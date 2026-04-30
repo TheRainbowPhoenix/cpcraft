@@ -1,0 +1,83 @@
+===========================
+crafting table
+==========================
+
+item			   cost
+4x planks 		--> 1x log
+4x stick		--> 2x plank
+
+1x wooden pickaxe	--> 2x stick, 3x plank
+1x stone pickaxe	--> 2x stick, 3x cobblestone
+1x iron pickaxe		--> 2x stick, 3x iron ingot
+1x gold pickaxe		--> 2x stick, 3x gold ingot
+1x diamond pickaxe	--> 2x stick, 3x diamond
+
+1x wooden axe 		--> 2x stick, 3x plank
+1x stone axe		--> 2x stick, 3x cobblestone
+1x iron axe		--> 2x stick, 3x iron ingot
+1x gold axe		--> 2x stick, 3x gold ingot
+1x diamond axe		--> 2x stick, 3x diamond
+
+1x wooden shovel 	--> 2x stick, 1x plank
+1x stone shovel 	--> 2x stick, 1x cobblestone
+1x iron shovel 		--> 2x stick, 1x iron ingot
+1x gold shovel 		--> 2x stick, 1x gold ingot
+1x diamond shovel 	--> 2x stick, 1x diamond
+
+1x wooden sword 	--> 1x stick, 2x plank
+1x stone sword 		--> 1x stick, 2x cobblestone
+1x iron sword 		--> 1x stick, 2x iron ingot
+1x gold sword 		--> 1x stick, 2x gold ingot
+1x diamond sword 	--> 1x stick, 2x diamond
+
+1x wooden hoe		--> 2x stick, 2x plank
+1x stone hoe		--> 2x stick, 2x cobblestone
+1x iron hoe		--> 2x stick, 2x iron ingot
+1x gold hoe		--> 2x stick, 2x gold ingot
+1x diamond hoe		--> 2x stick, 2x diamond
+
+1x crafting table 	--> 4x plank
+1x furnace 		--> 8x cobblestone
+1x chest		--> 8x plank
+1x bricks		--> 4x bricks
+4x torch		--> 1x stick, 1x coal
+1x bread		--> 3x wheat
+
+4x wooden stairs	--> 6x plank
+6x wooden slab		--> 3x plank
+4x cobblestone stairs	--> 6x cobblestone
+6x cobblestone slab	--> 3x cobblestone
+4x stone stairs		--> 6x stone
+6x stone slab		--> 3x stone
+4x brick stairs		--> 6x brick
+6x brick slab		--> 3x brick
+
+1x bed			--> 3x plank, 3x wool
+3x wooden door		--> 6x plank
+3x iron door		--> 6x iron ingot
+
+1x redstone torch	--> 1x redstone, 1x stick
+1x repeater		--> 2x redstone torch, 1 redstone, 3x stone
+1x redstone lamp	--> 1x redstone, 8x glass
+1x lever		--> 1x plank, 1x cobblestone
+1x wooden button 	--> 1x plank
+1x stone button		--> 1x stone
+
+1x coal block		--> 9x coal
+1x iron block		--> 9x iron ingot
+1x gold block		--> 9x gold ingot
+1x diamond block	--> 9x diamond
+1x redstone block	--> 9x redstone
+1x emerald block	--> 9x emerald
+
+1x shears		--> 2x iron ingot
+
+===========================
+furnace
+==========================
+1x stone		--> 1x cobblestone
+1x iron ingot		--> 1x iron ore
+1x gold ingot		--> 1x gold ore
+1x glass		--> 1x sand
+1x brick		--> 1x clay ball
+1x raw pork		--> 1x cooked pork

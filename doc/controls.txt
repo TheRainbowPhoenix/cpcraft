@@ -1,0 +1,21 @@
+F1 / on - hotbar left
+F2 / home - hotbar right
+F3 / prevtab - explosion
+F4 / pageup - increase brightness
+F5 / pagedown - decrease brightness
+alpha - switch game modes
+vars / variable - inventory
+menu / settings - game menu
+opt / ok - jump
+dpad - camera
+7 - destroy block
+9 - place block/interact
+8 - forward
+5 - backward
+4 - left
+6 - right
+3 - save heap log
+2 - reset heap, reload map and reload lighting
+1 - show performance stats
+0 - screenshot
+exe - select

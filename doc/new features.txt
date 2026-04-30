@@ -1,0 +1,33 @@
+-Block updates are now standart in all worlds and can be dissabled in settings with the chunk update distance slider
+-fixed a bug where door could be placed when a block is at the top half
+-more realistic water and lava flow mechanics
+-dirt can turn to grass when grass is close and light level is higher than 8
+-tool hp data is now saved
+-when using a hoe the hp decreases
+-when farmland is close to water it turns to wet farmland and when there is no water it will turn to dirt
+-selected block is no longer lagging behind
+-added a skybox
+-fixed some bugs with items
+-when looking at a diffrent block the progress will be reset to 0
+-added breaking textures
+-improved overall stability
+-worlds created before the UI update can be converted to the newest version again
+-reduced G3A file size
+-fixed a bug where entity's can walk out of the map
+-improved mob stabilety and removed a memory leak with mobs
+-fixed a bug where fur data did not save on sheaps
+-when a sheep with fur is killed it actually drops a item
+-added textured pigs
+-repalced my own custom heap with the tlsf that is much more stable
+-removed custom heap logs
+-improved compressed chunk performance
+-chunks now load gradually generated instead of instant so there is not a large lag spike
+-sheeps are now textured
+-disabling lighting does not use the lighmap at all, unlike before where it would still use it sometimes
+-textures and icons are now offloaded to a diffrent file to make texture packs possible
+-fixed a bug where enabling day/night cycle in a already created world would cause out of range errors
+-a more reliable lighting engine that is 35% faster for whole map update (1,07s -> 0.70s) and 3x as fast for single chunk updates (35ms -> 11ms)
+-fixed a bug where chest data would not save correctly
+-fixed a bug where upon opening inventory with a illagal item inside it the game would crash
+-tool health is now saved when a item is in the chest
+-fixed a bug where tool health would not transfer properly when swapping items in inventory

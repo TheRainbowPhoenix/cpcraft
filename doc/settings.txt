@@ -1,0 +1,17 @@
+game settings:
+render distance - how far the world is renderd
+compress vertices - compresses vertices for more performance but at the cost of chunk loading times
+render underwater - if enabled renders all the blocks below the water level and makes the water transparent
+render resolution - resolution at what the game renders
+render textured - enables or disables the use of textures
+lighting - enables or disables the lighting engine
+stop chunk loading - stops the chunk loading so you can move without loading/unloading any chunks
+render mode - the mode that the game uses for rendering can be wireframe or rasterization
+chunk update distance - the amount of chunks around the player where map updates are updated
+
+world settings:
+superflat - if enabled makes a superflat world
+seed - seed the game uses for the world (0=generate random seed)
+caves - add caves into the world
+survival - enables or disables survival
+day/night cycle - enables/disables the day and night cycle
