@@ -19475,7 +19475,7 @@ void makeOrePatch(int xMain, int yMain, int zMain, int size, int chance, int low
     }
     
 }
-__attribute__((always_inline)) inline void generateWorm(int x_, int y_, int z_, int distancePerStep, int length) {
+void generateWorm(int x_, int y_, int z_, int distancePerStep, int length) {
     Vector3I current;
     current.x = x_;
     current.y = y_;
