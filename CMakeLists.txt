@@ -26,7 +26,7 @@ set(ASSETS_cg
   # ...
 )
 
-set(MPM 1)
+# set(MPM 1)
 if(MPM OR "${CMAKE_BUILD_TYPE}" STREQUAL "FastLoad")
   set(ALLOC_OFFSET 0x100000)
 else()
