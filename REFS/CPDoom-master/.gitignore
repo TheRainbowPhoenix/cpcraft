@@ -1,0 +1,13 @@
+# Build items
+*.o
+*.a
+tags
+.cache
+obj
+dist
+compile_commands.json
+*.hh3
+*.elf
+
+# OS items
+.DS_Store
