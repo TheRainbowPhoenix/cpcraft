@@ -54,7 +54,7 @@ void dmaStart(unsigned src_addr, unsigned dest_addr, unsigned size)
     *DMA0_CHCR_0|=1;//Enable channel0 DMA
 }
 
-void dmaStartFill(unsigned src_addr, unsigned dest_addr, unsigned size)
+void dmaStartFill_old(unsigned src_addr, unsigned dest_addr, unsigned size)
 {
     //*MSTPCR0 = 0xFD7FF7F6;
     *MSTPCR0&=~(1<<21);//Clear bit 21
@@ -69,7 +69,7 @@ void dmaStartFill(unsigned src_addr, unsigned dest_addr, unsigned size)
     *DMA0_CHCR_0|=1;//Enable channel0 DMA
 }
 
-void dmaStartFill2B(unsigned src_addr, unsigned dest_addr, unsigned size)
+void dmaStartFill_old2B(unsigned src_addr, unsigned dest_addr, unsigned size)
 {
     //*MSTPCR0 = 0xFD7FF7F6;
     *MSTPCR0&=~(1<<21);//Clear bit 21

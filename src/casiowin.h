@@ -23,9 +23,9 @@ void *sys_realloc(void *ptr, size_t size);
 //=== Drawing and display ====================================================//
 
 // v1:likely v2:likely
-void Bdisp_PutDisp_DD(void);
+void LCD_Refresh(void);
 // v1 v2
-void *GetVRAMAddress(void);
+void *LCD_GetVRAMAddress(void);
 // v1 v2
 void *Bdisp_AllClr_VRAM(void);
 // v1:used v2:used
