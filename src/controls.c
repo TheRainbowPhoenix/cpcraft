@@ -2,13 +2,14 @@
 #include <string.h>
 #include "controls.h"
 
-// We map ClassPad scancodes to the Prizm-style basic_keycodes used by the game
-// This is just to keep the game logic mostly unchanged.
+// We track a small subset of Prizm keycodes that we map to ClassPad scancodes.
+// basic_keycodes can be large, so we use a sparse mapping or a larger array.
+// For simplicity and since fxcraft only uses a few, we'll use an array of 256
+// and ensure we don't index out of bounds.
 
 static uint8_t key_states[256];
 static uint8_t last_key_states[256];
 
-// Helper to map basic_keycode to scancode
 static enum Input_Scancode map_to_scancode(int basic_keycode) {
     switch (basic_keycode) {
         case KEY_EXE: return ScancodeEXE;
@@ -24,29 +25,22 @@ static enum Input_Scancode map_to_scancode(int basic_keycode) {
         case KEY_PRGM_7: return Scancode7;
         case KEY_PRGM_8: return Scancode8;
         case KEY_PRGM_9: return Scancode9;
-
-        // Directional keys
         case KEY_PRGM_UP: return ScancodeUp;
         case KEY_PRGM_DOWN: return ScancodeDown;
         case KEY_PRGM_LEFT: return ScancodeLeft;
         case KEY_PRGM_RIGHT: return ScancodeRight;
-
-        // Other keys
-        case KEY_PRGM_EXIT: return ScancodeClear; // Mapping EXIT to Clear
-        case KEY_PRGM_MENU: return ScancodeKeyboard; // Mapping MENU to Keyboard
+        case KEY_PRGM_EXIT: return ScancodeClear;
+        case KEY_PRGM_MENU: return ScancodeKeyboard;
         case KEY_PRGM_SHIFT: return ScancodeShift;
-        case KEY_PRGM_OPTN: return ScancodeEXP; // Mapping OPTN to EXP
-        case KEY_PRGM_ALPHA: return ScancodeNegative; // Mapping ALPHA to (-)
-        case KEY_VARS: return ScancodeComma; // Mapping VARS to Comma
-
-        // F keys - mapping them to something sensible since CP doesn't have them
+        case KEY_PRGM_OPTN: return ScancodeEXP;
+        case KEY_PRGM_ALPHA: return ScancodeNegative;
+        case KEY_VARS: return ScancodeComma;
         case KEY_PRGM_F1: return ScancodeOpenParenthesis;
         case KEY_PRGM_F2: return ScancodeCloseParenthesis;
-        case KEY_PRGM_F3: return Scancode7; // Not ideal, but needs some mapping
+        case KEY_PRGM_F3: return Scancode7;
         case KEY_PRGM_F4: return Scancode8;
         case KEY_PRGM_F5: return Scancode9;
         case KEY_PRGM_F6: return ScancodeDivide;
-
         default: return (enum Input_Scancode)0;
     }
 }
@@ -54,7 +48,6 @@ static enum Input_Scancode map_to_scancode(int basic_keycode) {
 void keyupdate(void) {
     memcpy(last_key_states, key_states, 256);
 
-    // We update the states for the keys we care about
     const int keys_to_track[] = {
         KEY_EXE, KEY_PLUS, KEY_MINUS, KEY_VARS,
         KEY_PRGM_0, KEY_PRGM_1, KEY_PRGM_2, KEY_PRGM_3, KEY_PRGM_4,
@@ -66,9 +59,11 @@ void keyupdate(void) {
 
     for (size_t i = 0; i < sizeof(keys_to_track)/sizeof(keys_to_track[0]); i++) {
         int k = keys_to_track[i];
-        enum Input_Scancode sc = map_to_scancode(k);
-        if (sc != 0) {
-            key_states[k] = Input_GetKeyState(sc);
+        if (k >= 0 && k < 256) {
+            enum Input_Scancode sc = map_to_scancode(k);
+            if (sc != 0) {
+                key_states[k] = Input_GetKeyState(sc);
+            }
         }
     }
 }

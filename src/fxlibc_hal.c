@@ -1,7 +1,7 @@
-#include "casiowin.h"
 #include <unistd.h>
+#include <stdlib.h>
 
-size_t write(int fd, void const *buf, size_t count)
+int write(int fd, const void *buf, size_t count)
 {
     (void)fd;
     (void)buf;
@@ -17,17 +17,18 @@ off_t lseek(int fd, off_t offset, int whence)
     return -1;
 }
 
+// Stubs for these if they were meant to use some system allocator
 void *fxlibc_hal_malloc(size_t size)
 {
-    return sys_malloc(size);
+    return malloc(size);
 }
 
 void fxlibc_hal_free(void *ptr)
 {
-    return sys_free(ptr);
+    free(ptr);
 }
 
 void *fxlibc_hal_realloc(void *ptr, size_t size)
 {
-    return sys_realloc(ptr, size);
+    return realloc(ptr, size);
 }

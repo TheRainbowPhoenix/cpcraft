@@ -32,7 +32,6 @@ int DmaWaitNextC0() {
     SYNCO();
     *DMA0_CHCR_0 &= ~1; // Disable DMA on channel 0
     //*DMA0_DMAOR = 0; // Disable all DMA
-    return 0;
 }
 
 void dmaStart(unsigned src_addr, unsigned dest_addr, unsigned size)
@@ -92,9 +91,5 @@ int dmaIsBussy()
 
 int dmaError()
 {
-    return (((*DMA0_DMAOR)&4) == 4);
-}
-
-void dmaStartFill(unsigned src_addr, unsigned dest_addr, unsigned size) {
-    dmaStart(src_addr, dest_addr, size);
+    return ((*DMA0_DMAOR)&4 == 4);
 }

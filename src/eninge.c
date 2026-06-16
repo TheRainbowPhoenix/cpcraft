@@ -1,19 +1,6 @@
 
 #include <sdk/os/lcd.h>
 #include <sdk/os/file.h>
-#ifndef FILE_OPEN_READ
-#define FILE_OPEN_READ (1 << 0)
-#define FILE_OPEN_WRITE (1 << 1)
-#define FILE_OPEN_CREATE (1 << 2)
-#endif
-
-static int File_GetSize_Helper(int fd) {
-    struct File_Stat st;
-    if (File_Fstat(fd, &st) == 0) return st.fileSize;
-    return 0;
-}
-#define File_GetSize(fd) File_GetSize_Helper(fd)
-
 #include <sdk/os/debug.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -309,7 +296,7 @@ void swap(Vector2I** a, Vector2I** b) {
 #define entityLength 128
 #define objLength 228
 
-int resXZBuffer = 160;
+int resXZBuffer = 320;
 int resYZBuffer = 180;
 
 int renderingMode;         //0=normal, 1=no transparent, 2=wireframe
@@ -12282,9 +12269,8 @@ void game_main()
     itemIcons2 = (color_t*)malloc(256 * 256 * 2);
     assetsInputBuffer = (color_t*)malloc(256 * 256 * 2);
     randomShit = (color_t*)malloc(256 * 256 * 2);
+
     tlsf = tlsf_create_with_pool((char*)malloc(1024*1024), 1024*1024);
-
-
 
     VRAMAddress = (unsigned short*)LCD_GetVRAMAddress();
 
@@ -17158,10 +17144,10 @@ void replaceOldWater()
 		for (int j = 0; j < width*width*height; j++)
 		{
 			if(blocks[i][j] == 6)
-			blockData[i*width*width*height + j] = 0b10000001;
+			blockData[i*width*width*height + j] = 0x81;
 
 			if(blocks[i][j] == 24)
-			blockData[i*width*width*height + j] = 0b10000001;
+			blockData[i*width*width*height + j] = 0x81;
 		}
 
 		loadingScreen(i, totalChunkWidth*totalChunkWidth, "Convering old water...", 22);
@@ -17206,7 +17192,7 @@ void saveWorldData(int world)
 
     File_Create(pFile, 1, &size);
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    int hFile = File_Open(pFile, 3, NULL);
     File_Write(hFile, worlData, size);
     File_Close(hFile);
 
@@ -17229,7 +17215,7 @@ void loadWorldData(int world)
     int size = 16;
     char worlData[16] = {0};
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
@@ -17301,7 +17287,7 @@ void saveChestData(int world)
 
     File_Create(pFile, 1, &size);
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    int hFile = File_Open(pFile, 3, NULL);
     File_Write(hFile, chestData_, size);
     File_Close(hFile);
 
@@ -17321,7 +17307,7 @@ void loadChestData(int world)
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
@@ -17383,7 +17369,7 @@ void loadChestDataV4(int world)
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
@@ -17451,7 +17437,7 @@ void savegameData()
 
     File_Create(pFile, 1, &size);
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    int hFile = File_Open(pFile, 3, NULL);
     File_Write(hFile, playerData, size);
     File_Close(hFile);
 
@@ -17473,7 +17459,7 @@ void loadgameData()
     int size = 25;
     char playerData[25] = {0};
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
@@ -17521,7 +17507,7 @@ void saveSettings()
 
     File_Create(pFile, 1, &size);
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    int hFile = File_Open(pFile, 3, NULL);
     File_Write(hFile, settingData, size);
     File_Close(hFile);
 
@@ -17542,7 +17528,7 @@ void loadSettings()
 
     char settingData[64] = {0};
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
@@ -17587,7 +17573,7 @@ void loadSettingsO()
     int size = 10;
     char settingData[10] = {0};
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
@@ -17623,7 +17609,7 @@ void saveChunk(int index, int world, bool exists)
     File_Create(pFile, 1, sizeof(blocks[index]));
 
    //writing data to file
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     File_Write(hFile, blocks[index], sizeof(blocks[index]));
     File_Close(hFile);
 
@@ -17658,7 +17644,7 @@ void loadChunk(int index, int world)
     unsigned short pFile[sizeof(fileLocation)*2];// Make buffer
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     int length = File_GetSize(hFile);
 
     File_Read(hFile, blocks[index], length, 0);
@@ -17706,7 +17692,7 @@ void saveChunkExtraData(int index, int world, bool exists)
     File_Create(pFile, 1, &sizeOfFile);
 
    //writing data to file
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     File_Write(hFile, &blockData[index*width*width*height], sizeOfFile);
     File_Close(hFile);
 
@@ -17741,7 +17727,7 @@ void loadChunkExtraData(int index, int world)
     unsigned short pFile[sizeof(fileLocation)*2];// Make buffer
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     int length = File_GetSize(hFile);
 
    //unsigned char buffer[length];
@@ -17782,7 +17768,7 @@ void saveCompressedChunk(int index, int world, bool exists)
     File_Create(pFile, 1, &compressedSize);
 
    //writing data to file
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
 
     if(exists == true)
     {
@@ -17792,7 +17778,7 @@ void saveCompressedChunk(int index, int world, bool exists)
             File_Close(hFile);
             Bfile_DeleteEntry(pFile);
             File_Create(pFile, 1, &compressedSize);
-            hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+            hFile = File_Open(pFile, 3, NULL);
         }
     }
 
@@ -17818,7 +17804,7 @@ void loadCompressedChunk(int index, int world)
     unsigned short pFile[sizeof(fileLocation)*2];// Make buffer
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     int length = File_GetSize(hFile);
 
 	char data[length];
@@ -17885,7 +17871,7 @@ void saveChestDataCompressed(int world, int exists)
     if(exists == false)
     File_Create(pFile, 1, &compressedSize);
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    int hFile = File_Open(pFile, 3, NULL);
 
     if(exists == true)
     {
@@ -17895,7 +17881,7 @@ void saveChestDataCompressed(int world, int exists)
             File_Close(hFile);
             Bfile_DeleteEntry(pFile);
             File_Create(pFile, 1, &compressedSize);
-            hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+            hFile = File_Open(pFile, 3, NULL);
         }
     }
 
@@ -17918,7 +17904,7 @@ void loadChestDataCompressed(int world)
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
@@ -18016,7 +18002,7 @@ void saveEntityData(int world, int exists)
     if(exists == false)
     File_Create(pFile, 1, &size);
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    int hFile = File_Open(pFile, 3, NULL);
 
     File_Write(hFile, entityData_, size);
     File_Close(hFile);
@@ -18037,7 +18023,7 @@ void loadEntityData(int world)
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
@@ -18167,7 +18153,7 @@ void savePlayerData(int world)
 
     File_Create(pFile, 1, &size);
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    int hFile = File_Open(pFile, 3, NULL);
     File_Write(hFile, playerData, size);
     File_Close(hFile);
 
@@ -18190,7 +18176,7 @@ void loadPlayerData(int world)
     int size = 236;
     char playerData[236] = {0};
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
@@ -18258,7 +18244,7 @@ void loadPlayerDataV4(int world)
     int size = 164;
     char playerData[164] = {0};
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
@@ -18470,7 +18456,7 @@ void loadTextureAssets()
         textures2[i*256+j] = missingTexture[j];
     }
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    int hFile = File_Open(pFile, 3, NULL);
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
@@ -18499,7 +18485,7 @@ void loadIconAssets()
         itemIcons2[i*676+j] = missingIcon[j];
     }
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    int hFile = File_Open(pFile, 3, NULL);
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
@@ -18523,7 +18509,7 @@ void loadTexturePackData(char *texturePackPath, char *creator, char *name, int* 
     int size = 52;
     char data[size];
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, 3, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
@@ -18563,7 +18549,7 @@ void loadTexturePackIcon(char *texturePackPath, color_t *icon)
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    int hFile = File_Open(pFile, 3, NULL);
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
@@ -18754,7 +18740,7 @@ void convertToBitmap16bit()
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
     File_Create(pFile, 1, &file_size);
 
-    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    int hFile = File_Open(pFile, 3, NULL);
     File_Write(hFile, bitmap_image, file_size);
     File_Close(hFile);
 
@@ -18783,7 +18769,7 @@ bool chenkCollisionDoor(float positionFX, float positionFY, float positionFZ)
     int chunkIndex = position.x/ width + position.z/ width * totalChunkWidth;
     int blockIndex = (position.x % width) + (position.z % width) * width + position.y * width * width;
 
-    int blockRotation = blockData[chunkIndex*width*width*height + blockIndex]&0b00000011;
+    int blockRotation = blockData[chunkIndex*width*width*height + blockIndex]&0x3;
 
     int diffX = pPosition.x-position.x;
     int diffY = pPosition.y-position.y;
@@ -19019,10 +19005,10 @@ void destroyBlock()
             }
 
             if(blocks[currentChunk_][blockIndex] == 55)
-            blockData[currentChunk_*width*width*height + blockIndex + width*width] = (blockData[currentChunk_*width*width*height + blockIndex + width*width]&0b01111111);//remove redstone torch signal
+            blockData[currentChunk_*width*width*height + blockIndex + width*width] = (blockData[currentChunk_*width*width*height + blockIndex + width*width]&0x7f);//remove redstone torch signal
 
             if(blocks[currentChunk_][blockIndex] == 54 && blockTypes[blocks[currentChunk_][blockIndex-width*width]].canTransferRedstoneSignal == true)
-            blockData[currentChunk_*width*width*height + blockIndex - width*width] = (blockData[currentChunk_*width*width*height + blockIndex - width*width]&0b10111111);//remove redstone wire signal
+            blockData[currentChunk_*width*width*height + blockIndex - width*width] = (blockData[currentChunk_*width*width*height + blockIndex - width*width]&0xbf);//remove redstone wire signal
 
             if(blocks[currentChunk_][blockIndex] == 58)
             {
@@ -19038,12 +19024,12 @@ void destroyBlock()
                 int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
                 if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true)
-                blockData[blockDataIndex] = (blockData[blockDataIndex]&0b01111111);//remove repeater signal
+                blockData[blockDataIndex] = (blockData[blockDataIndex]&0x7f);//remove repeater signal
             }
 
             if(blocks[currentChunk_][blockIndex] == 63 || allBlock[blocks[currentChunk_][blockIndex]].blockType == 18)
             {
-                int rotation = ((blockData[currentChunk_*width*width*height + blockIndex]&0b00001110)>>1);
+                int rotation = ((blockData[currentChunk_*width*width*height + blockIndex]&0xe)>>1);
                 Vector3I allSidesLeverButton[6] = {{-1, 0, 0}, {0, 0, -1}, {1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {0, 1, 0}};
 
                 int newX = removeBlock.x+allSidesLeverButton[rotation].x;
@@ -19055,7 +19041,7 @@ void destroyBlock()
                 int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
                 if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true)
-                blockData[blockDataIndex] = (blockData[blockDataIndex]&0b01111111);//remove repeater signal
+                blockData[blockDataIndex] = (blockData[blockDataIndex]&0x7f);//remove repeater signal
             }
 
             blocks[currentChunk_][blockIndex] = 0;
@@ -19133,7 +19119,7 @@ void placeBlock(int itemType)
             blocks[currentChunk_][blockIndex] = allItem[itemType].blockId;
 
 			if(allBlock[allItem[itemType].blockId].blockType == 2)//set water and lava hight to a standart of 1 instead of full block
-			blockData[currentChunk_*width*width*height + blockIndex] = 0b10000001;
+			blockData[currentChunk_*width*width*height + blockIndex] = 0x81;
 
             if(allBlock[allItem[itemType].blockId].blockType == 8)//
             {
@@ -19184,22 +19170,22 @@ void placeBlock(int itemType)
                 blocks[currentChunk_][blockIndex1] = allItem[itemType].blockId+1;
 
                 if(rotationY < 45 || rotationY > 315)
-                blockData[currentChunk_*width*width*height + blockIndex] = 0b00000010;
+                blockData[currentChunk_*width*width*height + blockIndex] = 0x2;
                 if(rotationY > 45 && rotationY < 135)
-                blockData[currentChunk_*width*width*height + blockIndex] = 0b00000001;
+                blockData[currentChunk_*width*width*height + blockIndex] = 0x1;
                 if(rotationY > 135 && rotationY < 225)
-                blockData[currentChunk_*width*width*height + blockIndex] = 0b00000000;
+                blockData[currentChunk_*width*width*height + blockIndex] = 0x0;
                 if(rotationY > 225 && rotationY < 315)
-                blockData[currentChunk_*width*width*height + blockIndex] = 0b00000011;
+                blockData[currentChunk_*width*width*height + blockIndex] = 0x3;
 
                 if(rotationY < 45 || rotationY > 315)
-                blockData[currentChunk_*width*width*height + blockIndex1] = 0b00000010;
+                blockData[currentChunk_*width*width*height + blockIndex1] = 0x2;
                 if(rotationY > 45 && rotationY < 135)
-                blockData[currentChunk_*width*width*height + blockIndex1] = 0b00000001;
+                blockData[currentChunk_*width*width*height + blockIndex1] = 0x1;
                 if(rotationY > 135 && rotationY < 225)
-                blockData[currentChunk_*width*width*height + blockIndex1] = 0b00000000;
+                blockData[currentChunk_*width*width*height + blockIndex1] = 0x0;
                 if(rotationY > 225 && rotationY < 315)
-                blockData[currentChunk_*width*width*height + blockIndex1] = 0b00000011;
+                blockData[currentChunk_*width*width*height + blockIndex1] = 0x3;
             }
             if(allBlock[allItem[itemType].blockId].blockType == 13)
             {
@@ -19229,22 +19215,22 @@ void placeBlock(int itemType)
 				rotation.z = addBlock.z-removeBlock.z;
 
 				if(rotation.x == 1)
-				blockData[currentChunk_*width*width*height + blockIndex] = 0b00000000;
+				blockData[currentChunk_*width*width*height + blockIndex] = 0x0;
 				if(rotation.z == 1)
-				blockData[currentChunk_*width*width*height + blockIndex] = 0b00000010;
+				blockData[currentChunk_*width*width*height + blockIndex] = 0x2;
 				if(rotation.x == -1)
-				blockData[currentChunk_*width*width*height + blockIndex] = 0b00000100;
+				blockData[currentChunk_*width*width*height + blockIndex] = 0x4;
 				if(rotation.z == -1)
-				blockData[currentChunk_*width*width*height + blockIndex] = 0b00000110;
+				blockData[currentChunk_*width*width*height + blockIndex] = 0x6;
 				if(rotation.y == 1)
-				blockData[currentChunk_*width*width*height + blockIndex] = 0b00001000;
+				blockData[currentChunk_*width*width*height + blockIndex] = 0x8;
 				if(rotation.y == -1)
-				blockData[currentChunk_*width*width*height + blockIndex] = 0b00001010;
+				blockData[currentChunk_*width*width*height + blockIndex] = 0xa;
 			}
             if(allItem[itemType].blockId == 70)
-            blockData[currentChunk_*width*width*height + blockIndex] = 0b10000000;
+            blockData[currentChunk_*width*width*height + blockIndex] = 0x80;
             if(allItem[itemType].blockId == 55)
-            blockData[currentChunk_*width*width*height + blockIndex] = 0b10000000;
+            blockData[currentChunk_*width*width*height + blockIndex] = 0x80;
 
             updateChunkV2(chunkX, chunkY);
 
@@ -19577,7 +19563,7 @@ void generateWorm(int x_, int y_, int z_, int distancePerStep, int length) {
                             else
 							{
 				blocks[chunkX + chunkZ * totalChunkWidth][xInChunk + zInChunk * width + y * width * width] = 24;
-								blockData[(chunkX + chunkZ * totalChunkWidth)*width*width*height + xInChunk + zInChunk * width + y * width * width] = 0b10000001;
+								blockData[(chunkX + chunkZ * totalChunkWidth)*width*width*height + xInChunk + zInChunk * width + y * width * width] = 0x81;
 							}
                         }else
                         breakAll = 1;
@@ -19720,7 +19706,7 @@ void loadPerlin(int chunkX, int chunkY)
                         for (int y = maxY+1; y <= 18; y++)
 						{
 				blocks[chunkIndex][x + z * width + y * width * width] = 6;
-							blockData[chunkIndex*width*width*height + x + z * width + y * width * width] = 0b10000001;
+							blockData[chunkIndex*width*width*height + x + z * width + y * width * width] = 0x81;
 						}
                     }
                 }
@@ -20968,7 +20954,7 @@ void updateMap()
 								//updating lever
 								if(blocks[chunkIndex][blockIndex] == 63)
 								{
-									int rotation = ((blockData[chunkIndex*width*width*height + blockIndex]&0b00001110)>>1);
+									int rotation = ((blockData[chunkIndex*width*width*height + blockIndex]&0xe)>>1);
 
 									int posX = chunkX*width + x;
 					    int posZ = chunkZ*width + z;
@@ -20981,20 +20967,20 @@ void updateMap()
 					    int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
 					    int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-									if((blockData[chunkIndex*width*width*height + blockIndex]&0b00000001) == 0b00000001)
+									if((blockData[chunkIndex*width*width*height + blockIndex]&0x1) == 0x1)
 									{
 										if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true)
                                         {
                                             if(chunkIndexNew != chunkIndex)
-										    blockData[blockDataIndex] = ((blockData[blockDataIndex]&0b01111111)|0b10000000);
+										    blockData[blockDataIndex] = ((blockData[blockDataIndex]&0x7f)|0x80);
                                             else
                                             {
-                                                redstoneData[blockIndexNew] = ((blockData[blockDataIndex]&0b01111111)|0b10000000);
+                                                redstoneData[blockIndexNew] = ((blockData[blockDataIndex]&0x7f)|0x80);
                                                 updateRedstoneData[blockIndexNew] = 1;
                                             }
                                         }
 
-										redstoneData[blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b01111111)|0b10000000);
+										redstoneData[blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0x7f)|0x80);
                                         updateRedstoneData[blockIndex] = 1;
 									}
 									else
@@ -21002,15 +20988,15 @@ void updateMap()
 										if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true)
                                         {
                                             if(chunkIndexNew != chunkIndex)
-										    blockData[blockDataIndex] = (blockData[blockDataIndex]&0b01111111);
+										    blockData[blockDataIndex] = (blockData[blockDataIndex]&0x7f);
                                             else
                                             {
-                                                redstoneData[blockIndexNew] = (blockData[blockDataIndex]&0b01111111);
+                                                redstoneData[blockIndexNew] = (blockData[blockDataIndex]&0x7f);
                                                 updateRedstoneData[blockIndexNew] = 1;
                                             }
                                         }
 
-                                        redstoneData[blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0b01111111);
+                                        redstoneData[blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0x7f);
                                         updateRedstoneData[blockIndex] = 1;
 									}
 								}
@@ -21018,7 +21004,7 @@ void updateMap()
 								//updating button
 								if(allBlock[blocks[chunkIndex][blockIndex]].blockType == 18)
 								{
-									int rotation = ((blockData[chunkIndex*width*width*height + blockIndex]&0b00001110)>>1);
+									int rotation = ((blockData[chunkIndex*width*width*height + blockIndex]&0xe)>>1);
 
 									int posX = chunkX*width + x;
 					    int posZ = chunkZ*width + z;
@@ -21031,44 +21017,44 @@ void updateMap()
 					    int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
 					    int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-									int time = ((blockData[chunkIndex*width*width*height + blockIndex]&0b00110000)>>4);
+									int time = ((blockData[chunkIndex*width*width*height + blockIndex]&0x30)>>4);
 									if(time > 0)
 									{
 										time--;
-										redstoneData[blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11001111)|(time<<4));
+										redstoneData[blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0xcf)|(time<<4));
 
 										if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true)
                                         {
                                             if(chunkIndexNew != chunkIndex)
-										    blockData[blockDataIndex] = ((blockData[blockDataIndex]&0b01111111)|0b10000000);
+										    blockData[blockDataIndex] = ((blockData[blockDataIndex]&0x7f)|0x80);
                                             else
                                             {
-                                                redstoneData[blockIndexNew] = ((blockData[blockDataIndex]&0b01111111)|0b10000000);
+                                                redstoneData[blockIndexNew] = ((blockData[blockDataIndex]&0x7f)|0x80);
                                                 updateRedstoneData[blockIndexNew] = 1;
                                             }
                                         }
 
-										redstoneData[blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b01111111)|0b10000000);
+										redstoneData[blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0x7f)|0x80);
                                         updateRedstoneData[blockIndex] = 1;
 									}
 									else
 									{
-										if((blockData[chunkIndex*width*width*height + blockIndex]&0b00000001) == 0b00000001)
+										if((blockData[chunkIndex*width*width*height + blockIndex]&0x1) == 0x1)
 										{
-											redstoneData[blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0b11111110);
+											redstoneData[blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0xfe);
 
 											if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true)
                                             {
                                                 if(chunkIndexNew != chunkIndex)
-									            blockData[blockDataIndex] = (blockData[blockDataIndex]&0b01111111);
+									            blockData[blockDataIndex] = (blockData[blockDataIndex]&0x7f);
                                                 else
                                                 {
-                                                    redstoneData[blockIndexNew] = (blockData[blockDataIndex]&0b01111111);
+                                                    redstoneData[blockIndexNew] = (blockData[blockDataIndex]&0x7f);
                                                     updateRedstoneData[blockIndexNew] = 1;
                                                 }
                                             }
 
-                                            redstoneData[blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0b01111111);
+                                            redstoneData[blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0x7f);
                                             updateRedstoneData[blockIndex] = 1;
 
 											updateChunkAtIndexFull = 1;
@@ -21081,9 +21067,9 @@ void updateMap()
 					{
 					    int blockIndexNew = blockIndex+width*width;
 					    int blockDataIndex = chunkIndex*width*width*height + blockIndexNew;
-					    if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew]].blockType].canHoldRedstoneSignal == true && (blockData[blockDataIndex]&0b10000000) == 0b00000000)
+					    if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew]].blockType].canHoldRedstoneSignal == true && (blockData[blockDataIndex]&0x80) == 0x0)
 					    {
-					        blockData[blockDataIndex] = ((blockData[blockDataIndex]&0b01111111)|0b10000000);
+					        blockData[blockDataIndex] = ((blockData[blockDataIndex]&0x7f)|0x80);
 					        updateChunkAtIndex = 1;
 					    }
 					}
@@ -21091,9 +21077,9 @@ void updateMap()
 					{
 					    int blockIndexNew = blockIndex+width*width;
 					    int blockDataIndex = chunkIndex*width*width*height + blockIndexNew;
-					    if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew]].blockType].canHoldRedstoneSignal == true  && (blockData[blockDataIndex]&0b10000000) == 0b10000000)
+					    if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew]].blockType].canHoldRedstoneSignal == true  && (blockData[blockDataIndex]&0x80) == 0x80)
 					    {
-					        blockData[blockDataIndex] = (blockData[blockDataIndex]&0b01111111);
+					        blockData[blockDataIndex] = (blockData[blockDataIndex]&0x7f);
 					        updateChunkAtIndex = 1;
 					    }
 					}
@@ -21106,17 +21092,17 @@ void updateMap()
 
 									if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew]].blockType].canHoldRedstoneSignal == true)
 									{
-						if((blockData[blockDataIndex]&0b11000000) > 0b00000000)
+						if((blockData[blockDataIndex]&0xc0) > 0x0)
 						{
 						    redstoneBlockData[blockIndex] = 56;
-											blockData[chunkIndex*width*width*height + blockIndex] = 0b00000000;
+											blockData[chunkIndex*width*width*height + blockIndex] = 0x0;
 
                                             int blockIndexNew2 = blockIndex+width*width;
 					            int blockDataIndex2 = chunkIndex*width*width*height + blockIndexNew2;
-					            if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew2]].blockType].canHoldRedstoneSignal == true  && (blockData[blockDataIndex2]&0b10000000) == 0b10000000)
+					            if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew2]].blockType].canHoldRedstoneSignal == true  && (blockData[blockDataIndex2]&0x80) == 0x80)
 					            {
                                                 if(y+1 != height)
-					                blockData[blockDataIndex2] = (blockData[blockDataIndex2]&0b01111111);
+					                blockData[blockDataIndex2] = (blockData[blockDataIndex2]&0x7f);
 					            }
 
 						    updateChunkAtIndex = 1;
@@ -21130,17 +21116,17 @@ void updateMap()
 
 									if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew]].blockType].canHoldRedstoneSignal == true)
 									{
-						if((blockData[blockDataIndex]&0b11000000) == 0b00000000)
+						if((blockData[blockDataIndex]&0xc0) == 0x0)
 						{
 						    redstoneBlockData[blockIndex] = 55;
-											blockData[chunkIndex*width*width*height + blockIndex] = 0b10000000;
+											blockData[chunkIndex*width*width*height + blockIndex] = 0x80;
 
                                             int blockIndexNew2 = blockIndex+width*width;//updating blocks above torch
 					            int blockDataIndex2 = chunkIndex*width*width*height + blockIndexNew2;
-					            if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew2]].blockType].canHoldRedstoneSignal == true && (blockData[blockDataIndex2]&0b10000000) == 0b00000000)
+					            if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew2]].blockType].canHoldRedstoneSignal == true && (blockData[blockDataIndex2]&0x80) == 0x0)
 					            {
                                                 if(y+1 != height)
-					                redstoneData[blockIndexNew2] = ((blockData[blockDataIndex2]&0b01111111)|0b10000000);
+					                redstoneData[blockIndexNew2] = ((blockData[blockDataIndex2]&0x7f)|0x80);
 					            }
 
 						    updateChunkAtIndex = 1;
@@ -21152,7 +21138,7 @@ void updateMap()
 					if(blocks[chunkIndex][blockIndex] == 57)
 					{
 					    int blockDataIndex = chunkIndex*width*width*height + blockIndex;
-					    int rotation = blockData[blockDataIndex]&0b00000011;
+					    int rotation = blockData[blockDataIndex]&0x3;
 
 					    int newX = (chunkX*width + x) - sidesRepeater[rotation].x;
 					    int newZ = (chunkZ*width + z) - sidesRepeater[rotation].z;
@@ -21163,9 +21149,9 @@ void updateMap()
 					        int blockIndexNew = (newX%width) + (newZ%width) * width + y * width * width;
 					        int blockDataIndexNew = chunkIndexNew*width*width*height + blockIndexNew;
 
-					        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true && (blockData[blockDataIndexNew]&0b10000000) == 0b10000000)
+					        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true && (blockData[blockDataIndexNew]&0x80) == 0x80)
 					        {
-					            blockData[blockDataIndexNew] = ((blockData[blockDataIndexNew]&0b01111111));
+					            blockData[blockDataIndexNew] = ((blockData[blockDataIndexNew]&0x7f));
 					            updateChunkAtIndex = 1;
 					        }
 					    }
@@ -21173,7 +21159,7 @@ void updateMap()
 					if(blocks[chunkIndex][blockIndex] == 58)
 					{
 					    int blockDataIndex = chunkIndex*width*width*height + blockIndex;
-					    int rotation = blockData[blockDataIndex]&0b00000011;
+					    int rotation = blockData[blockDataIndex]&0x3;
 
 					    int newX = (chunkX*width + x) - sidesRepeater[rotation].x;
 					    int newZ = (chunkZ*width + z) - sidesRepeater[rotation].z;
@@ -21184,9 +21170,9 @@ void updateMap()
 					        int blockIndexNew = (newX%width) + (newZ%width) * width + y * width * width;
 					        int blockDataIndexNew = chunkIndexNew*width*width*height + blockIndexNew;
 
-					        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true && (blockData[blockDataIndexNew]&0b10000000) == 0b00000000)
+					        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true && (blockData[blockDataIndexNew]&0x80) == 0x0)
 					        {
-					            blockData[blockDataIndexNew] = ((blockData[blockDataIndexNew]&0b01111111)|0b10000000);
+					            blockData[blockDataIndexNew] = ((blockData[blockDataIndexNew]&0x7f)|0x80);
 					            updateChunkAtIndex = 1;
 					        }
 					    }
@@ -21199,7 +21185,7 @@ void updateMap()
 					    int posZ = chunkZ*width + z;
 
 					    int blockDataIndex = chunkIndex*width*width*height + blockIndex;
-					    int rotation = blockData[blockDataIndex]&0b00000011;
+					    int rotation = blockData[blockDataIndex]&0x3;
 
 					    int newX = posX+sidesRepeater[rotation].x;
 					    int newY = y+sidesRepeater[rotation].y;
@@ -21214,13 +21200,13 @@ void updateMap()
 
 										if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canHoldRedstoneSignal == true)
 										{
-											if((blockData[chunkIndexNew*width*width*height+blockIndexNew]&0b11000000) > 0b00000000)
+											if((blockData[chunkIndexNew*width*width*height+blockIndexNew]&0xc0) > 0x0)
 					            change = true;
 										}
 					        else if(blocks[chunkIndexNew][blockIndexNew] == 58)
 					        {
 					            int blockDataIndexNew = chunkIndexNew*width*width*height + blockIndexNew;
-					            if((blockData[blockDataIndexNew]&0b00000011) == rotation)
+					            if((blockData[blockDataIndexNew]&0x3) == rotation)
 					            change = true;
 					        }
 
@@ -21236,7 +21222,7 @@ void updateMap()
 												int chunkIndexNew2 = (newX2/width) + (newZ2/width) * totalChunkWidth;
 								int blockIndexNew2 = (newX2%width) + (newZ2%width) * width + newY2 * width * width;
 
-												if(blocks[chunkIndexNew2][blockIndexNew2] == 58 && (blockData[chunkIndexNew2*width*width*height+blockIndexNew2]&0b00000011) == sidesRepeaterForStopSignalRotation[rotation][i])
+												if(blocks[chunkIndexNew2][blockIndexNew2] == 58 && (blockData[chunkIndexNew2*width*width*height+blockIndexNew2]&0x3) == sidesRepeaterForStopSignalRotation[rotation][i])
 												hasNoSignal = false;
 											}
 
@@ -21253,13 +21239,13 @@ void updateMap()
 					                    int blockIndexNew3 = (newX3%width) + (newZ3%width) * width + y * width * width;
 					                    int blockDataIndexNew3 = chunkIndexNew3*width*width*height + blockIndexNew3;
 
-					                    if(blockTypes[allBlock[blocks[chunkIndexNew3][blockIndexNew3]].blockType].canTransferRedstoneSignal == true && (blockData[blockDataIndexNew3]&0b10000000) == 0b00000000)
+					                    if(blockTypes[allBlock[blocks[chunkIndexNew3][blockIndexNew3]].blockType].canTransferRedstoneSignal == true && (blockData[blockDataIndexNew3]&0x80) == 0x0)
 					                    {
                                                         if(chunkIndexNew3 != chunkIndex)
-					                        blockData[blockDataIndexNew3] = ((blockData[blockDataIndexNew3]&0b01111111)|0b10000000);
+					                        blockData[blockDataIndexNew3] = ((blockData[blockDataIndexNew3]&0x7f)|0x80);
                                                         else
                                                         {
-                                                            redstoneData[blockIndexNew3] = ((blockData[blockDataIndexNew3]&0b01111111)|0b10000000);
+                                                            redstoneData[blockIndexNew3] = ((blockData[blockDataIndexNew3]&0x7f)|0x80);
                                                             updateRedstoneData[blockIndexNew3] = 1;
                                                         }
 					                    }
@@ -21276,7 +21262,7 @@ void updateMap()
 					    int posZ = chunkZ*width + z;
 
 					    int blockDataIndex = chunkIndex*width*width*height + blockIndex;
-					    int rotation = blockData[blockDataIndex]&0b00000011;
+					    int rotation = blockData[blockDataIndex]&0x3;
 
 					    int newX = posX+sidesRepeater[rotation].x;
 					    int newY = y+sidesRepeater[rotation].y;
@@ -21291,13 +21277,13 @@ void updateMap()
 
 										if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canHoldRedstoneSignal == true)
 										{
-											if((blockData[chunkIndexNew*width*width*height+blockIndexNew]&0b11000000) == 0b00000000)
+											if((blockData[chunkIndexNew*width*width*height+blockIndexNew]&0xc0) == 0x0)
 					            change = true;
 										}
 					        else if(blocks[chunkIndexNew][blockIndexNew] == 58)
 					        {
 					            int blockDataIndexNew = chunkIndexNew*width*width*height + blockIndexNew;
-					            if((blockData[blockDataIndexNew]&0b00000011) != rotation)
+					            if((blockData[blockDataIndexNew]&0x3) != rotation)
 					            change = true;
 					        }
 					        else
@@ -21315,7 +21301,7 @@ void updateMap()
 												int chunkIndexNew2 = (newX2/width) + (newZ2/width) * totalChunkWidth;
 								int blockIndexNew2 = (newX2%width) + (newZ2%width) * width + newY2 * width * width;
 
-												if(blocks[chunkIndexNew2][blockIndexNew2] == 58 && (blockData[chunkIndexNew2*width*width*height+blockIndexNew2]&0b00000011) == sidesRepeaterForStopSignalRotation[rotation][i])
+												if(blocks[chunkIndexNew2][blockIndexNew2] == 58 && (blockData[chunkIndexNew2*width*width*height+blockIndexNew2]&0x3) == sidesRepeaterForStopSignalRotation[rotation][i])
 												hasNoSignal = false;
 											}
 
@@ -21332,13 +21318,13 @@ void updateMap()
 								    int blockIndexNew3 = (newX3%width) + (newZ3%width) * width + y * width * width;
 								    int blockDataIndexNew3 = chunkIndexNew3*width*width*height + blockIndexNew3;
 
-								    if(blockTypes[allBlock[blocks[chunkIndexNew3][blockIndexNew3]].blockType].canTransferRedstoneSignal == true && (blockData[blockDataIndexNew3]&0b10000000) == 0b10000000)
+								    if(blockTypes[allBlock[blocks[chunkIndexNew3][blockIndexNew3]].blockType].canTransferRedstoneSignal == true && (blockData[blockDataIndexNew3]&0x80) == 0x80)
 								    {
 														if(chunkIndexNew3 != chunkIndex)
-								        blockData[blockDataIndexNew3] = ((blockData[blockDataIndexNew3]&0b01111111));
+								        blockData[blockDataIndexNew3] = ((blockData[blockDataIndexNew3]&0x7f));
 														else
 														{
-															redstoneData[blockIndexNew3] = ((blockData[blockDataIndexNew3]&0b01111111));
+															redstoneData[blockIndexNew3] = ((blockData[blockDataIndexNew3]&0x7f));
                                                             updateRedstoneData[blockIndexNew3] = 1;
 														}
 								    }
@@ -21370,7 +21356,7 @@ void updateMap()
 
 					        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 17 || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 18)
 										{
-											if((blockData[blockDataIndex]&0b10000000) == 0b10000000)
+											if((blockData[blockDataIndex]&0x80) == 0x80)
 							openDoor = true;
 										}
 					    }
@@ -21385,7 +21371,7 @@ void updateMap()
 					        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
 					        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-					        if(blocks[chunkIndexNew][blockIndexNew] == 58 && (blockData[blockDataIndex]&0b00000011) == i)
+					        if(blocks[chunkIndexNew][blockIndexNew] == 58 && (blockData[blockDataIndex]&0x3) == i)
 					        openDoor = true;
 					    }
 
@@ -21399,46 +21385,46 @@ void updateMap()
 					        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
 					        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-					        if(blocks[chunkIndexNew][blockIndexNew] == 58 && (blockData[blockDataIndex]&0b00000011) == i)
+					        if(blocks[chunkIndexNew][blockIndexNew] == 58 && (blockData[blockDataIndex]&0x3) == i)
 					        openDoor = true;
 					    }
 
 					    if(openDoor == true)
 					    {
-					        if(((blockData[chunkIndex*width*width*height + blockIndex]&0b00000100)>>2) == 0)
+					        if(((blockData[chunkIndex*width*width*height + blockIndex]&0x4)>>2) == 0)
 					        {
-					            if((blockData[chunkIndex*width*width*height + blockIndex]&0b00000011) == 3)
-					            blockData[chunkIndex*width*width*height + blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0b11111100);
+					            if((blockData[chunkIndex*width*width*height + blockIndex]&0x3) == 3)
+					            blockData[chunkIndex*width*width*height + blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0xfc);
 					            else
 					            blockData[chunkIndex*width*width*height + blockIndex]++;
 
-					            if((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b00000011) == 3)
-					            blockData[chunkIndex*width*width*height + blockIndex + width*width] = (blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b11111100);
+					            if((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0x3) == 3)
+					            blockData[chunkIndex*width*width*height + blockIndex + width*width] = (blockData[chunkIndex*width*width*height + blockIndex + width*width]&0xfc);
 					            else
 					            blockData[chunkIndex*width*width*height + blockIndex + width*width]++;
 
-					            blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11111011) | 0b00000100);
-					            blockData[chunkIndex*width*width*height + blockIndex + width*width] = ((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b11111011) | 0b00000100);
+					            blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0xfb) | 0x4);
+					            blockData[chunkIndex*width*width*height + blockIndex + width*width] = ((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0xfb) | 0x4);
 
 					            updateChunkAtIndexFull = 1;
 					        }
 					    }
 					    else
 					    {
-					        if(((blockData[chunkIndex*width*width*height + blockIndex]&0b00000100)>>2) == 1)
+					        if(((blockData[chunkIndex*width*width*height + blockIndex]&0x4)>>2) == 1)
 					        {
-					            if((blockData[chunkIndex*width*width*height + blockIndex]&0b00000011) == 0)
-					            blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11111100) | 3);
+					            if((blockData[chunkIndex*width*width*height + blockIndex]&0x3) == 0)
+					            blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0xfc) | 3);
 					            else
 					            blockData[chunkIndex*width*width*height + blockIndex]--;
 
-					            if((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b00000011) == 0)
-					            blockData[chunkIndex*width*width*height + blockIndex + width*width] = ((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b11111100) | 3);
+					            if((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0x3) == 0)
+					            blockData[chunkIndex*width*width*height + blockIndex + width*width] = ((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0xfc) | 3);
 					            else
 					            blockData[chunkIndex*width*width*height + blockIndex + width*width]--;
 
-					            blockData[chunkIndex*width*width*height + blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0b11111011);
-					            blockData[chunkIndex*width*width*height + blockIndex + width*width] = (blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b11111011);
+					            blockData[chunkIndex*width*width*height + blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0xfb);
+					            blockData[chunkIndex*width*width*height + blockIndex + width*width] = (blockData[chunkIndex*width*width*height + blockIndex + width*width]&0xfb);
 
 					            updateChunkAtIndexFull = 1;
 					        }
@@ -21465,7 +21451,7 @@ void updateMap()
 
 					        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 17 || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 18)
 										{
-											if((blockData[blockDataIndex]&0b11000000) > 0b00000000)
+											if((blockData[blockDataIndex]&0xc0) > 0x0)
 							turnOnLamp = true;
 										}
 
@@ -21483,7 +21469,7 @@ void updateMap()
 					        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
 					        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-					        if(blocks[chunkIndexNew][blockIndexNew] == 58 && (blockData[blockDataIndex]&0b00000011) == i)
+					        if(blocks[chunkIndexNew][blockIndexNew] == 58 && (blockData[blockDataIndex]&0x3) == i)
 					        turnOnLamp = true;
 					    }
 
@@ -21491,7 +21477,7 @@ void updateMap()
 					    int blockIndexNew = (posX%width) + (posZ%width) * width + (y+1) * width * width;
 					    int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-					    if(blocks[chunkIndexNew][blockIndexNew] == 54 && (blockData[blockDataIndex]&0b00001111) > 0)
+					    if(blocks[chunkIndexNew][blockIndexNew] == 54 && (blockData[blockDataIndex]&0xf) > 0)
 					    turnOnLamp = true;
 
 					    if(turnOnLamp == true)
@@ -21532,7 +21518,7 @@ void updateMap()
 
 					        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 17 || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 18)
 										{
-											if((blockData[blockDataIndex]&0b11000000) > 0b00000000)
+											if((blockData[blockDataIndex]&0xc0) > 0x0)
 							makeExplosion(10, posX, y, posZ);
 										}
 
@@ -21550,7 +21536,7 @@ void updateMap()
 					        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
 					        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-					        if(blocks[chunkIndexNew][blockIndexNew] == 58 && (blockData[blockDataIndex]&0b00000011) == i)
+					        if(blocks[chunkIndexNew][blockIndexNew] == 58 && (blockData[blockDataIndex]&0x3) == i)
 					        makeExplosion(10, posX, y, posZ);
 					    }
 
@@ -21558,7 +21544,7 @@ void updateMap()
 					    int blockIndexNew = (x%width) + (z%width) * width + (y+1) * width * width;
 					    int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-					    if(blocks[chunkIndexNew][blockIndexNew] == 54 && (blockData[blockDataIndex]&0b00001111) > 0)
+					    if(blocks[chunkIndexNew][blockIndexNew] == 54 && (blockData[blockDataIndex]&0xf) > 0)
 					    makeExplosion(10, posX, y, posZ);
 								}
                                //-------------------------redstone end-------------------------
@@ -21615,13 +21601,13 @@ void updateMap()
                                         }
 										else if(blocks[chunkIndex][blockIndex-width*width] == 24)//
 										{
-											if((blockData[chunkIndex*width*width*height + (blockIndex-width*width)]&0b00001111) != 0b00000000)//if water below, update water below to full block
+											if((blockData[chunkIndex*width*width*height + (blockIndex-width*width)]&0xf) != 0x0)//if water below, update water below to full block
 											{
-												blockData[chunkIndex*width*width*height + (blockIndex-width*width)] = (blockData[chunkIndex*width*width*height + (blockIndex-width*width)]&0b11110000);
+												blockData[chunkIndex*width*width*height + (blockIndex-width*width)] = (blockData[chunkIndex*width*width*height + (blockIndex-width*width)]&0xf0);
 												updateChunkAtIndexWater = 2;
 											}
 
-											bool hasHigherClose = (blockData[chunkIndex*width*width*height + blockIndex]&0b10000000);
+											bool hasHigherClose = (blockData[chunkIndex*width*width*height + blockIndex]&0x80);
 											if(y != height-1)
 											{
 												if((blocks[chunkIndex][blockIndex+width*width]) == 24)
@@ -21642,7 +21628,7 @@ void updateMap()
 
 														if(blocks[chunkIndexNew][blockIndexNew] == 24)
 														{
-															if((blockData[chunkIndex*width*width*height + blockIndex]&0b00001111) > (blockData[chunkIndexNew*width*width*height + blockIndexNew]&0b00001111))
+															if((blockData[chunkIndex*width*width*height + blockIndex]&0xf) > (blockData[chunkIndexNew*width*width*height + blockIndexNew]&0xf))
 															{
 																hasHigherClose = true;
 																break;
@@ -21659,8 +21645,8 @@ void updateMap()
 														blocks[chunkIndex][blockIndex] = 0;
 														blockData[chunkIndex*width*width*height + blockIndex] = 0;
 
-														if((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0b00001111) == 0b00000000)
-														blockData[chunkIndex*width*width*height + blockIndex-width*width] = ((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0b11110000)|0b00000001);
+														if((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0xf) == 0x0)
+														blockData[chunkIndex*width*width*height + blockIndex-width*width] = ((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0xf0)|0x1);
 													}
 													updateChunkAtIndexWater = 3;
 												}
@@ -21673,15 +21659,15 @@ void updateMap()
 										}
 										else
 										{
-											bool hasHigherClose = (blockData[chunkIndex*width*width*height + blockIndex]&0b10000000);
+											bool hasHigherClose = (blockData[chunkIndex*width*width*height + blockIndex]&0x80);
 											if(y != height-1)
 											{
 												if((blocks[chunkIndex][blockIndex+width*width]) == 24)
 												hasHigherClose = true;
 											}
 
-											int waterHight = (blockData[chunkIndex*width*width*height + blockIndex]&0b00001111)+2;
-											if((blockData[chunkIndex*width*width*height + blockIndex]&0b00001111) == 0b00000000)
+											int waterHight = (blockData[chunkIndex*width*width*height + blockIndex]&0xf)+2;
+											if((blockData[chunkIndex*width*width*height + blockIndex]&0xf) == 0x0)
 											waterHight = 1;
 
 											for (int i = 0; i < 4; i++)
@@ -21696,11 +21682,11 @@ void updateMap()
 
 													if(blocks[chunkIndexNew][blockIndexNew] == 0 || blocks[chunkIndexNew][blockIndexNew] == 24)
 													{
-														if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0b10000000) == 0b00000000)
+														if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0x80) == 0x0)
 														{
 															if(waterHight < 9)
 															{
-																if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0b00001111) > waterHight || blocks[chunkIndexNew][blockIndexNew] == 0)
+																if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0xf) > waterHight || blocks[chunkIndexNew][blockIndexNew] == 0)
 																{
 																	if(chunkIndexNew == chunkIndex)
 																	{
@@ -21726,7 +21712,7 @@ void updateMap()
 													{
 														if(blocks[chunkIndexNew][blockIndexNew] == 24)
 														{
-															if((blockData[chunkIndex*width*width*height + blockIndex]&0b00001111) > (blockData[chunkIndexNew*width*width*height + blockIndexNew]&0b00001111))
+															if((blockData[chunkIndex*width*width*height + blockIndex]&0xf) > (blockData[chunkIndexNew*width*width*height + blockIndexNew]&0xf))
 															hasHigherClose = true;
 														}
 													}
@@ -21741,8 +21727,8 @@ void updateMap()
 													blocks[chunkIndex][blockIndex] = 0;
 													blockData[chunkIndex*width*width*height + blockIndex] = 0;
 
-													if((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0b00001111) == 0b00000000)
-													blockData[chunkIndex*width*width*height + blockIndex-width*width] = ((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0b11110000)|0b00000001);
+													if((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0xf) == 0x0)
+													blockData[chunkIndex*width*width*height + blockIndex-width*width] = ((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0xf0)|0x1);
 												}
 												updateChunkAtIndexWater = 6;
 											}
@@ -21765,13 +21751,13 @@ void updateMap()
                                         }
 										else if(blocks[chunkIndex][blockIndex-width*width] == 6)//
 										{
-											if((blockData[chunkIndex*width*width*height + (blockIndex-width*width)]&0b00001111) != 0b00000000)//if water below, update water below to full block
+											if((blockData[chunkIndex*width*width*height + (blockIndex-width*width)]&0xf) != 0x0)//if water below, update water below to full block
 											{
-												blockData[chunkIndex*width*width*height + (blockIndex-width*width)] = (blockData[chunkIndex*width*width*height + (blockIndex-width*width)]&0b11110000);
+												blockData[chunkIndex*width*width*height + (blockIndex-width*width)] = (blockData[chunkIndex*width*width*height + (blockIndex-width*width)]&0xf0);
 												updateChunkAtIndexWater = 2;
 											}
 
-											bool hasHigherClose = (blockData[chunkIndex*width*width*height + blockIndex]&0b10000000);
+											bool hasHigherClose = (blockData[chunkIndex*width*width*height + blockIndex]&0x80);
 											if(y != height-1)
 											{
 												if((blocks[chunkIndex][blockIndex+width*width]) == 6)
@@ -21790,7 +21776,7 @@ void updateMap()
 
 													if(blocks[chunkIndexNew][blockIndexNew] == 24)//check for lava
 													{
-														if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0b10000000) == 0b10000000)
+														if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0x80) == 0x80)
 														blocks[chunkIndexNew][blockIndexNew] = 25;//make obsidian
 														else
 														blocks[chunkIndexNew][blockIndexNew] = 10;//make cobblestone
@@ -21802,7 +21788,7 @@ void updateMap()
 													{
 														if(blocks[chunkIndexNew][blockIndexNew] == 6)
 														{
-															if((blockData[chunkIndex*width*width*height + blockIndex]&0b00001111) > (blockData[chunkIndexNew*width*width*height + blockIndexNew]&0b00001111))
+															if((blockData[chunkIndex*width*width*height + blockIndex]&0xf) > (blockData[chunkIndexNew*width*width*height + blockIndexNew]&0xf))
 															hasHigherClose = true;
 														}
 													}
@@ -21818,15 +21804,15 @@ void updateMap()
 													blocks[chunkIndex][blockIndex] = 0;
 													blockData[chunkIndex*width*width*height + blockIndex] = 0;
 
-													if((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0b00001111) == 0b00000000)
-													blockData[chunkIndex*width*width*height + blockIndex-width*width] = ((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0b11110000)|0b00000001);
+													if((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0xf) == 0x0)
+													blockData[chunkIndex*width*width*height + blockIndex-width*width] = ((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0xf0)|0x1);
 												}
 												updateChunkAtIndexWater = 3;
 											}
 										}
 										else if(blocks[chunkIndex][blockIndex-width*width] == 24)//check for lava below
 										{
-											if((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0b10000000) == 0b10000000)
+											if((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0x80) == 0x80)
 											blocks[chunkIndex][blockIndex-width*width] = 25;//make obsidian
 											else
 											blocks[chunkIndex][blockIndex-width*width] = 10;//make cobblestone
@@ -21834,14 +21820,14 @@ void updateMap()
 										}
 										else
 										{
-											bool hasHigherClose = (blockData[chunkIndex*width*width*height + blockIndex]&0b10000000);
+											bool hasHigherClose = (blockData[chunkIndex*width*width*height + blockIndex]&0x80);
 											if(y != height-1)
 											{
 												if((blocks[chunkIndex][blockIndex+width*width]) == 6)
 												hasHigherClose = true;
 											}
 
-											int waterHight = (blockData[chunkIndex*width*width*height + blockIndex]&0b00001111)+1;
+											int waterHight = (blockData[chunkIndex*width*width*height + blockIndex]&0xf)+1;
 											if(waterHight == 1)
 											waterHight++;
 
@@ -21857,11 +21843,11 @@ void updateMap()
 
 													if(blocks[chunkIndexNew][blockIndexNew] == 0 || blocks[chunkIndexNew][blockIndexNew] == 6)
 													{
-														if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0b10000000) == 0b00000000)
+														if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0x80) == 0x0)
 														{
 															if(waterHight < 9)
 															{
-																if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0b00001111) > waterHight || blocks[chunkIndexNew][blockIndexNew] == 0)
+																if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0xf) > waterHight || blocks[chunkIndexNew][blockIndexNew] == 0)
 																{
 																	if(chunkIndexNew == chunkIndex)
 																	{
@@ -21884,7 +21870,7 @@ void updateMap()
 													}
 													else if(blocks[chunkIndexNew][blockIndexNew] == 24)//check for lava
 													{
-														if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0b10000000) == 0b10000000)
+														if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0x80) == 0x80)
 														blocks[chunkIndexNew][blockIndexNew] = 25;//make obsidian
 														else
 														blocks[chunkIndexNew][blockIndexNew] = 10;//make cobblestone
@@ -21896,7 +21882,7 @@ void updateMap()
 													{
 														if(blocks[chunkIndexNew][blockIndexNew] == 6)
 														{
-															if((blockData[chunkIndex*width*width*height + blockIndex]&0b00001111) > (blockData[chunkIndexNew*width*width*height + blockIndexNew]&0b00001111))
+															if((blockData[chunkIndex*width*width*height + blockIndex]&0xf) > (blockData[chunkIndexNew*width*width*height + blockIndexNew]&0xf))
 															hasHigherClose = true;
 														}
 													}
@@ -21911,16 +21897,16 @@ void updateMap()
 													blocks[chunkIndex][blockIndex] = 0;
 													blockData[chunkIndex*width*width*height + blockIndex] = 0;
 
-													if((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0b00001111) == 0b00000000)
-													blockData[chunkIndex*width*width*height + blockIndex-width*width] = ((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0b11110000)|0b00000001);
+													if((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0xf) == 0x0)
+													blockData[chunkIndex*width*width*height + blockIndex-width*width] = ((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0xf0)|0x1);
 												}
 												updateChunkAtIndexWater = 6;
 											}
 
 											//makes new full water so the infite water shit.
-											//if((blockData[chunkIndex*width*width*height + blockIndex]&0b10000000) == 0b10000000)
+											//if((blockData[chunkIndex*width*width*height + blockIndex]&0x80) == 0x80)
 											//{
-											//	if((blocks[chunkIndex][blockIndex-width*width] == 6 && (blockData[chunkIndex*width*width*height + blockIndex-width*width]&0b10000000) == 0b10000000) || (blocks[chunkIndex][blockIndex-width*width] != 6 && blocks[chunkIndex][blockIndex-width*width] != 0))
+											//	if((blocks[chunkIndex][blockIndex-width*width] == 6 && (blockData[chunkIndex*width*width*height + blockIndex-width*width]&0x80) == 0x80) || (blocks[chunkIndex][blockIndex-width*width] != 6 && blocks[chunkIndex][blockIndex-width*width] != 0))
 											//	{
 											//		for (int i = 0; i < 4; i++)
 											//		{
@@ -21933,23 +21919,23 @@ void updateMap()
 											//				int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
 						//		    	int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
 
-											//				if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0b10000000) == 0b10000000)
+											//				if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0x80) == 0x80)
 											//				{
 											//					int chunkIndexNewX = (newX/width) + (posZ/width) * totalChunkWidth;
 						//		    		int blockIndexNewX = (newX%width) + (posZ%width) * width + newY * width * width;
 
-											//					if((blockData[chunkIndexNewX*width*width*height + blockIndexNewX]&0b10000000) == 0b00000000)
+											//					if((blockData[chunkIndexNewX*width*width*height + blockIndexNewX]&0x80) == 0x0)
 											//					{
-											//						blockData[chunkIndexNewX*width*width*height + blockIndexNewX] = 0b10000001;
+											//						blockData[chunkIndexNewX*width*width*height + blockIndexNewX] = 0x81;
 											//						updateChunkAtIndexWater = true;
 											//					}
 
 											//					int chunkIndexNewZ = (posX/width) + (newZ/width) * totalChunkWidth;
 						//		    		int blockIndexNewZ = (posX%width) + (newZ%width) * width + newY * width * width;
 
-											//					if((blockData[chunkIndexNewZ*width*width*height + blockIndexNewZ]&0b10000000) == 0b00000000)
+											//					if((blockData[chunkIndexNewZ*width*width*height + blockIndexNewZ]&0x80) == 0x0)
 											//					{
-											//						blockData[chunkIndexNewZ*width*width*height + blockIndexNewZ] = 0b10000001;
+											//						blockData[chunkIndexNewZ*width*width*height + blockIndexNewZ] = 0x81;
 											//						updateChunkAtIndexWater = true;
 											//					}
 											//				}
@@ -22218,7 +22204,7 @@ void updateMap()
                                             if(allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 1 || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 17 || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 18)
                                             {
                                                 int blockDataIndex = chunkIndexNew * width*width*height + blockIndexNew;
-                                                if((blockData[blockDataIndex]&0b10000000) == 0b10000000)
+                                                if((blockData[blockDataIndex]&0x80) == 0x80)
                                                 highestNeighbourLevel = 16;
                                             }
                                         }
@@ -22239,18 +22225,18 @@ void updateMap()
                                             {
                                                 if(chunkIndex != chunkIndexNew)
                                                 {
-                                                    if((blockData[chunkIndexNew*width*width*height+blockIndexNew]&0b00001111) > highestNeighbourLevel)
-                                                    highestNeighbourLevel = (blockData[chunkIndexNew*width*width*height+blockIndexNew]&0b00001111);
+                                                    if((blockData[chunkIndexNew*width*width*height+blockIndexNew]&0xf) > highestNeighbourLevel)
+                                                    highestNeighbourLevel = (blockData[chunkIndexNew*width*width*height+blockIndexNew]&0xf);
                                                 }
                                                 else
                                                 {
-                                                    if((redstoneData[blockIndexNew]&0b00001111) > highestNeighbourLevel)
-                                                    highestNeighbourLevel = (redstoneData[blockIndexNew]&0b00001111);
+                                                    if((redstoneData[blockIndexNew]&0xf) > highestNeighbourLevel)
+                                                    highestNeighbourLevel = (redstoneData[blockIndexNew]&0xf);
                                                 }
                                             }
                                             if(blocks[chunkIndexNew][blockIndexNew] == 58)
                                             {
-                                                if((blockData[chunkIndexNew*width*width*height+blockIndexNew]&0b00000011) == i)
+                                                if((blockData[chunkIndexNew*width*width*height+blockIndexNew]&0x3) == i)
                                                 highestNeighbourLevel = 16;
                                             }
                                             if(blocks[chunkIndexNew][blockIndexNew] == 55)
@@ -22272,13 +22258,13 @@ void updateMap()
                                             {
                                                 if(chunkIndex != chunkIndexNew)
                                                 {
-                                                    if((blockData[chunkIndexNew*width*width*height+blockIndexNew]&0b00001111) > highestNeighbourLevel)
-                                                    highestNeighbourLevel = (blockData[chunkIndexNew*width*width*height+blockIndexNew]&0b00001111);
+                                                    if((blockData[chunkIndexNew*width*width*height+blockIndexNew]&0xf) > highestNeighbourLevel)
+                                                    highestNeighbourLevel = (blockData[chunkIndexNew*width*width*height+blockIndexNew]&0xf);
                                                 }
                                                 else
                                                 {
-                                                    if((redstoneData[blockIndexNew]&0b00001111) > highestNeighbourLevel)
-                                                    highestNeighbourLevel = (redstoneData[blockIndexNew]&0b00001111);
+                                                    if((redstoneData[blockIndexNew]&0xf) > highestNeighbourLevel)
+                                                    highestNeighbourLevel = (redstoneData[blockIndexNew]&0xf);
                                                 }
                                             }
                                         }
@@ -22301,13 +22287,13 @@ void updateMap()
                                                 {
                                                     if(chunkIndex != chunkIndexNew)
                                                     {
-                                                        if((blockData[chunkIndexNew*width*width*height+blockIndexNew]&0b00001111) > highestNeighbourLevel)
-                                                        highestNeighbourLevel = (blockData[chunkIndexNew*width*width*height+blockIndexNew]&0b00001111);
+                                                        if((blockData[chunkIndexNew*width*width*height+blockIndexNew]&0xf) > highestNeighbourLevel)
+                                                        highestNeighbourLevel = (blockData[chunkIndexNew*width*width*height+blockIndexNew]&0xf);
                                                     }
                                                     else
                                                     {
-                                                        if((redstoneData[blockIndexNew]&0b00001111) > highestNeighbourLevel)
-                                                        highestNeighbourLevel = (redstoneData[blockIndexNew]&0b00001111);
+                                                        if((redstoneData[blockIndexNew]&0xf) > highestNeighbourLevel)
+                                                        highestNeighbourLevel = (redstoneData[blockIndexNew]&0xf);
                                                     }
                                                 }
                                             }
@@ -22332,7 +22318,7 @@ void updateMap()
                 {
                     if(blocks[chunkIndex][i] == 54)
                     {
-                        if((blockData[chunkIndex*width*width*height+i]&0b00001111) != redstoneData[i])
+                        if((blockData[chunkIndex*width*width*height+i]&0xf) != redstoneData[i])
                         {
                             updateChunkAtIndex = 1;
                             blockData[chunkIndex*width*width*height+i] = redstoneData[i];
@@ -22341,13 +22327,13 @@ void updateMap()
                             {
                                 if(redstoneData[i] > 0)
 								{
-					blockData[chunkIndex*width*width*height+(i-width*width)] = ((blockData[chunkIndex*width*width*height+(i-width*width)]&0b10111111)|0b01000000);
-									blockData[chunkIndex*width*width*height+i] = ((blockData[chunkIndex*width*width*height+i]&0b10111111)|0b01000000);
+					blockData[chunkIndex*width*width*height+(i-width*width)] = ((blockData[chunkIndex*width*width*height+(i-width*width)]&0xbf)|0x40);
+									blockData[chunkIndex*width*width*height+i] = ((blockData[chunkIndex*width*width*height+i]&0xbf)|0x40);
 								}
                                 else
 								{
-					blockData[chunkIndex*width*width*height+(i-width*width)] = (blockData[chunkIndex*width*width*height+(i-width*width)]&0b10111111);
-									blockData[chunkIndex*width*width*height+i] = (blockData[chunkIndex*width*width*height+i]&0b10111111);
+					blockData[chunkIndex*width*width*height+(i-width*width)] = (blockData[chunkIndex*width*width*height+(i-width*width)]&0xbf);
+									blockData[chunkIndex*width*width*height+i] = (blockData[chunkIndex*width*width*height+i]&0xbf);
 								}
                             }
                         }
@@ -27899,7 +27885,7 @@ void useBlock()
         }
 		if(allBlock[blockType].blockType == 17)//lever
         {
-			if((blockData[chunkIndex*width*width*height + blockIndex]&0b00000001) == 0b00000000)
+			if((blockData[chunkIndex*width*width*height + blockIndex]&0x1) == 0x0)
 			blockData[chunkIndex*width*width*height + blockIndex]++;
 			else
 			blockData[chunkIndex*width*width*height + blockIndex]--;
@@ -27911,9 +27897,9 @@ void useBlock()
 		if(allBlock[blockType].blockType == 18)//botton presses
         {
 			if(blockType == 64)
-			blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11001110)|0b00110001);//leave on for 4 redstone ticks
+			blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0xce)|0x31);//leave on for 4 redstone ticks
 			if(blockType == 65)
-			blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11001110)|0b00100001);//leave on for 3 redstone ticks
+			blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0xce)|0x21);//leave on for 3 redstone ticks
 
 			updateChunkV2(chunkX, chunkY);
 
@@ -27922,35 +27908,35 @@ void useBlock()
 
         if(blockType == 49)//open via top door
         {
-            if(((blockData[chunkIndex*width*width*height + blockIndex]&0b00000100)>>2) == 0)
+            if(((blockData[chunkIndex*width*width*height + blockIndex]&0x4)>>2) == 0)
             {
-                if((blockData[chunkIndex*width*width*height + blockIndex]&0b00000011) == 3)
-                blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11111100));
+                if((blockData[chunkIndex*width*width*height + blockIndex]&0x3) == 3)
+                blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0xfc));
                 else
                 blockData[chunkIndex*width*width*height + blockIndex]++;
 
-                if((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b00000011) == 3)
-                blockData[chunkIndex*width*width*height + blockIndex + width*width] = (blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b11111100);
+                if((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0x3) == 3)
+                blockData[chunkIndex*width*width*height + blockIndex + width*width] = (blockData[chunkIndex*width*width*height + blockIndex + width*width]&0xfc);
                 else
                 blockData[chunkIndex*width*width*height + blockIndex + width*width]++;
 
-                blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11111011) | 0b00000100);
-                blockData[chunkIndex*width*width*height + blockIndex + width*width] = ((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b11111011) | 0b00000100);
+                blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0xfb) | 0x4);
+                blockData[chunkIndex*width*width*height + blockIndex + width*width] = ((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0xfb) | 0x4);
             }
-            else if(((blockData[chunkIndex*width*width*height + blockIndex]&0b00000100)>>2) == 1)
+            else if(((blockData[chunkIndex*width*width*height + blockIndex]&0x4)>>2) == 1)
             {
-                if((blockData[chunkIndex*width*width*height + blockIndex]&0b00000011) == 0)
-                blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11111100) | 3);
+                if((blockData[chunkIndex*width*width*height + blockIndex]&0x3) == 0)
+                blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0xfc) | 3);
                 else
                 blockData[chunkIndex*width*width*height + blockIndex]--;
 
-                if((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b00000011) == 0)
-                blockData[chunkIndex*width*width*height + blockIndex + width*width] = ((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b11111100) | 3);
+                if((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0x3) == 0)
+                blockData[chunkIndex*width*width*height + blockIndex + width*width] = ((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0xfc) | 3);
                 else
                 blockData[chunkIndex*width*width*height + blockIndex + width*width]--;
 
-                blockData[chunkIndex*width*width*height + blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0b11111011);
-                blockData[chunkIndex*width*width*height + blockIndex + width*width] = ((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b11111011));
+                blockData[chunkIndex*width*width*height + blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0xfb);
+                blockData[chunkIndex*width*width*height + blockIndex + width*width] = ((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0xfb));
             }
 
             updateChunkV2(chunkX, chunkY);
@@ -27958,35 +27944,35 @@ void useBlock()
         }
         if(blockType == 50)//open via bottom door
         {
-            if(((blockData[chunkIndex*width*width*height + blockIndex]&0b00000100)>>2) == 0)
+            if(((blockData[chunkIndex*width*width*height + blockIndex]&0x4)>>2) == 0)
             {
-                if((blockData[chunkIndex*width*width*height + blockIndex]&0b00000011) == 3)
-                blockData[chunkIndex*width*width*height + blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0b11111100);
+                if((blockData[chunkIndex*width*width*height + blockIndex]&0x3) == 3)
+                blockData[chunkIndex*width*width*height + blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0xfc);
                 else
                 blockData[chunkIndex*width*width*height + blockIndex]++;
 
-                if((blockData[chunkIndex*width*width*height + blockIndex - width*width]&0b00000011) == 3)
-                blockData[chunkIndex*width*width*height + blockIndex - width*width] = (blockData[chunkIndex*width*width*height + blockIndex - width*width]&0b11111100);
+                if((blockData[chunkIndex*width*width*height + blockIndex - width*width]&0x3) == 3)
+                blockData[chunkIndex*width*width*height + blockIndex - width*width] = (blockData[chunkIndex*width*width*height + blockIndex - width*width]&0xfc);
                 else
                 blockData[chunkIndex*width*width*height + blockIndex - width*width]++;
 
-                blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11111011) | 0b00000100);
-                blockData[chunkIndex*width*width*height + blockIndex - width*width] = ((blockData[chunkIndex*width*width*height + blockIndex - width*width]&0b11111011) | 0b00000100);
+                blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0xfb) | 0x4);
+                blockData[chunkIndex*width*width*height + blockIndex - width*width] = ((blockData[chunkIndex*width*width*height + blockIndex - width*width]&0xfb) | 0x4);
             }
-            else if(((blockData[chunkIndex*width*width*height + blockIndex]&0b00000100)>>2) == 1)
+            else if(((blockData[chunkIndex*width*width*height + blockIndex]&0x4)>>2) == 1)
             {
-                if((blockData[chunkIndex*width*width*height + blockIndex]&0b00000011) == 0)
-                blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11111100) | 3);
+                if((blockData[chunkIndex*width*width*height + blockIndex]&0x3) == 0)
+                blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0xfc) | 3);
                 else
                 blockData[chunkIndex*width*width*height + blockIndex]--;
 
-                if((blockData[chunkIndex*width*width*height + blockIndex - width*width]&0b00000011) == 0)
-                blockData[chunkIndex*width*width*height + blockIndex - width*width] = ((blockData[chunkIndex*width*width*height + blockIndex - width*width]&0b11111100) | 3);
+                if((blockData[chunkIndex*width*width*height + blockIndex - width*width]&0x3) == 0)
+                blockData[chunkIndex*width*width*height + blockIndex - width*width] = ((blockData[chunkIndex*width*width*height + blockIndex - width*width]&0xfc) | 3);
                 else
                 blockData[chunkIndex*width*width*height + blockIndex - width*width]--;
 
-                blockData[chunkIndex*width*width*height + blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0b11111011);
-                blockData[chunkIndex*width*width*height + blockIndex - width*width] = (blockData[chunkIndex*width*width*height + blockIndex - width*width]&0b11111011);
+                blockData[chunkIndex*width*width*height + blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0xfb);
+                blockData[chunkIndex*width*width*height + blockIndex - width*width] = (blockData[chunkIndex*width*width*height + blockIndex - width*width]&0xfb);
             }
 
             updateChunkV2(chunkX, chunkY);
