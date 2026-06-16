@@ -9,6 +9,7 @@ void DmaWaitNext(void){
 }
 
 void DoDMAlcdNonblockStrip(unsigned y1,unsigned y2){
+    (void)y1; (void)y2;
     // In Hollyhock, we don't have easy partial refresh like this that maps to the old Prizm one
     // So we just refresh the whole screen for now.
     LCD_Refresh();
@@ -18,13 +19,13 @@ void DoDMAlcdNonblock(void){
     LCD_Refresh();
 }
 
-void DoDMAlcdNonblockStripXramStart(unsigned y1,unsigned y2)
-{
+void DoDMAlcdNonblockStripXramStart(unsigned y1,unsigned y2) {
+    (void)y1; (void)y2;
     // No-op
 }
 
-void DoDMAlcdNonblockStripXram(unsigned y1,unsigned y2)
-{
+void DoDMAlcdNonblockStripXram(unsigned y1,unsigned y2) {
+    (void)y1; (void)y2;
     // No-op or LCD_Refresh() if it's supposed to actually show something
     LCD_Refresh();
 }

@@ -1,3 +1,38 @@
+
+#include <sdk/os/lcd.h>
+#include <sdk/os/file.h>
+#ifndef FILE_OPEN_READ
+#define FILE_OPEN_READ (1 << 0)
+#define FILE_OPEN_WRITE (1 << 1)
+#define FILE_OPEN_CREATE (1 << 2)
+#endif
+
+static int File_GetSize_Helper(int fd) {
+    struct File_Stat st;
+    if (File_Fstat(fd, &st) == 0) return st.fileSize;
+    return 0;
+}
+#define File_GetSize(fd) File_GetSize_Helper(fd)
+
+#include <sdk/os/debug.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+
+#define PrintMini(...) ((void)0)
+#define Print(...) ((void)0)
+#define locate(...) ((void)0)
+#define Bdisp_DrawLineVRAM(...) ((void)0)
+#define Bdisp_SetPoint_VRAM(...) ((void)0)
+#define Timer_Install(...) ((void)0)
+#define Timer_Start(...) ((void)0)
+#define Timer_Stop(...) ((void)0)
+#define DisplayStatusArea(...) ((void)0)
+#define EnableInput(...) ((void)0)
+#define SetQuitHandler(...) ((void)0)
+#define Sleep(...) ((void)0)
+#define GetSecondaryVRAMAddress() LCD_GetVRAMAddress()
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -89,15 +124,15 @@ typedef struct {
 } screenPoint;
 
 typedef struct {
-    Vector3S *verticesIPC; //vertices int pre-calculated
+    Vector3S *verticesIPC;//vertices int pre-calculated
     Vector4S *triangles;
     char *brightnes;
     unsigned char *color;
 	color_t *solidColor;
     Vector3B *normal;
     volatile bool active;
-    volatile int sizeV;  //size vertices
-    volatile int sizeT;  //size triangles
+    volatile int sizeV; //size vertices
+    volatile int sizeT; //size triangles
     volatile Vector3 position;
     volatile Vector3I actualPosition;
     volatile Vector2 rotation;
@@ -118,12 +153,12 @@ typedef struct {
 } particle;
 
 typedef struct {
-    volatile bool active;            //is entity active
-    volatile unsigned char type;     //mob type
-    volatile unsigned short state;    //state of the mob
-	volatile unsigned short state2;    //state of the mob extra
+    volatile bool active;           //is entity active
+    volatile unsigned char type;    //mob type
+    volatile unsigned short state;   //state of the mob
+	volatile unsigned short state2;   //state of the mob extra
 	volatile short fallingSince;
-    volatile float moveTimer;        //
+    volatile float moveTimer;       //
     volatile unsigned short locationOnAllObj;
     volatile unsigned short health;
     volatile unsigned short extraEntity;
@@ -144,7 +179,7 @@ typedef struct {
 typedef struct{
     char name[20];
     char stackSize;
-    short breaksIn; //how long the tool will last set to -1 if no tool
+    short breaksIn;//how long the tool will last set to -1 if no tool
 
     bool isBlock;
     unsigned char blockId;
@@ -152,8 +187,8 @@ typedef struct{
     char toolType;
     char toolLevel;
 
-    short burnTime; //in ticks
-    short textureIfNoBlock; //item that returns when item is put into furnace
+    short burnTime;//in ticks
+    short textureIfNoBlock;//item that returns when item is put into furnace
 
     unsigned char damage;
 
@@ -170,18 +205,18 @@ typedef struct{
     short drops;
     char toolToBeak;
     char toolLevelToGetItem;
-    unsigned char blockType; //0=full, 1=transparent
+    unsigned char blockType;//0=full, 1=transparent
     char brightness;
 } block;
 
 typedef struct {
     int verticesLength;
-    Vector3B vertices[10][16]; //768
+    Vector3B vertices[10][16];//768
 
     int diffrentRotationAmount;
 
     int facesLength;
-    Vector4B faces[12]; //768
+    Vector4B faces[12];//768
 
     bool isFullBlock;
     bool isTransprent;
@@ -196,17 +231,17 @@ typedef struct {
 	bool canHoldRedstoneSignal;
 	bool canHaveGrassBelow;
 
-    unsigned char texureSize[12]; //96
-    Vector3B dir[10][12]; //1152
-    Vector3B normal[10][12]; //288
-    char doSideCheck[12]; //96 - 3168+16 bytes per blocktype
+    unsigned char texureSize[12];//96
+    Vector3B dir[10][12];//1152
+    Vector3B normal[10][12];//288
+    char doSideCheck[12];//96 - 3168+16 bytes per blocktype
 
     char otherBlocksRenderFace[10][12];
 } blockType;
 
 typedef struct {
     volatile bool active;
-	
+
     volatile int start;
     volatile int end;
     volatile int size;
@@ -256,7 +291,7 @@ typedef struct
   unsigned long address;
 } file_type_t;
 
-//180x320
+//216x384
 void swap(Vector2I** a, Vector2I** b) {
     Vector2I* temp = *a;
     *a = *b;
@@ -275,11 +310,11 @@ void swap(Vector2I** a, Vector2I** b) {
 #define objLength 228
 
 int resXZBuffer = 160;
-int resYZBuffer = 90;
+int resYZBuffer = 180;
 
-int renderingMode;          //0=normal, 1=no transparent, 2=wireframe
+int renderingMode;         //0=normal, 1=no transparent, 2=wireframe
 int maxSpeed = 25;
-//unsigned short ZBuffer[160*108];
+//unsigned short ZBuffer[160*180];
 unsigned short *ZBuffer;
 float gravity = 9.81f;
 
@@ -310,9 +345,9 @@ chestData allchest[32];
 int triangleLength;
 int verticesLength;
 
-short *((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())());
-char *lightmap = NULL; //behind z-buffer
-char *blockData = NULL; //behind lightmap
+short *VRAMAddress;
+char *lightmap;//behind z-buffer
+char *blockData;//behind lightmap
 
 float deltaTime;
 float deltaTimeNoSlow;
@@ -350,7 +385,7 @@ char skyBrightness = 8;
 int blockSelected = 1;
 int totalBlockAmount = 8;
 
-unsigned short *screenColor = NULL;
+unsigned short *screenColor = 0xE5200000;
 
 float destructionTimer = 0;
 float totalDestructionTimer = 0;
@@ -409,10 +444,10 @@ color_t missingTexture[256] = {
     0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a
 };
 
-color_t *textures2 = NULL;
-color_t *itemIcons2 = NULL;
-color_t *assetsInputBuffer = NULL;
-color_t *randomShit = NULL;
+color_t *textures2;
+color_t *itemIcons2;
+color_t *assetsInputBuffer;
+color_t *randomShit;
 
 const static int skyboxColors[16][128] = {
 	{
@@ -2498,8 +2533,8 @@ const static int skyboxColors[16][128] = {
 };
 /*const static color_t textures[textureBlockAmount][256] = {
     {
-		0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,    //missing texture
-		0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,    //0
+		0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,   //missing texture
+		0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,   //0
 		0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,
 		0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,
 		0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,
@@ -2516,8 +2551,8 @@ const static int skyboxColors[16][128] = {
 		0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a,0x0020,0x0020,0xf01a,0xf01a
 	},
     {
-		0x75a9,0x75a9,0x7589,0x6527,0x6527,0x6d68,0x5ce6,0x6d68,0x7dea,0x75a9,0x6d48,0x6527,0x6d47,0x6506,0x5484,0x6d68,    //grass top
-		0x75a9,0x6d68,0x8dcb,0x858a,0x858a,0x6506,0x6d47,0x6507,0x5ce6,0x960c,0x95ec,0x7589,0x6506,0x6d68,0x6527,0x6d48,    //1
+		0x75a9,0x75a9,0x7589,0x6527,0x6527,0x6d68,0x5ce6,0x6d68,0x7dea,0x75a9,0x6d48,0x6527,0x6d47,0x6506,0x5484,0x6d68,   //grass top
+		0x75a9,0x6d68,0x8dcb,0x858a,0x858a,0x6506,0x6d47,0x6507,0x5ce6,0x960c,0x95ec,0x7589,0x6506,0x6d68,0x6527,0x6d48,   //1
 		0x8deb,0xa68e,0x9e4d,0x6527,0x6d47,0x6d47,0x7588,0x7588,0x75a9,0x7dea,0x960c,0x962c,0x6527,0x54a5,0x6506,0xa66e,
 		0x54a5,0x6527,0x6d48,0x75a9,0x7588,0x7dc9,0x5ce6,0x5cc6,0x5ce6,0x6507,0x6d68,0x75a9,0x6d68,0x6d48,0x6d68,0x5ce6,
 		0x860b,0x6507,0x962c,0x6507,0x962c,0x9e2d,0x7508,0x962c,0xa68e,0x54a5,0x6506,0x960c,0x962c,0x5ce6,0x6d47,0x6d68,
@@ -2534,8 +2569,8 @@ const static int skyboxColors[16][128] = {
 		0x6527,0x75a9,0x6d47,0x5484,0x862b,0x7dc9,0x75a9,0xa68e,0x6d68,0xaecf,0x5ce6,0x6506,0x6527,0x7588,0x6d47,0x7dea
 	},
     {
-		0x75a9,0x75a9,0x7589,0x6527,0x6527,0x6d68,0x5ce6,0x6d68,0x7dea,0x75a9,0x6d48,0x6527,0x6d47,0x6506,0x5484,0x6d68,    //grass side
-		0x75a9,0x6d68,0x8dcb,0x858a,0x858a,0x59e5,0x6d47,0x6507,0x5ce6,0x960c,0x95ec,0x7589,0x6506,0x6d68,0x6527,0x6d48,    //2
+		0x75a9,0x75a9,0x7589,0x6527,0x6527,0x6d68,0x5ce6,0x6d68,0x7dea,0x75a9,0x6d48,0x6527,0x6d47,0x6506,0x5484,0x6d68,   //grass side
+		0x75a9,0x6d68,0x8dcb,0x858a,0x858a,0x59e5,0x6d47,0x6507,0x5ce6,0x960c,0x95ec,0x7589,0x6506,0x6d68,0x6527,0x6d48,   //2
 		0x8deb,0x59e5,0x9e4d,0x6527,0x6d47,0x59e5,0x7588,0x59e5,0x75a9,0x7dea,0x960c,0x962c,0x59e5,0x54a5,0x6506,0x59e5,
 		0x59e5,0x6b6d,0x59e5,0x59e5,0x7588,0x59e5,0x59e5,0x59e5,0x5ce6,0x59e5,0x6d68,0x59e5,0x7aa7,0x59e5,0x59e5,0x7aa7,
 		0x9369,0x7aa7,0x9369,0xbc2b,0x59e5,0x9369,0x7aa7,0x7aa7,0x59e5,0x59e5,0x59e5,0x6b6d,0x7aa7,0x9369,0x59e5,0x7aa7,
@@ -2552,8 +2587,8 @@ const static int skyboxColors[16][128] = {
 		0x9369,0x7aa7,0xbc2b,0x9369,0x9369,0x7aa7,0x8430,0x9369,0x9369,0x9369,0x7aa7,0x7aa7,0x9369,0x9369,0x7aa7,0x59e5
 	},
     {
-		0xbc2b,0x9369,0x9369,0x7aa7,0x7aa7,0xbc2b,0x9369,0x9369,0x7aa7,0x7aa7,0x59e5,0x7aa7,0x7aa7,0xbc2b,0x7aa7,0xbc2b,    //dirt
-		0x7aa7,0x9369,0x59e5,0x7aa7,0x7aa7,0x9369,0x8430,0x59e5,0x7aa7,0xbc2b,0x9369,0x7aa7,0x7aa7,0x9369,0x59e5,0x59e5,    //3
+		0xbc2b,0x9369,0x9369,0x7aa7,0x7aa7,0xbc2b,0x9369,0x9369,0x7aa7,0x7aa7,0x59e5,0x7aa7,0x7aa7,0xbc2b,0x7aa7,0xbc2b,   //dirt
+		0x7aa7,0x9369,0x59e5,0x7aa7,0x7aa7,0x9369,0x8430,0x59e5,0x7aa7,0xbc2b,0x9369,0x7aa7,0x7aa7,0x9369,0x59e5,0x59e5,   //3
 		0xbc2b,0x7aa7,0x7aa7,0x59e5,0xbc2b,0x7aa7,0x7aa7,0x7aa7,0xbc2b,0x7aa7,0x7aa7,0x7aa7,0x59e5,0x59e5,0xbc2b,0x7aa7,
 		0x9369,0x6b6d,0xbc2b,0x7aa7,0x9369,0x59e5,0x7aa7,0xbc2b,0x9369,0x9369,0x7aa7,0x9369,0x7aa7,0xbc2b,0x9369,0x7aa7,
 		0x9369,0x7aa7,0x9369,0xbc2b,0x59e5,0x9369,0x7aa7,0x7aa7,0x9369,0x59e5,0x7aa7,0x6b6d,0x7aa7,0x9369,0x59e5,0x7aa7,
@@ -2570,8 +2605,8 @@ const static int skyboxColors[16][128] = {
 		0x9369,0x7aa7,0xbc2b,0x9369,0x9369,0x7aa7,0x8430,0x9369,0x9369,0x9369,0x7aa7,0x7aa7,0x9369,0x9369,0x7aa7,0x59e5
 	},
     {
-		0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,0x8c71,0x8c71,0x6b4d,0x8c71,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,    //stone 
-		0x7bef,0x7bef,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x73ae,0x8c71,0x8c71,0x8c71,0x6b4d,0x7bef,0x7bef,0x73ae,    //4
+		0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,0x8c71,0x8c71,0x6b4d,0x8c71,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,   //stone
+		0x7bef,0x7bef,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x73ae,0x8c71,0x8c71,0x8c71,0x6b4d,0x7bef,0x7bef,0x73ae,   //4
 		0x7bef,0x6b4d,0x73ae,0x73ae,0x6b4d,0x73ae,0x73ae,0x73ae,0x8c71,0x73ae,0x7bef,0x7bef,0x7bef,0x8c71,0x7bef,0x7bef,
 		0x7bef,0x8c71,0x7bef,0x7bef,0x7bef,0x6b4d,0x7bef,0x8c71,0x7bef,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,
 		0x7bef,0x8c71,0x8c71,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x6b4d,
@@ -2588,12 +2623,12 @@ const static int skyboxColors[16][128] = {
 		0x73ae,0x73ae,0x73ae,0x73ae,0x6b4d,0x8c71,0x8c71,0x7bef,0x7bef,0x7bef,0x7bef,0x73ae,0x73ae,0x73ae,0x7bef,0x7bef
 	},
     {
-		0x4e86,0x19c3,0x5786,0x4724,0x1c03,0x19c3,0x19c3,0x19c3,0x35c3,0x19c3,0x19c3,0x19c3,0x19c3,0x1be3,0x19c3,0x5786,    //leave
-		0x3e04,0x19c3,0x67e8,0x4ea6,0x19c3,0x1be3,0x19c3,0x19c3,0x1be3,0x13a2,0x19c3,0x5fc7,0x5fc7,0x13c2,0x19c3,0x1be3,    //5
-		0x19c3,0x19c3,0x4645,0x19c3,0x2320,0x57a6,0x4f45,0x19c3,0x4724,0x5786,0x2444,0x57a6,0x4665,0x19c3,0x57a6,0x5786,
+		0x4e86,0x19c3,0x5786,0x4724,0x1c03,0x19c3,0x19c3,0x19c3,0x35c3,0x19c3,0x19c3,0x19c3,0x19c3,0x1be3,0x19c3,0x5786,   //leave
+		0x3e04,0x19c3,0x67e8,0x4ea6,0x19c3,0x1be3,0x19c3,0x19c3,0x1be3,0x13a2,0x19c3,0x5fc7,0x5fc7,0x13c2,0x19c3,0x1be3,   //5
+		0x19c3,0x19c3,0x4645,0x19c3,0x2384,0x57a6,0x4f45,0x19c3,0x4724,0x5786,0x2444,0x57a6,0x4665,0x19c3,0x57a6,0x5786,
 		0x19c3,0x19c3,0x19c3,0x19c3,0x19c3,0x5786,0x3e24,0x19c3,0x5786,0x4ea6,0x13c2,0x57a6,0x3e24,0x19c3,0x5786,0x4ea6,
-		0x19c3,0x4724,0x4724,0x19c3,0x19c3,0x5707,0x2320,0x19c3,0x4ea6,0x3e44,0x19c3,0x19c3,0x3e44,0x19c3,0x4665,0x3e24,
-		0x19c3,0x57a6,0x3e03,0x19c3,0x13c2,0x3e44,0x2424,0x19c3,0x2320,0x4ea6,0x19c3,0x1c03,0x19c3,0x2424,0x19c3,0x35e3,
+		0x19c3,0x4724,0x4724,0x19c3,0x19c3,0x5707,0x2384,0x19c3,0x4ea6,0x3e44,0x19c3,0x19c3,0x3e44,0x19c3,0x4665,0x3e24,
+		0x19c3,0x57a6,0x3e03,0x19c3,0x13c2,0x3e44,0x2424,0x19c3,0x2384,0x4ea6,0x19c3,0x1c03,0x19c3,0x2424,0x19c3,0x35e3,
 		0x1be3,0x4665,0x19c3,0x13c2,0x1c03,0x19c3,0x4f45,0x4f65,0x19c3,0x19c3,0x2c65,0x19c3,0x19c3,0x13c2,0x1c03,0x2424,
 		0x4f45,0x5fe7,0x19c3,0x4f65,0x5fc7,0x1c03,0x57a6,0x4665,0x19c3,0x4f65,0x67e8,0x1be3,0x19c3,0x13c2,0x19c3,0x2444,
 		0x5fe7,0x4645,0x19c3,0x4ea6,0x4665,0x2b85,0x4e86,0x4665,0x19c3,0x4665,0x4665,0x19c3,0x19c3,0x67e8,0x56c6,0x1be3,
@@ -2606,8 +2641,8 @@ const static int skyboxColors[16][128] = {
 		0x4f45,0x19c3,0x19c3,0x19c3,0x19c3,0x4ea6,0x19c3,0x1be3,0x5786,0x57a6,0x13c2,0x19c3,0x19c3,0x4645,0x1c03,0x57a6
 	},
     {
-		0x6aa6,0x6aa6,0x3963,0x6aa6,0x6aa6,0x6286,0x3963,0x3963,0x3963,0x6aa6,0x6aa6,0x3963,0x6ac7,0x6aa6,0x6aa6,0x6ac6,    //log top
-		0x6aa6,0xb48b,0xb46a,0xb48b,0xb48b,0xb48b,0xb48b,0xb48b,0xac4a,0xb46a,0xb48b,0xb48b,0xbcab,0xbcac,0xb48b,0x6265,    //6
+		0x6aa6,0x6aa6,0x3963,0x6aa6,0x6aa6,0x6286,0x3963,0x3963,0x3963,0x6aa6,0x6aa6,0x3963,0x6ac7,0x6aa6,0x6aa6,0x6ac6,   //log top
+		0x6aa6,0xb48b,0xb46a,0xb48b,0xb48b,0xb48b,0xb48b,0xb48b,0xac4a,0xb46a,0xb48b,0xb48b,0xbcab,0xbcac,0xb48b,0x6265,   //6
 		0x3963,0xb48b,0x9c09,0x9c09,0x9c29,0x93e8,0x9c29,0x9c09,0xa46a,0x9c29,0x9c29,0x9c29,0x9c29,0xa42a,0xb48b,0x6aa6,
 		0x6aa6,0xb48b,0xa44a,0xb48b,0xbccc,0xbccc,0xbccc,0xbccc,0xbccc,0xbcab,0xbccc,0xbcab,0xbccc,0x9c29,0xb48b,0x3963,
 		0x49e4,0xb46b,0x9c09,0xbccc,0xb48b,0xbcab,0xb48b,0xb48b,0xb48b,0xb48b,0xb48b,0xbcab,0xbccc,0x9c29,0xb48b,0x6aa6,
@@ -2624,8 +2659,8 @@ const static int skyboxColors[16][128] = {
 		0x6aa6,0x6ac7,0x3963,0x6aa6,0x6aa6,0x6a86,0x3963,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x3963,0x3963,0x3963,0x6aa6
 	},
     {
-		0x41c4,0x6aa6,0x6aa6,0x9bc9,0x3983,0x6ac6,0x93a8,0x41a4,0x6286,0x6a86,0x6286,0x7b07,0x6ac6,0x7b07,0x6aa6,0x9be9,    //log side
-		0x3983,0x6285,0x6ac7,0x3943,0x3983,0x9bc9,0x41a4,0x6286,0x9bc9,0x3983,0x6a86,0x9bc9,0x49e4,0x7b07,0x49e4,0x93a8,    //7
+		0x41c4,0x6aa6,0x6aa6,0x9bc9,0x3983,0x6ac6,0x93a8,0x41a4,0x6286,0x6a86,0x6286,0x7b07,0x6ac6,0x7b07,0x6aa6,0x9be9,   //log side
+		0x3983,0x6285,0x6ac7,0x3943,0x3983,0x9bc9,0x41a4,0x6286,0x9bc9,0x3983,0x6a86,0x9bc9,0x49e4,0x7b07,0x49e4,0x93a8,   //7
 		0x3963,0x5a45,0x6265,0x41a4,0x6a86,0x9bc9,0x3983,0x6286,0x9bc9,0x3963,0x6286,0x7b07,0x49e4,0x7b07,0x49e4,0x9bc9,
 		0x6ac6,0x41c4,0x6265,0x4184,0x7b07,0x7b07,0x3983,0x6a86,0x9bc9,0x3963,0x6a86,0x9bc9,0x3983,0x9be9,0x41a4,0x7b07,
 		0x6aa6,0x41a4,0x6aa6,0x6286,0x7b07,0x7b07,0x6aa6,0x6286,0x6ac7,0x41a4,0x6aa6,0x9bc9,0x3983,0x9bc9,0x3963,0x7b07,
@@ -2642,8 +2677,8 @@ const static int skyboxColors[16][128] = {
 		0x5a45,0x6a86,0x7b07,0x3983,0x6265,0x6aa6,0x6a86,0x4184,0x6aa6,0x6aa6,0x6286,0x3142,0x6286,0x6aa6,0x6285,0x7b07
 	},
     {
-		0x3b7f,0x22ff,0x22ff,0x1abf,0x1abf,0x1abf,0x22ff,0x22ff,0x22ff,0x22ff,0x22ff,0x22ff,0x3b7f,0x3b7f,0x3b7f,0x3b7f,    //water1
-		0x1abf,0x22ff,0x3b7f,0x3b7f,0x3b7f,0x3b7f,0x3b7f,0x3b7f,0x3b7f,0x3b7f,0x3b7f,0x22ff,0x22ff,0x22ff,0x1abf,0x1abf,    //8
+		0x3b7f,0x22ff,0x22ff,0x1abf,0x1abf,0x1abf,0x22ff,0x22ff,0x22ff,0x22ff,0x22ff,0x22ff,0x3b7f,0x3b7f,0x3b7f,0x3b7f,   //water1
+		0x1abf,0x22ff,0x3b7f,0x3b7f,0x3b7f,0x3b7f,0x3b7f,0x3b7f,0x3b7f,0x3b7f,0x3b7f,0x22ff,0x22ff,0x22ff,0x1abf,0x1abf,   //8
 		0x1abf,0x1abf,0x22ff,0x22ff,0x22ff,0x3b7f,0x22ff,0x22ff,0x22ff,0x22ff,0x1abf,0x3b7f,0x3b7f,0x1abf,0x1abf,0x1abf,
 		0x1abf,0x3b7f,0x3b7f,0x22ff,0x22ff,0x3b7f,0x3b7f,0x3b7f,0x3b7f,0x1abf,0x1abf,0x1abf,0x1abf,0x1abf,0x22ff,0x22ff,
 		0x3b7f,0x3b7f,0x3b7f,0x1abf,0x1abf,0x1abf,0x1abf,0x1abf,0x1abf,0x3b7f,0x22ff,0x22ff,0x22ff,0x1abf,0x22ff,0x1abf,
@@ -2660,8 +2695,8 @@ const static int skyboxColors[16][128] = {
 		0x1abf,0x1abf,0x1abf,0x1abf,0x1abf,0x1abf,0x3b7f,0x1abf,0x1abf,0x1abf,0x1abf,0x1abf,0x1abf,0x1abf,0x1abf,0x1abf
 	},
     {
-		0x10a2,0x10a2,0x10a2,0x0861,0x0861,0x0861,0x0861,0x10a2,0x10a2,0x0861,0x0020,0x0020,0x0861,0x0861,0x10a2,0x10a2, //coal block
-		0x10a2,0x10a2,0x18c3,0x2104,0x18c3,0x10a2,0x10a2,0x10a2,0x0861,0x0861,0x0861,0x2104,0x0861,0x10a2,0x10a2,0x18c3, //9
+		0x10a2,0x10a2,0x10a2,0x0861,0x0861,0x0861,0x0861,0x10a2,0x10a2,0x0861,0x0020,0x0020,0x0861,0x0861,0x10a2,0x10a2,//coal block
+		0x10a2,0x10a2,0x18c3,0x2104,0x18c3,0x10a2,0x10a2,0x10a2,0x0861,0x0861,0x0861,0x2104,0x0861,0x10a2,0x10a2,0x18c3,//9
 		0x0861,0x0861,0x2104,0x18c3,0x10a2,0x10a2,0x0861,0x0861,0x0861,0x0861,0x18c3,0x18c3,0x10a2,0x0861,0x10a2,0x10a2,
 		0x0861,0x18c3,0x18c3,0x18c3,0x10a2,0x0861,0x0020,0x0861,0x2104,0x2104,0x18c3,0x10a2,0x10a2,0x10a2,0x18c3,0x10a2,
 		0x0861,0x10a2,0x0861,0x10a2,0x0861,0x0861,0x0861,0x2945,0x18c3,0x18c3,0x18c3,0x10a2,0x2104,0x18c3,0x10a2,0x10a2,
@@ -2678,8 +2713,8 @@ const static int skyboxColors[16][128] = {
 		0x10a2,0x10a2,0x18c3,0x0861,0x0861,0x0861,0x0861,0x0861,0x0861,0x0020,0x0020,0x0861,0x0861,0x0861,0x10a2,0x0861
 	},
     {
-		0xbdf7,0xb5b6,0xb5b6,0xbdd7,0xbdf7,0xc618,0xc638,0xc618,0xc618,0xc618,0xc638,0xbdd7,0xbdd7,0xbdd7,0xbdd7,0xbdd7, //iron block
-		0xce59,0xef5d,0xef5d,0xef5d,0xef7d,0xef7d,0xef7d,0xef7d,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xbdf7, //10
+		0xbdf7,0xb5b6,0xb5b6,0xbdd7,0xbdf7,0xc618,0xc638,0xc618,0xc618,0xc618,0xc638,0xbdd7,0xbdd7,0xbdd7,0xbdd7,0xbdd7,//iron block
+		0xce59,0xef5d,0xef5d,0xef5d,0xef7d,0xef7d,0xef7d,0xef7d,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xbdf7,//10
 		0xc638,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xbdf7,
 		0xb5b6,0xdefb,0xdefb,0xdefb,0xdefb,0xdefb,0xdefb,0xe71c,0xe71c,0xe71c,0xe71c,0xdedb,0xdedb,0xd6ba,0xd6ba,0xb596,
 		0xc638,0xf79e,0xef7d,0xef7d,0xef7d,0xf79e,0xef7d,0xef7d,0xef7d,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xe73c,0xbdf7,
@@ -2696,8 +2731,8 @@ const static int skyboxColors[16][128] = {
 		0xbdf7,0xbdd7,0xbdd7,0xbdd7,0xbdd7,0xbdd7,0xbdd7,0xb5b6,0xbdf7,0xbdf7,0xbdf7,0xbdf7,0xb5b6,0xb5b6,0xb5b6,0xb5b6
 	},
     {
-		0xdd65,0xdd65,0xdd85,0xe5c5,0xe626,0xee67,0xee87,0xee67,0xee46,0xee27,0xee88,0xeea8,0xeec9,0xeee9,0xf6ea,0xee67, //gold block
-		0xe648,0xff4c,0xff4b,0xff6b,0xffab,0xffab,0xffaa,0xffab,0xffab,0xff8b,0xffab,0xffaa,0xffaa,0xff8a,0xff89,0xee67, //11
+		0xdd65,0xdd65,0xdd85,0xe5c5,0xe626,0xee67,0xee87,0xee67,0xee46,0xee27,0xee88,0xeea8,0xeec9,0xeee9,0xf6ea,0xee67,//gold block
+		0xe648,0xff4c,0xff4b,0xff6b,0xffab,0xffab,0xffaa,0xffab,0xffab,0xff8b,0xffab,0xffaa,0xffaa,0xff8a,0xff89,0xee67,//11
 		0xee88,0xffed,0xffed,0xffed,0xffed,0xffea,0xffea,0xffca,0xffcb,0xffcb,0xffca,0xffc9,0xffa9,0xff88,0xff87,0xee65,
 		0xee88,0xffed,0xffed,0xffed,0xffed,0xffea,0xffea,0xffea,0xffcb,0xffcb,0xffc9,0xffc9,0xffa8,0xffc8,0xffc8,0xee66,
 		0xee88,0xffea,0xffed,0xffea,0xffc9,0xffe9,0xffe9,0xffea,0xffca,0xffcb,0xffc9,0xffa8,0xffa8,0xffa8,0xffa8,0xee87,
@@ -2714,8 +2749,8 @@ const static int skyboxColors[16][128] = {
 		0xeec7,0xeea7,0xeea7,0xeea7,0xee87,0xee87,0xf687,0xee66,0xee66,0xf687,0xfe66,0xfe66,0xfe46,0xfe26,0xfe06,0xfde6
 	},
     {
-		0x0574,0x0574,0x0574,0x0574,0x0574,0x05f6,0x0617,0x05f6,0x05f6,0x05f6,0x0637,0x0637,0x0e58,0x1e78,0x1e78,0x05f6, //diamond block
-		0x05f6,0x66fb,0x66fb,0x6f1b,0x873c,0x873c,0x873c,0x873c,0x7f1b,0x7f1b,0x873c,0x873c,0x7f1b,0x7f1b,0x771b,0x05f6, //12
+		0x0574,0x0574,0x0574,0x0574,0x0574,0x05f6,0x0617,0x05f6,0x05f6,0x05f6,0x0637,0x0637,0x0e58,0x1e78,0x1e78,0x05f6,//diamond block
+		0x05f6,0x66fb,0x66fb,0x6f1b,0x873c,0x873c,0x873c,0x873c,0x7f1b,0x7f1b,0x873c,0x873c,0x7f1b,0x7f1b,0x771b,0x05f6,//12
 		0x0617,0x8f3c,0x8f3c,0x8f3c,0x975c,0x8f3c,0x8f3c,0x8f3c,0x873c,0x873c,0x8f3c,0x873c,0x7f1b,0x6efb,0x5efa,0x05f6,
 		0x0637,0x975c,0x975c,0x8f3c,0x8f3c,0x975c,0x9f5c,0x975c,0x975c,0x873c,0x873c,0x873c,0x7f1b,0x7f1b,0x7f1b,0x05f6,
 		0x0637,0x975c,0x8f3c,0x975c,0x873c,0x975c,0x975c,0x975c,0x975c,0x975c,0x873c,0x7f1b,0x7f1b,0x771b,0x771b,0x0617,
@@ -2732,8 +2767,8 @@ const static int skyboxColors[16][128] = {
 		0x0616,0x0616,0x0616,0x0616,0x0616,0x0616,0x0637,0x0616,0x0617,0x0658,0x0637,0x0637,0x0637,0x0617,0x05f6,0x05d6
 	},
     {
-		0x9cab,0xdeb4,0xdeb3,0xdeb3,0xd692,0xdeb3,0xd672,0xde93,0xe6f4,0xdeb4,0xde93,0xd693,0xd652,0xd672,0xce31,0xde93,    //sand
-		0xdeb4,0xde93,0xe6b5,0xe6d6,0xbdb1,0xd672,0xd652,0xd672,0xc5d0,0xe6d5,0xfffb,0xdeb3,0xd672,0xde93,0xd693,0xef15,    //13
+		0x9cab,0xdeb4,0xdeb3,0xdeb3,0xd692,0xdeb3,0xd672,0xde93,0xe6f4,0xdeb4,0xde93,0xd693,0xd652,0xd672,0xce31,0xde93,   //sand
+		0xdeb4,0xde93,0xe6b5,0xe6d6,0xbdb1,0xd672,0xd652,0xd672,0xc5d0,0xe6d5,0xfffb,0xdeb3,0xd672,0xde93,0xd693,0xef15,   //13
 		0xe6b5,0xef16,0xff78,0xd673,0xde93,0xd693,0xdeb3,0xdeb3,0xdeb3,0xe6f4,0xe6d5,0xeef6,0xc611,0xce52,0xd672,0xff78,
 		0xce31,0xd673,0xde93,0xdeb4,0xd652,0xded4,0xd652,0xce52,0xd672,0xd672,0xde93,0xe6f4,0xdeb3,0xde93,0xdeb3,0xbdd0,
 		0xe6f4,0xd672,0xeef6,0xd672,0xeef6,0xeef6,0xe6d5,0xeef6,0xe6d5,0xce32,0xd672,0xe6d5,0xd653,0xc5f0,0xded4,0xce11,
@@ -2750,8 +2785,8 @@ const static int skyboxColors[16][128] = {
 		0xd673,0xe6f4,0xd693,0xc5d0,0xfffa,0xded4,0xc611,0xef16,0xdeb3,0xf737,0xd652,0xd672,0xd673,0xdeb3,0xd693,0xc611
 	},
     {
-		0xbccc,0x9c29,0x9c29,0x9c29,0x9c29,0xbccc,0xbccc,0xb48b,0x9c29,0xbccc,0xbccc,0xbccc,0xbccc,0xbccc,0xbccc,0x9c29,    //plank
-		0xbccc,0xbccc,0xb48b,0x72e7,0xb48b,0xb48b,0x9c29,0x9c29,0x9c29,0x9c29,0x9c29,0xb48b,0x9c29,0xb48b,0xbccc,0x9c29,    //14
+		0xbccc,0x9c29,0x9c29,0x9c29,0x9c29,0xbccc,0xbccc,0xb48b,0x9c29,0xbccc,0xbccc,0xbccc,0xbccc,0xbccc,0xbccc,0x9c29,   //plank
+		0xbccc,0xbccc,0xb48b,0x72e7,0xb48b,0xb48b,0x9c29,0x9c29,0x9c29,0x9c29,0x9c29,0xb48b,0x9c29,0xb48b,0xbccc,0x9c29,   //14
 		0xbccc,0xbccc,0x9c29,0x9c29,0x9c29,0x9c29,0xb48b,0xb48b,0xbccc,0xbccc,0xbccc,0xb48b,0x72e7,0xbccc,0xbccc,0x9c29,
 		0x6aa6,0x6aa6,0x6aa6,0x72e7,0x72e7,0x72e7,0x72e7,0x72e7,0x72e7,0x72e7,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x72e7,0x72e7,
 		0xbccc,0x9c29,0x9c29,0x9c29,0x9c29,0xbccc,0xbccc,0x9c29,0xbccc,0x9c29,0x9c29,0x72e7,0xb48b,0xb48b,0xb48b,0xbccc,
@@ -2768,8 +2803,8 @@ const static int skyboxColors[16][128] = {
 		0x72e7,0x72e7,0x72e7,0x7b07,0x6aa6,0x6aa6,0x7b07,0x6aa6,0x72e7,0x72e7,0x72e7,0x6aa6,0x49e4,0x6aa6,0x6aa6,0x72e7
 	},
     {
-		0x52aa,0x3186,0x3186,0x3186,0x3186,0x52aa,0x94b2,0x94b2,0x0020,0x94b2,0x52aa,0x3186,0x3186,0x3186,0x3186,0x52aa,    //bedrock
-		0x52aa,0x52aa,0x94b2,0x94b2,0x94b2,0x94b2,0x94b2,0x94b2,0x3186,0x94b2,0x94b2,0x94b2,0x0020,0x52aa,0x52aa,0x3186,    //15
+		0x52aa,0x3186,0x3186,0x3186,0x3186,0x52aa,0x94b2,0x94b2,0x0020,0x94b2,0x52aa,0x3186,0x3186,0x3186,0x3186,0x52aa,   //bedrock
+		0x52aa,0x52aa,0x94b2,0x94b2,0x94b2,0x94b2,0x94b2,0x94b2,0x3186,0x94b2,0x94b2,0x94b2,0x0020,0x52aa,0x52aa,0x3186,   //15
 		0x52aa,0x0020,0x3186,0x3186,0x0020,0x3186,0x3186,0x3186,0x94b2,0x3186,0x52aa,0x52aa,0x52aa,0x94b2,0x52aa,0x52aa,
 		0x52aa,0x94b2,0x52aa,0x52aa,0x52aa,0x0020,0x52aa,0x94b2,0x52aa,0x52aa,0x3186,0x3186,0x3186,0x3186,0x3186,0x52aa,
 		0x52aa,0x94b2,0x94b2,0x3186,0x3186,0x3186,0x3186,0x3186,0x3186,0x3186,0x94b2,0x94b2,0x94b2,0x94b2,0x94b2,0x0020,
@@ -2786,8 +2821,8 @@ const static int skyboxColors[16][128] = {
 		0x3186,0x3186,0x3186,0x3186,0x0020,0x94b2,0x94b2,0x52aa,0x52aa,0x52aa,0x52aa,0x3186,0x3186,0x3186,0x52aa,0x52aa
 	},
     {
-		0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,0x8c71,0x8c71,0x6b4d,0x8c71,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,    //coal ore
-		0x7bef,0x7bef,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x73ae,0x8c71,0x8c71,0x8c71,0x6b4d,0x7bef,0x7bef,0x73ae,    //16
+		0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,0x8c71,0x8c71,0x6b4d,0x8c71,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,   //coal ore
+		0x7bef,0x7bef,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x73ae,0x8c71,0x8c71,0x8c71,0x6b4d,0x7bef,0x7bef,0x73ae,   //16
 		0x7bef,0x6b4d,0x73ae,0x73ae,0x31a6,0x73ae,0x73ae,0x73ae,0x8c71,0x73ae,0x7bef,0x7bef,0x39e7,0x31a6,0x7bef,0x7bef,
 		0x7bef,0x8c71,0x7bef,0x7bef,0x7bef,0x6b4d,0x7bef,0x39e7,0x31a6,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,
 		0x7bef,0x8c71,0x8c71,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x6b4d,
@@ -2804,8 +2839,8 @@ const static int skyboxColors[16][128] = {
 		0x73ae,0x73ae,0x73ae,0x73ae,0x6b4d,0x8c71,0x8c71,0x7bef,0x7bef,0x7bef,0x7bef,0x73ae,0x73ae,0x73ae,0x7bef,0x7bef
 	},
     {
-		0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,0x8c71,0x8c71,0x6b4d,0x8c71,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,    //iron ore
-		0x7bef,0x7bef,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x73ae,0x8c71,0x8c71,0x8c71,0x6b4d,0x7bef,0x7bef,0x73ae,    //17
+		0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,0x8c71,0x8c71,0x6b4d,0x8c71,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,   //iron ore
+		0x7bef,0x7bef,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x73ae,0x8c71,0x8c71,0x8c71,0x6b4d,0x7bef,0x7bef,0x73ae,   //17
 		0x7bef,0x6b4d,0x73ae,0x73ae,0xbcd0,0x73ae,0x73ae,0x73ae,0x8c71,0x73ae,0x7bef,0x7bef,0xdd72,0xbcd0,0x7bef,0x7bef,
 		0x7bef,0x8c71,0x7bef,0x7bef,0x7bef,0x6b4d,0x7bef,0xdd72,0xac6e,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,
 		0x7bef,0x8c71,0x8c71,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x6b4d,
@@ -2822,8 +2857,8 @@ const static int skyboxColors[16][128] = {
 		0x73ae,0x73ae,0x73ae,0x73ae,0x6b4d,0x8c71,0x8c71,0x7bef,0x7bef,0x7bef,0x7bef,0x73ae,0x73ae,0x73ae,0x7bef,0x7bef
 	},
     {
-		0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,0x8c71,0x8c71,0x6b4d,0x8c71,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,    //gold ore
-		0x7bef,0x7bef,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x73ae,0x8c71,0x8c71,0x8c71,0x6b4d,0x7bef,0x7bef,0x73ae,    //18
+		0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,0x8c71,0x8c71,0x6b4d,0x8c71,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,   //gold ore
+		0x7bef,0x7bef,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x73ae,0x8c71,0x8c71,0x8c71,0x6b4d,0x7bef,0x7bef,0x73ae,   //18
 		0x7bef,0x6b4d,0x73ae,0x73ae,0xff69,0x73ae,0x73ae,0x73ae,0x8c71,0x73ae,0x7bef,0x7bef,0xfff6,0xff69,0x7bef,0x7bef,
 		0x7bef,0x8c71,0x7bef,0x7bef,0x7bef,0x6b4d,0x7bef,0xfff6,0xfd65,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,
 		0x7bef,0x8c71,0x8c71,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x6b4d,
@@ -2840,8 +2875,8 @@ const static int skyboxColors[16][128] = {
 		0x73ae,0x73ae,0x73ae,0x73ae,0x6b4d,0x8c71,0x8c71,0x7bef,0x7bef,0x7bef,0x7bef,0x73ae,0x73ae,0x73ae,0x7bef,0x7bef
 	},
     {
-		0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x5aeb,0x630c,0x73ae,0x6b4d,0x8c71,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,    //emerald ore
-		0x7bef,0x7bef,0x8c71,0x6b6d,0x5aeb,0x5acb,0xdffd,0x16ec,0x630c,0x8c71,0x8c71,0x8c71,0x6b4d,0x7bef,0x7bef,0x73ae,    //19
+		0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x5aeb,0x630c,0x73ae,0x6b4d,0x8c71,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,   //emerald ore
+		0x7bef,0x7bef,0x8c71,0x6b6d,0x5aeb,0x5acb,0xdffd,0x16ec,0x630c,0x8c71,0x8c71,0x8c71,0x6b4d,0x7bef,0x7bef,0x73ae,   //19
 		0x7bef,0x6b4d,0x73ae,0x73ae,0x6b4d,0x630c,0x16ec,0x03c3,0x73ae,0x73ae,0x7bef,0x7bef,0x6b4d,0x73ae,0x7bef,0x7bef,
 		0x7bef,0x8c71,0x7bef,0x7bef,0x6b4d,0x52aa,0x6b4d,0x73ae,0x7bef,0x7bef,0x73ae,0x630c,0xdffd,0x16ec,0x630c,0x7bef,
 		0x7bef,0x8c71,0x8c71,0x630c,0xdffd,0x16ec,0x630c,0x630c,0x73ae,0x73ae,0x8c71,0x630c,0x16ec,0x03c3,0x73ae,0x6b4d,
@@ -2858,8 +2893,8 @@ const static int skyboxColors[16][128] = {
 		0x73ae,0x630c,0x630c,0x73ae,0x6b4d,0x8c71,0x8c71,0x7bef,0x7bef,0x7bef,0x7bef,0x73ae,0x73ae,0x73ae,0x7bef,0x7bef
 	},
     {
-		0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,0x8c71,0x8c71,0x6b4d,0x8c71,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,    //diamond ore
-		0x7bef,0x7bef,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x73ae,0x8c71,0x8c71,0x8c71,0x6b4d,0x7bef,0x7bef,0x73ae,    //20
+		0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,0x8c71,0x8c71,0x6b4d,0x8c71,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,   //diamond ore
+		0x7bef,0x7bef,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x73ae,0x8c71,0x8c71,0x8c71,0x6b4d,0x7bef,0x7bef,0x73ae,   //20
 		0x7bef,0x6b4d,0x73ae,0x73ae,0x767f,0x73ae,0x73ae,0x73ae,0x8c71,0x73ae,0x7bef,0x7bef,0xc73f,0x767f,0x7bef,0x7bef,
 		0x7bef,0x8c71,0x7bef,0x7bef,0x7bef,0x6b4d,0x7bef,0xc73f,0x5f7e,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,
 		0x7bef,0x8c71,0x8c71,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x6b4d,
@@ -2876,8 +2911,8 @@ const static int skyboxColors[16][128] = {
 		0x73ae,0x73ae,0x73ae,0x73ae,0x6b4d,0x8c71,0x8c71,0x7bef,0x7bef,0x7bef,0x7bef,0x73ae,0x73ae,0x73ae,0x7bef,0x7bef
 	},
     {
-		0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,0x8c71,0x8c71,0x6b4d,0x8c71,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,    //lapiz ore
-		0x7bef,0x7bef,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x73ae,0x8c71,0x8c71,0x8c71,0x6b4d,0x7bef,0x7bef,0x73ae,    //21
+		0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,0x8c71,0x8c71,0x6b4d,0x8c71,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,   //lapiz ore
+		0x7bef,0x7bef,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x73ae,0x8c71,0x8c71,0x8c71,0x6b4d,0x7bef,0x7bef,0x73ae,   //21
 		0x7bef,0x6b4d,0x1ab8,0x2b73,0x1ad8,0x1a54,0x73ae,0x73ae,0x8c71,0x73ae,0x7bef,0x7bef,0x0937,0x1a54,0x7bef,0x7bef,
 		0x7bef,0x8c71,0x7bef,0x7bef,0x7bef,0x1238,0x7bef,0x1a91,0x1237,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,
 		0x7bef,0x8c71,0x8c71,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x6b4d,
@@ -2894,8 +2929,8 @@ const static int skyboxColors[16][128] = {
 		0x73ae,0x73ae,0x73ae,0x73ae,0x6b4d,0x8c71,0x8c71,0x7bef,0x7bef,0x7bef,0x7bef,0x73ae,0x73ae,0x73ae,0x7bef,0x7bef
 	},
     {
-		0xfdeb,0x7ac5,0x49c2,0x49c2,0x49c2,0x49c2,0xfdeb,0x7ac5,0x7369,0x7369,0x7369,0xfdeb,0xfdeb,0xc468,0x7ac5,0x7369,    //glowstone
-		0x7ac5,0xffff,0xc468,0x49c2,0x7369,0xfdeb,0xc468,0xffff,0x49c2,0x7369,0xfdeb,0x7ac5,0xfeb3,0xffff,0xc468,0x49c2,    //22
+		0xfdeb,0x7ac5,0x49c2,0x49c2,0x49c2,0x49c2,0xfdeb,0x7ac5,0x7369,0x7369,0x7369,0xfdeb,0xfdeb,0xc468,0x7ac5,0x7369,   //glowstone
+		0x7ac5,0xffff,0xc468,0x49c2,0x7369,0xfdeb,0xc468,0xffff,0x49c2,0x7369,0xfdeb,0x7ac5,0xfeb3,0xffff,0xc468,0x49c2,   //22
 		0x7ac5,0x7ac5,0x49c2,0x7369,0x7ac5,0x7369,0x49c2,0x7ac5,0x49c2,0x7369,0x7369,0x49c2,0xc468,0xc468,0x49c2,0x7369,
 		0x7369,0x49c2,0x7369,0xfdeb,0x7ac5,0x7ac5,0x7369,0x49c2,0x7369,0xfdeb,0x7ac5,0x7369,0x49c2,0x49c2,0x7369,0x7369,
 		0x49c2,0x7369,0xfdeb,0xc468,0xfeb3,0xfeb3,0xc468,0x49c2,0xfdeb,0xc468,0x7ac5,0x49c2,0x7369,0x7369,0xfdeb,0xfdeb,
@@ -2912,8 +2947,8 @@ const static int skyboxColors[16][128] = {
 		0x7369,0x49c2,0xc468,0xc468,0x7ac5,0x7ac5,0x49c2,0x7369,0x7369,0x7369,0x7369,0x49c2,0x49c2,0x49c2,0x49c2,0x7369
 	},
     {
-		0x7bef,0x632c,0x630c,0xb596,0xad55,0x7bef,0x738e,0xad55,0xa514,0x7bef,0x632c,0x528a,0x5acb,0x6b6d,0xa534,0xb596,    //cobblestone
-		0x8c51,0x630c,0xad55,0xad75,0x8430,0x632c,0xad55,0x8430,0xb596,0x8c71,0x8c71,0x630c,0x630c,0xa514,0x7bef,0x7bef,    //23
+		0x7bef,0x632c,0x630c,0xb596,0xad55,0x7bef,0x738e,0xad55,0xa514,0x7bef,0x632c,0x528a,0x5acb,0x6b6d,0xa534,0xb596,   //cobblestone
+		0x8c51,0x630c,0xad55,0xad75,0x8430,0x632c,0xad55,0x8430,0xb596,0x8c71,0x8c71,0x630c,0x630c,0xa514,0x7bef,0x7bef,   //23
 		0x630c,0xa514,0x7bcf,0x7bef,0x7bef,0x528a,0xad55,0x9492,0x7bef,0x7bef,0x8430,0x52aa,0x632c,0x630c,0x94b2,0x8410,
 		0x630c,0x630c,0x9cd3,0x7bef,0x738e,0x52aa,0x7bef,0x8410,0x8c71,0x7bef,0x52aa,0x5acb,0xa534,0x630c,0x630c,0x528a,
 		0x9cd3,0xad55,0x52aa,0x52aa,0x52aa,0x52aa,0x6b4d,0x7bef,0x528a,0x52aa,0xad55,0x9cd3,0x7bef,0x7bef,0x630c,0x6b6d,
@@ -2930,8 +2965,8 @@ const static int skyboxColors[16][128] = {
 		0x8430,0x52aa,0x73ae,0x8430,0x7bef,0x52aa,0x632c,0xa514,0x7bef,0x7bef,0x528a,0x6b4d,0xa514,0xad55,0x630c,0x8410
 	},
     {
-		0x18a1,0x18a1,0x0840,0x18a1,0x18a1,0x1881,0x0840,0x0840,0x0840,0x18a1,0x18a1,0x0840,0x18a1,0x18a1,0x18a1,0x18a1,    //crafting table top
-		0x18a1,0xb48b,0xb46a,0x2902,0xab88,0xab88,0xab88,0xab88,0xab68,0xab88,0xab88,0xab88,0x2922,0xbcac,0xb48b,0x1881,    //24
+		0x18a1,0x18a1,0x0840,0x18a1,0x18a1,0x1881,0x0840,0x0840,0x0840,0x18a1,0x18a1,0x0840,0x18a1,0x18a1,0x18a1,0x18a1,   //crafting table top
+		0x18a1,0xb48b,0xb46a,0x2902,0xab88,0xab88,0xab88,0xab88,0xab68,0xab88,0xab88,0xab88,0x2922,0xbcac,0xb48b,0x1881,   //24
 		0x0840,0xb48b,0x20e2,0xa347,0xa347,0x9b27,0xa347,0xa347,0xa388,0xa347,0xa347,0xa347,0xa347,0x2102,0xb48b,0x18a1,
 		0x18a1,0x2902,0xa368,0x51a4,0x4963,0x51c4,0x51c4,0x51c4,0x4963,0x4943,0x51c4,0x51a4,0x51c4,0xa347,0x2902,0x0840,
 		0x1061,0xab88,0xa347,0x51c4,0x9ac6,0xa2e6,0x51a4,0xab88,0xab88,0x4943,0x9ac6,0xb3a9,0x51c4,0xa347,0xab88,0x18a1,
@@ -2948,8 +2983,8 @@ const static int skyboxColors[16][128] = {
 		0x18a1,0x18a1,0x0840,0x18a1,0x18a1,0x5122,0x4902,0x5122,0x5122,0x5122,0x5122,0x18a1,0x0840,0x0840,0x0840,0x18a1
 	},
     {
-		0x18a1,0x9c29,0x9c29,0x9c29,0x9c29,0x2922,0xb3a9,0x5963,0x5963,0xb3a9,0x2922,0xbccc,0xbccc,0xbccc,0xbccc,0x18a1,    //crafting table side
-		0x18a1,0xbccc,0xb48b,0x72e7,0xb48b,0xb48b,0x2102,0x5963,0x5963,0x2102,0x9c29,0xb48b,0x9c29,0xb48b,0xbccc,0x18a1,    //25
+		0x18a1,0x9c29,0x9c29,0x9c29,0x9c29,0x2922,0xb3a9,0x5963,0x5963,0xb3a9,0x2922,0xbccc,0xbccc,0xbccc,0xbccc,0x18a1,   //crafting table side
+		0x18a1,0xbccc,0xb48b,0x72e7,0xb48b,0xb48b,0x2102,0x5963,0x5963,0x2102,0x9c29,0xb48b,0x9c29,0xb48b,0xbccc,0x18a1,   //25
 		0x18a1,0xbccc,0x9c29,0x9c29,0x7ac6,0x9c29,0xb48b,0x2902,0x2922,0xbccc,0xbccc,0xb48b,0x72e7,0xbccc,0xbccc,0x18a1,
 		0x18a1,0x6aa6,0x6aa6,0x49e4,0x49e4,0x72e7,0x72e7,0x18a1,0x18a1,0x72e7,0x41a4,0x6aa6,0x6aa6,0x6aa6,0x72e7,0x18a1,
 		0x18a1,0x9c29,0x9c29,0x7ac6,0x9c29,0xbccc,0xbccc,0x2102,0x2922,0x9c29,0x7ac6,0x72e7,0xb48b,0xb48b,0xb48b,0x18a1,
@@ -2966,8 +3001,8 @@ const static int skyboxColors[16][128] = {
 		0x18a1,0x72e7,0x72e7,0x7b07,0x6aa6,0x6aa6,0x7b07,0x18a1,0x18a1,0x72e7,0x72e7,0x6aa6,0x49e4,0x6aa6,0x6aa6,0x18a1
 	},
     {
-		0xda23,0xc9e2,0xb1c2,0xa1a2,0xda23,0xc9e2,0xb1c2,0xa1a2,0xda23,0xc9e2,0xb1c2,0xa1a2,0xda23,0xc9e2,0xb1c2,0xa1a2,    //tnt side              
-		0xda23,0xc1e2,0xa9a2,0x9162,0xda23,0xc1e2,0xa9a2,0x9162,0xda23,0xc1e2,0xa9a2,0x9162,0xda23,0xc1e2,0xa9a2,0x9162,    //26
+		0xda23,0xc9e2,0xb1c2,0xa1a2,0xda23,0xc9e2,0xb1c2,0xa1a2,0xda23,0xc9e2,0xb1c2,0xa1a2,0xda23,0xc9e2,0xb1c2,0xa1a2,   //tnt side
+		0xda23,0xc1e2,0xa9a2,0x9162,0xda23,0xc1e2,0xa9a2,0x9162,0xda23,0xc1e2,0xa9a2,0x9162,0xda23,0xc1e2,0xa9a2,0x9162,   //26
 		0xda23,0xc1e2,0xa9a2,0x9162,0xda23,0xc1e2,0xa9a2,0x9162,0xda23,0xc1e2,0xa9a2,0x9162,0xda23,0xc1e2,0xa9a2,0x9162,
 		0xda23,0xc1e2,0xa9a2,0x9162,0xda23,0xc1e2,0xa9a2,0x9162,0xda23,0xc1e2,0xa9a2,0x9162,0xda23,0xc1e2,0xa9a2,0x9162,
 		0xda23,0xc1e2,0xa9a2,0x9162,0xda23,0xc1e2,0xa9a2,0x9162,0xda23,0xc1e2,0xa9a2,0x9162,0xda23,0xc1e2,0xa9a2,0x9162,
@@ -2984,8 +3019,8 @@ const static int skyboxColors[16][128] = {
 		0xc1e2,0xb1a2,0xa182,0x9162,0xc1e2,0xb1a2,0xa182,0x9162,0xc1e2,0xb1a2,0xa182,0x9162,0xc1e2,0xb1a2,0xa182,0x9162
 	},
     {
-		0xda23,0xda23,0xda23,0xa9a2,0xda23,0xda23,0xda23,0xa9a2,0xda23,0xda23,0xda23,0xa9a2,0xda23,0xda23,0xda23,0xa9a2,    //tnt top
-		0xda23,0x8c71,0x8c71,0x9162,0xda23,0x8c71,0x8c71,0x9162,0xda23,0x8c71,0x8c71,0x9162,0xda23,0x8c71,0x8c71,0x9162,    //27
+		0xda23,0xda23,0xda23,0xa9a2,0xda23,0xda23,0xda23,0xa9a2,0xda23,0xda23,0xda23,0xa9a2,0xda23,0xda23,0xda23,0xa9a2,   //tnt top
+		0xda23,0x8c71,0x8c71,0x9162,0xda23,0x8c71,0x8c71,0x9162,0xda23,0x8c71,0x8c71,0x9162,0xda23,0x8c71,0x8c71,0x9162,   //27
 		0xda23,0x8c71,0x52aa,0x9162,0xda23,0x8c71,0x52aa,0x0020,0x0020,0x52aa,0x8c71,0x9162,0xda23,0x52aa,0x8c71,0x9162,
 		0xa9a2,0x9162,0x9162,0x52aa,0xa9a2,0x9162,0x52aa,0x9162,0x52aa,0x0020,0x9162,0x9162,0x52aa,0x9162,0x9162,0x9162,
 		0xda23,0xda23,0xda23,0xa9a2,0x52aa,0xda23,0x52aa,0xa9a2,0x52aa,0xda23,0x0020,0x0020,0x52aa,0xda23,0xda23,0xa9a2,
@@ -3002,8 +3037,8 @@ const static int skyboxColors[16][128] = {
 		0xa9a2,0x9162,0x9162,0x9162,0xa9a2,0x9162,0x9162,0x9162,0xa9a2,0x9162,0x9162,0x9162,0xa9a2,0x9162,0x9162,0x9162
 	},
     {
-		0xda23,0xda23,0xda23,0xa9a2,0xda23,0xda23,0xda23,0xa9a2,0xda23,0xda23,0xda23,0xa9a2,0xda23,0xda23,0xda23,0xa9a2,    //tnt bottom
-		0xda23,0x8c71,0x8c71,0x9162,0xda23,0x8c71,0x8c71,0x9162,0xda23,0x8c71,0x8c71,0x9162,0xda23,0x8c71,0x8c71,0x9162,    //28
+		0xda23,0xda23,0xda23,0xa9a2,0xda23,0xda23,0xda23,0xa9a2,0xda23,0xda23,0xda23,0xa9a2,0xda23,0xda23,0xda23,0xa9a2,   //tnt bottom
+		0xda23,0x8c71,0x8c71,0x9162,0xda23,0x8c71,0x8c71,0x9162,0xda23,0x8c71,0x8c71,0x9162,0xda23,0x8c71,0x8c71,0x9162,   //28
 		0xda23,0x8c71,0x8c71,0x9162,0xda23,0x8c71,0x8c71,0x9162,0xda23,0x8c71,0x8c71,0x9162,0xda23,0x8c71,0x8c71,0x9162,
 		0xa9a2,0x9162,0x9162,0x9162,0xa9a2,0x9162,0x9162,0x9162,0xa9a2,0x9162,0x9162,0x9162,0xa9a2,0x9162,0x9162,0x9162,
 		0xda23,0xda23,0xda23,0xa9a2,0xda23,0xda23,0xda23,0xa9a2,0xda23,0xda23,0xda23,0xa9a2,0xda23,0xda23,0xda23,0xa9a2,
@@ -3020,8 +3055,8 @@ const static int skyboxColors[16][128] = {
 		0xa9a2,0x9162,0x9162,0x9162,0xa9a2,0x9162,0x9162,0x9162,0xa9a2,0x9162,0x9162,0x9162,0xa9a2,0x9162,0x9162,0x9162
 	},
     {
-		0x39c7,0x31a6,0x31a6,0x3186,0x3186,0x2965,0x2965,0x2965,0x2124,0x39c7,0x39c7,0x31a6,0x2965,0x2124,0x31a6,0x3186, //furnace top/bottom
-		0x39c7,0x6b6d,0x5acb,0x630c,0x4228,0x52aa,0x738e,0x738e,0x4a69,0x630c,0x632c,0x630c,0x52aa,0x4228,0x52aa,0x3186, //29
+		0x39c7,0x31a6,0x31a6,0x3186,0x3186,0x2965,0x2965,0x2965,0x2124,0x39c7,0x39c7,0x31a6,0x2965,0x2124,0x31a6,0x3186,//furnace top/bottom
+		0x39c7,0x6b6d,0x5acb,0x630c,0x4228,0x52aa,0x738e,0x738e,0x4a69,0x630c,0x632c,0x630c,0x52aa,0x4228,0x52aa,0x3186,//29
 		0x2945,0x528a,0x7bcf,0x52aa,0x630c,0x8c71,0x8c71,0x7bcf,0x632c,0x528a,0x8430,0x7bef,0x5aeb,0x7bcf,0x528a,0x3186,
 		0x2965,0x528a,0x5aeb,0x6b6d,0x9cd3,0x632c,0x8c51,0x8430,0x5aeb,0x6b6d,0x5acb,0x5acb,0x6b4d,0x8c51,0x6b4d,0x2945,
 		0x39c7,0x738e,0x7bcf,0x6b4d,0x8c71,0x7bcf,0x7bcf,0x5acb,0x6b4d,0x8c51,0x94b2,0x94b2,0x738e,0x8430,0x738e,0x2124,
@@ -3038,8 +3073,8 @@ const static int skyboxColors[16][128] = {
 		0x39c7,0x31a6,0x31a6,0x3186,0x3186,0x2965,0x2965,0x2965,0x2124,0x39c7,0x39c7,0x31a6,0x2965,0x2124,0x31a6,0x3186
 	},
     {
-		0x39c7,0x31a6,0x31a6,0x3186,0x3186,0x2965,0x2965,0x2965,0x2124,0x39c7,0x39c7,0x31a6,0x2965,0x2124,0x31a6,0x3186, //furance side
-		0x39c7,0x6b6d,0x5acb,0x630c,0x4228,0x52aa,0x738e,0x738e,0x4a69,0x630c,0x632c,0x630c,0x52aa,0x4228,0x52aa,0x3186, //30
+		0x39c7,0x31a6,0x31a6,0x3186,0x3186,0x2965,0x2965,0x2965,0x2124,0x39c7,0x39c7,0x31a6,0x2965,0x2124,0x31a6,0x3186,//furance side
+		0x39c7,0x6b6d,0x5acb,0x630c,0x4228,0x52aa,0x738e,0x738e,0x4a69,0x630c,0x632c,0x630c,0x52aa,0x4228,0x52aa,0x3186,//30
 		0x2945,0x528a,0x7bcf,0x52aa,0x630c,0x8c71,0x8c71,0x7bcf,0x632c,0x528a,0x8430,0x7bef,0x5aeb,0x7bcf,0x528a,0x3186,
 		0x2965,0x528a,0x5aeb,0x6b6d,0x9cd3,0x632c,0x8c51,0x8430,0x5aeb,0x6b6d,0x5acb,0x5acb,0x6b4d,0x8c51,0x6b4d,0x2945,
 		0x39c7,0x738e,0x7bcf,0x6b4d,0x8c71,0x7bcf,0x7bcf,0x5acb,0x6b4d,0x8c51,0x94b2,0x94b2,0x738e,0x8430,0x738e,0x2124,
@@ -3056,8 +3091,8 @@ const static int skyboxColors[16][128] = {
 		0x39e7,0x3186,0x3186,0x3186,0x3186,0x3186,0x3186,0x3186,0x3186,0x2965,0x3186,0x3186,0x3186,0x3186,0x3186,0x3186
 	},
     {
-		0x39c7,0x31a6,0x31a6,0x3186,0x3186,0x2965,0x2965,0x2965,0x2124,0x39c7,0x39c7,0x31a6,0x2965,0x2124,0x31a6,0x3186, //furnace front
-		0x39c7,0x6b6d,0x5acb,0x630c,0x4228,0x52aa,0x738e,0x738e,0x4a69,0x630c,0x632c,0x630c,0x52aa,0x4228,0x52aa,0x3186, //31
+		0x39c7,0x31a6,0x31a6,0x3186,0x3186,0x2965,0x2965,0x2965,0x2124,0x39c7,0x39c7,0x31a6,0x2965,0x2124,0x31a6,0x3186,//furnace front
+		0x39c7,0x6b6d,0x5acb,0x630c,0x4228,0x52aa,0x738e,0x738e,0x4a69,0x630c,0x632c,0x630c,0x52aa,0x4228,0x52aa,0x3186,//31
 		0x2945,0x528a,0x7bcf,0x52aa,0x630c,0x8c71,0x8c71,0x7bcf,0x632c,0x528a,0x8430,0x7bef,0x5aeb,0x7bcf,0x528a,0x3186,
 		0x2965,0x528a,0x5aeb,0x6b6d,0x6b6d,0x2124,0x3186,0x3186,0x2104,0x2945,0x2104,0x4208,0x6b4d,0x8c51,0x6b4d,0x2945,
 		0x39c7,0x738e,0x7bcf,0x4a69,0x31a6,0x0020,0x0020,0x0020,0x0020,0x0020,0x0020,0x31a6,0x528a,0x8430,0x738e,0x2124,
@@ -3075,8 +3110,8 @@ const static int skyboxColors[16][128] = {
 	},
 
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //coal
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //32
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//coal
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//32
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x18e3,0x18e3,0x18e3,0x18e3,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x18e3,0x2965,0x3186,0x3186,0x2965,0x18e3,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x18e3,0x2124,0x31a6,0x39e8,0x3186,0x2124,0x2124,0x18e3,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3093,8 +3128,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //iron ingot
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //33
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//iron ingot
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//33
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5aeb,0x5aeb,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5aeb,0x5aeb,0x5aeb,0xad55,0xad55,0x738e,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x5aeb,0x5aeb,0x5aeb,0xad55,0xdedb,0xdedb,0xdedb,0xdedb,0xad55,0x738e,0x0000,0x0000,
@@ -3111,8 +3146,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //gold ingot
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //34
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//gold ingot
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//34
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb322,0xb322,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb322,0xb322,0xb322,0xfea9,0xfea9,0xb322,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0xb322,0xb322,0xb322,0xffab,0xffab,0xffab,0xffab,0xffab,0xffab,0xb322,0x0000,0x0000,
@@ -3129,8 +3164,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //emerald
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //35
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//emerald
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//35
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0280,0x0280,0x0280,0x0280,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0280,0xdffd,0x4790,0x4790,0x16ec,0x0280,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0280,0xdffd,0xaff9,0x4790,0x4790,0x0545,0x16ec,0x0160,0x0000,0x0000,0x0000,0x0000,
@@ -3147,8 +3182,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //diamond
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //36
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//diamond
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//36
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x138f,0x138f,0x138f,0x138f,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x138f,0xffff,0xffff,0xffff,0xd7fe,0x138f,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x138f,0xffff,0x4f7b,0x4f7b,0xa7dd,0xd7fe,0x2636,0x12ea,0x0000,0x0000,0x0000,0x0000,
@@ -3165,8 +3200,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0xffff,0xffff,0xffff,0x0000,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xc7bf, //glass
-		0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xc7bf,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb6bb, //37
+		0xffff,0xffff,0xffff,0x0000,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xc7bf,//glass
+		0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xc7bf,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb6bb,//37
 		0xffff,0x0000,0x0000,0xffff,0x0000,0x0000,0xc7bf,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0xffff,0x0000,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xc7bf,0xb6bb,
 		0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0x0000,0x0000,0x0000,0xc7bf,0x0000,0xb6bb,
@@ -3183,8 +3218,8 @@ const static int skyboxColors[16][128] = {
 		0xc7bf,0xb6bb,0xb6bb,0xb6bb,0xb6bb,0xb6bb,0x0000,0x0000,0xb6bb,0xb6bb,0x0000,0xb6bb,0xb6bb,0xb6bb,0xb6bb,0xc7bf
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //dandelion
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //38
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//dandelion
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//38
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3201,8 +3236,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x1420,0x1300,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //sapling
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5567,0x0000,0x0000,0x0000,0x0000, //39
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//sapling
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5567,0x0000,0x0000,0x0000,0x0000,//39
 		0x0000,0x0000,0x0000,0x0000,0x5567,0x5567,0x0000,0x0000,0x0000,0x0000,0x5567,0x4465,0x1282,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x2363,0x4465,0x0000,0x5567,0x5567,0x4465,0x0000,0x4465,0x7b07,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x5567,0x7b07,0x1b23,0x1282,0x0000,0x4465,0x1282,0x4982,0x59e3,0x59e3,0x1282,0x0000,0x0000,
@@ -3219,8 +3254,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7285,0x59e3,0x4982,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0xca21,0xca01,0xca01,0xd261,0xd241,0xdbe4,0xdbe4,0xd322,0xd2c2,0xd2a1,0xd2e2,0xe527,0xe4e6,0xd241,0xc9e0,0xca01, //lava
-		0xca01,0xc9e1,0xd2c2,0xca01,0xca01,0xd2e2,0xdc04,0xdc04,0xd281,0xd281,0xd2e2,0xe4a5,0xdb83,0xca01,0xc9e0,0xca01, //40
+		0xca21,0xca01,0xca01,0xd261,0xd241,0xdbe4,0xdbe4,0xd322,0xd2c2,0xd2a1,0xd2e2,0xe527,0xe4e6,0xd241,0xc9e0,0xca01,//lava
+		0xca01,0xc9e1,0xd2c2,0xca01,0xca01,0xd2e2,0xdc04,0xdc04,0xd281,0xd281,0xd2e2,0xe4a5,0xdb83,0xca01,0xc9e0,0xca01,//40
 		0xca21,0xc9e1,0xc9e1,0xd2c2,0xc9e0,0xca21,0xd2e2,0xd2e2,0xd281,0xd2e2,0xd281,0xd2a1,0xca41,0xc9e0,0xc9e1,0xca21,
 		0xdba3,0xca21,0xca01,0xc9e1,0xc9c0,0xc9e0,0xca21,0xd241,0xd261,0xd261,0xca41,0xca21,0xca01,0xca01,0xd261,0xd302,
 		0xdbe4,0xd261,0xd261,0xd261,0xca01,0xd241,0xca01,0xca21,0xd2e2,0xca21,0xc9e1,0xca01,0xca01,0xd241,0xdbe4,0xe4c6,
@@ -3237,8 +3272,8 @@ const static int skyboxColors[16][128] = {
 		0xd281,0xd2e2,0xdb22,0xd2e2,0xca41,0xdb42,0xdb83,0xd2a1,0xd261,0xca41,0xca01,0xd2e2,0xdc44,0xdba3,0xca21,0xca41
 	},
     {
-		0x1083,0x1083,0x1083,0x0862,0x0862,0x1083,0x0862,0x0862,0x1083,0x0841,0x0862,0x1083,0x1084,0x1082,0x0841,0x1083, //obsidian
-		0x0862,0x1082,0x0841,0x0841,0x0841,0x1082,0x0863,0x1083,0x0841,0x314a,0x1083,0x1083,0x1083,0x0841,0x398a,0x1083, //41
+		0x1083,0x1083,0x1083,0x0862,0x0862,0x1083,0x0862,0x0862,0x1083,0x0841,0x0862,0x1083,0x1084,0x1082,0x0841,0x1083,//obsidian
+		0x0862,0x1082,0x0841,0x0841,0x0841,0x1082,0x0863,0x1083,0x0841,0x314a,0x1083,0x1083,0x1083,0x0841,0x398a,0x1083,//41
 		0x1083,0x0841,0x396a,0x398a,0x398a,0x0862,0x0862,0x0841,0x398a,0x18c5,0x1083,0x0862,0x0841,0x398a,0x18c5,0x1083,
 		0x0862,0x0841,0x18c5,0x20c5,0x0862,0x1082,0x1082,0x41cc,0x18c5,0x18c5,0x0862,0x1083,0x0841,0x0862,0x1083,0x1083,
 		0x0862,0x0841,0x18c5,0x1083,0x1082,0x1082,0x0862,0x1083,0x0861,0x0862,0x1083,0x0842,0x18c5,0x0863,0x1083,0x1083,
@@ -3255,53 +3290,53 @@ const static int skyboxColors[16][128] = {
 		0x1083,0x0862,0x1083,0x0863,0x1083,0x1083,0x1083,0x1083,0x1083,0x1083,0x1082,0x1083,0x1083,0x1083,0x0862,0x1083
 	},
     {
-		0x18a1,0x20e2,0x20e2,0x20e2,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902, //chest front
-		0x2902,0x9b03,0xb342,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xb342,0xb342,0xb342,0xbb61,0xbb61,0xbb61,0x9304,0x41c5, //42
-		0x20e2,0x9b23,0xb319,0xb319,0xb319,0xb319,0xb319,0x82e3,0x8b04,0xbbc4,0xbbc4,0x9b41,0x9b41,0xbb61,0x9304,0x49c5,
+		0x18a1,0x20e2,0x20e2,0x20e2,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,//chest front
+		0x2902,0x9b03,0xb342,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xb342,0xb342,0xb342,0xbb61,0xbb61,0xbb61,0x9304,0x41c5,//42
+		0x20e2,0x9b23,0xb383,0xb383,0xb383,0xb383,0xb383,0x82e3,0x8b04,0xbbc4,0xbbc4,0x9b41,0x9b41,0xbb61,0x9304,0x49c5,
 		0x20e2,0x8ae2,0xbbc4,0xbb61,0x9b41,0x9b41,0x8ac3,0xce79,0xa535,0x8ac3,0x9b41,0x9b41,0x9b41,0xbb61,0x9304,0x41c5,
 		0x2902,0x9b03,0xb342,0xbb61,0xbb61,0xbb61,0x7ac4,0xc618,0x8431,0x51e2,0xb342,0xbb61,0xbb61,0xbb61,0x9304,0x41c5,
 		0x18a1,0x20e2,0x20e2,0x20e2,0x2902,0x2902,0x2923,0xa534,0x73ae,0x2923,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,
 		0x2902,0x9304,0xa364,0x9b23,0x8ae2,0xa364,0x6244,0x9492,0x73ae,0x41a3,0x8ae2,0x8ae2,0x8ae2,0xa364,0x9304,0x41c5,
-		0x2903,0xa364,0xb319,0x9b41,0x9b41,0x9b41,0x7a83,0x41a3,0x41a3,0x7a83,0xbbc4,0xbbc4,0xbbc4,0xb319,0x9304,0x49e5,
+		0x2903,0xa364,0xb383,0x9b41,0x9b41,0x9b41,0x7a83,0x41a3,0x41a3,0x7a83,0xbbc4,0xbbc4,0xbbc4,0xb383,0x9304,0x49e5,
 		0x2902,0x9b03,0xb342,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xb342,0xb342,0xb342,0xbb61,0xbb61,0xbb61,0x9304,0x41c5,
-		0x20e2,0x9b23,0xb319,0xb319,0xb319,0xb319,0xb319,0xb319,0xb319,0xbbc4,0xbbc4,0x9b41,0x9b41,0xbb61,0x9304,0x49c5,
-		0x20e2,0x8ae2,0xbbc4,0xbb61,0x9b41,0x9b41,0x9b41,0xb319,0xb319,0x9b41,0x9b41,0x9b41,0x9b41,0xbb61,0x9304,0x41c5,
-		0x20e2,0xa364,0xbbc4,0xb319,0xb319,0xb319,0xbbc4,0xbbc4,0x9b41,0xbb61,0xbbc4,0xb319,0xbbc4,0xbb61,0x9304,0x41c5,
-		0x20e2,0x8ac3,0xbbc4,0xbbc4,0xb319,0xb319,0xb319,0xb319,0xb319,0xb319,0xb319,0xb319,0xbbc4,0xbb61,0xa364,0x41e5,
+		0x20e2,0x9b23,0xb383,0xb383,0xb383,0xb383,0xb383,0xb383,0xb383,0xbbc4,0xbbc4,0x9b41,0x9b41,0xbb61,0x9304,0x49c5,
+		0x20e2,0x8ae2,0xbbc4,0xbb61,0x9b41,0x9b41,0x9b41,0xb383,0xb383,0x9b41,0x9b41,0x9b41,0x9b41,0xbb61,0x9304,0x41c5,
+		0x20e2,0xa364,0xbbc4,0xb383,0xb383,0xb383,0xbbc4,0xbbc4,0x9b41,0xbb61,0xbbc4,0xb383,0xbbc4,0xbb61,0x9304,0x41c5,
+		0x20e2,0x8ac3,0xbbc4,0xbbc4,0xb383,0xb383,0xb383,0xb383,0xb383,0xb383,0xb383,0xb383,0xbbc4,0xbb61,0xa364,0x41e5,
 		0x2902,0x8ac3,0x9b03,0x9b03,0x9b03,0x9b03,0xa302,0xa302,0xa302,0x9b03,0x9b03,0x9b03,0x9b03,0x9b03,0x9b03,0x41c5,
 		0x2902,0x82c5,0x82c5,0x82c5,0x82a4,0x7a84,0x7284,0x7284,0x7284,0x7ac5,0x82c5,0x82c5,0x7aa5,0x7aa4,0x82c5,0x41e5,
 		0x18a1,0x3164,0x3164,0x3164,0x3164,0x3143,0x3164,0x3164,0x3164,0x3164,0x3143,0x41c5,0x18a1,0x18a1,0x3143,0x41c5
 	},
     {
-		0x18a1,0x20e2,0x20e2,0x20e2,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902, //chest side
-		0x3164,0x9b03,0xb342,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xb342,0xb342,0xb342,0xbb61,0xbb61,0xbb61,0x9304,0x41c5, //43
-		0x3164,0x9b23,0xb319,0xb319,0xb319,0x9b41,0x9b41,0x9b41,0x9b41,0xbbc4,0xbbc4,0xb319,0xb319,0xbb61,0x9304,0x49c5,
-		0x41c5,0x8ae2,0xbbc4,0xbb61,0x9b41,0x9b41,0x9b41,0xb319,0xb319,0xbbc4,0x9b41,0x9b41,0x9b41,0xbb61,0x9304,0x41c5,
+		0x18a1,0x20e2,0x20e2,0x20e2,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,//chest side
+		0x3164,0x9b03,0xb342,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xb342,0xb342,0xb342,0xbb61,0xbb61,0xbb61,0x9304,0x41c5,//43
+		0x3164,0x9b23,0xb383,0xb383,0xb383,0x9b41,0x9b41,0x9b41,0x9b41,0xbbc4,0xbbc4,0xb383,0xb383,0xbb61,0x9304,0x49c5,
+		0x41c5,0x8ae2,0xbbc4,0xbb61,0x9b41,0x9b41,0x9b41,0xb383,0xb383,0xbbc4,0x9b41,0x9b41,0x9b41,0xbb61,0x9304,0x41c5,
 		0x3164,0x9b03,0xb342,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xb342,0xb342,0xb342,0xbb61,0xbb61,0xbb61,0x9304,0x41c5,
 		0x18a1,0x20e2,0x20e2,0x20e2,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,0x2902,
 		0x3164,0x9304,0xa364,0x9b23,0x8ae2,0xa364,0xa364,0x8ae2,0xa364,0xa364,0x8ae2,0x8ae2,0x8ae2,0xa364,0x9304,0x41c5,
-		0x3164,0xa364,0xb319,0x9b41,0x9b41,0x9b41,0x9b41,0x9b41,0xbbc4,0x9b41,0xbbc4,0xbbc4,0xbbc4,0xb319,0x9304,0x49e5,
+		0x3164,0xa364,0xb383,0x9b41,0x9b41,0x9b41,0x9b41,0x9b41,0xbbc4,0x9b41,0xbbc4,0xbbc4,0xbbc4,0xb383,0x9304,0x49e5,
 		0x3164,0x9b03,0xb342,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xb342,0xb342,0xb342,0xbb61,0xbb61,0xbb61,0x9304,0x41c5,
-		0x3164,0x9b23,0xb319,0xb319,0xb319,0x9b41,0x9b41,0x9b41,0x9b41,0xbbc4,0xbbc4,0xb319,0xb319,0xbb61,0x9304,0x49c5,
-		0x3164,0x8ae2,0xbbc4,0xbb61,0x9b41,0x9b41,0x9b41,0xb319,0xb319,0xbbc4,0x9b41,0x9b41,0x9b41,0xbb61,0x9304,0x41c5,
-		0x41c5,0xa364,0xbbc4,0xb319,0xb319,0xb319,0xbbc4,0xbbc4,0x9b41,0xbb61,0xbbc4,0xb319,0xbbc4,0xbb61,0x9304,0x41c5,
-		0x3164,0x8ac3,0xbbc4,0xbbc4,0xb319,0xb319,0xb319,0xb319,0xb319,0xb319,0xb319,0xb319,0xbbc4,0xbb61,0xa364,0x41e5,
+		0x3164,0x9b23,0xb383,0xb383,0xb383,0x9b41,0x9b41,0x9b41,0x9b41,0xbbc4,0xbbc4,0xb383,0xb383,0xbb61,0x9304,0x49c5,
+		0x3164,0x8ae2,0xbbc4,0xbb61,0x9b41,0x9b41,0x9b41,0xb383,0xb383,0xbbc4,0x9b41,0x9b41,0x9b41,0xbb61,0x9304,0x41c5,
+		0x41c5,0xa364,0xbbc4,0xb383,0xb383,0xb383,0xbbc4,0xbbc4,0x9b41,0xbb61,0xbbc4,0xb383,0xbbc4,0xbb61,0x9304,0x41c5,
+		0x3164,0x8ac3,0xbbc4,0xbbc4,0xb383,0xb383,0xb383,0xb383,0xb383,0xb383,0xb383,0xb383,0xbbc4,0xbb61,0xa364,0x41e5,
 		0x41c5,0x8ac3,0x9b03,0x9b03,0x9b03,0x9b03,0xa302,0xa302,0xa302,0x9b03,0x9b03,0x9b03,0x9b03,0x9b03,0x9b03,0x41c5,
 		0x3164,0x82c5,0x82c5,0x82c5,0x82a4,0x7a84,0x7284,0x7284,0x7284,0x7ac5,0x82c5,0x82c5,0x7aa5,0x7aa4,0x82c5,0x41e5,
 		0x18a1,0x3143,0x3143,0x3164,0x3164,0x3164,0x3164,0x3143,0x3164,0x3164,0x3164,0x3164,0x3143,0x41c5,0x18a1,0x41c5
 	},
     {
-		0x2902,0x3143,0x3943,0x3144,0x3144,0x3943,0x3144,0x3143,0x3143,0x3143,0x3144,0x3144,0x3144,0x41c5,0x3164,0x3164, //chest bottom/top
-		0x3164,0x9304,0x8ae2,0x8ae2,0xa364,0xa364,0x8ae2,0xa364,0xa364,0x8ae2,0x9b23,0xa364,0x9304,0x9b23,0xa364,0x3164, //44
-		0x3164,0xa364,0xbbc4,0xbbc4,0x9b41,0xbbc4,0x9b41,0x9b41,0x9b41,0x9b41,0x9b41,0xb319,0xa364,0x9b41,0xb319,0x3164,
+		0x2902,0x3143,0x3943,0x3144,0x3144,0x3943,0x3144,0x3143,0x3143,0x3143,0x3144,0x3144,0x3144,0x41c5,0x3164,0x3164,//chest bottom/top
+		0x3164,0x9304,0x8ae2,0x8ae2,0xa364,0xa364,0x8ae2,0xa364,0xa364,0x8ae2,0x9b23,0xa364,0x9304,0x9b23,0xa364,0x3164,//44
+		0x3164,0xa364,0xbbc4,0xbbc4,0x9b41,0xbbc4,0x9b41,0x9b41,0x9b41,0x9b41,0x9b41,0xb383,0xa364,0x9b41,0xb383,0x3164,
 		0x3143,0x9b03,0xbb61,0xb342,0xb342,0xb342,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xb342,0x9b03,0xbb61,0xb342,0x3164,
-		0x3164,0x9b23,0xb319,0xbbc4,0xbbc4,0x9b41,0x9b41,0x9b41,0x9b41,0xb319,0xbb61,0xbb61,0x9b23,0xb319,0xb319,0x3164,
-		0x3143,0x8ae2,0x9b41,0x9b41,0xbbc4,0xb319,0xb319,0x9b41,0x9b41,0x9b41,0xbb61,0xbb61,0xbb61,0xbb61,0xbbc4,0x3164,
-		0x3164,0xa364,0xbbc4,0xbbc4,0xbb61,0x9b41,0xbbc4,0xbbc4,0xb319,0xb319,0xb319,0xbb61,0xbb61,0xb319,0xbbc4,0x3164,
+		0x3164,0x9b23,0xb383,0xbbc4,0xbbc4,0x9b41,0x9b41,0x9b41,0x9b41,0xb383,0xbb61,0xbb61,0x9b23,0xb383,0xb383,0x3164,
+		0x3143,0x8ae2,0x9b41,0x9b41,0xbbc4,0xb383,0xb383,0x9b41,0x9b41,0x9b41,0xbb61,0xbb61,0xbb61,0xbb61,0xbbc4,0x3164,
+		0x3164,0xa364,0xbbc4,0xbbc4,0xbb61,0x9b41,0xbbc4,0xbbc4,0xb383,0xb383,0xb383,0xbb61,0xbb61,0xb383,0xbbc4,0x3164,
 		0x3143,0xa302,0xb342,0xb342,0xb342,0xb342,0xbb61,0xbb61,0xbb61,0xb342,0xb342,0xbb61,0xbb61,0xbb61,0xb342,0x3164,
-		0x3164,0xa364,0xb319,0xbbc4,0xbbc4,0xbbc4,0x9b41,0x9b41,0x9b41,0xbb61,0xbbc4,0xbbc4,0xbb61,0xbbc4,0xbbc4,0x3164,
-		0x3143,0x8ae2,0xb319,0xb319,0xb319,0xbbc4,0x9b41,0xb319,0xb319,0xb319,0xb319,0x9b41,0x8ae2,0xb319,0x9b41,0x41c5,
-		0x3164,0x8ae2,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0x9b41,0xbb61,0xb319,0x9b23,0xbb61,0xb319,0x41c5,
+		0x3164,0xa364,0xb383,0xbbc4,0xbbc4,0xbbc4,0x9b41,0x9b41,0x9b41,0xbb61,0xbbc4,0xbbc4,0xbb61,0xbbc4,0xbbc4,0x3164,
+		0x3143,0x8ae2,0xb383,0xb383,0xb383,0xbbc4,0x9b41,0xb383,0xb383,0xb383,0xb383,0x9b41,0x8ae2,0xb383,0x9b41,0x41c5,
+		0x3164,0x8ae2,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0x9b41,0xbb61,0xb383,0x9b23,0xbb61,0xb383,0x41c5,
 		0x3144,0x9b03,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xb342,0xb342,0xb342,0xa302,0xb342,0xb342,0x3164,
 		0x3164,0x9304,0xa302,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0x9b23,0x8ae2,0x9304,0x9b23,0x8ae2,0x3164,
 		0x3164,0x9b03,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xbb61,0xb342,0xb342,0xb342,0xa302,0xbb61,0xa364,0x3164,
@@ -3309,8 +3344,8 @@ const static int skyboxColors[16][128] = {
 		0x3164,0x41c5,0x41c5,0x3164,0x3164,0x3164,0x3164,0x3164,0x3164,0x3164,0x3164,0x41c5,0x41c5,0x41c5,0x3164,0x3164
 	},
     {
-		0x8452,0xa536,0xa536,0x9d36,0x9d15,0x9d36,0x9d15,0x9d35,0xa556,0xa536,0x9d15,0x9d15,0x9d15,0x9d15,0x94f5,0x9d35, //clay
-		0xa536,0x9d35,0xa536,0xa557,0x94b4,0x9d15,0x9d15,0x9d15,0x94d4,0xa557,0xadd9,0xa536,0x9d15,0x9d35,0x9d15,0xa576, //45
+		0x8452,0xa536,0xa536,0x9d36,0x9d15,0x9d36,0x9d15,0x9d35,0xa556,0xa536,0x9d15,0x9d15,0x9d15,0x9d15,0x94f5,0x9d35,//clay
+		0xa536,0x9d35,0xa536,0xa557,0x94b4,0x9d15,0x9d15,0x9d15,0x94d4,0xa557,0xadd9,0xa536,0x9d15,0x9d35,0x9d15,0xa576,//45
 		0xa536,0xad77,0xad98,0x9d15,0x9d15,0x9d15,0x9d36,0x9d36,0xa536,0xa556,0xa557,0xa557,0x94f4,0x9d15,0x9d15,0xad98,
 		0x9cf5,0x9d15,0x9d15,0xa536,0x9d15,0xa536,0x9d15,0x9d15,0x9d15,0x9d15,0x9d35,0xa556,0x9d36,0x9d35,0x9d36,0x94d4,
 		0xa556,0x9d15,0xa557,0x9d15,0xa557,0xa557,0xa537,0xa557,0xa557,0x9cf5,0x9d15,0xa557,0x9d16,0x94d4,0xa536,0x94f5,
@@ -3327,8 +3362,8 @@ const static int skyboxColors[16][128] = {
 		0x9d15,0xa556,0x9d15,0x94d4,0xadd9,0xa536,0x94f4,0xa557,0x9d36,0xad77,0x9d15,0x9d15,0x9d15,0x9d36,0x9d15,0x94f4
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //clay ball
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //46
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//clay ball
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//46
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x422b,0x422b,0x422b,0x422b,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x422b,0x73f2,0xa536,0x73f2,0x73f2,0x422b,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3345,8 +3380,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //brick
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //47
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//brick
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//47
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4903,0x4903,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4903,0x4903,0x4903,0x8a26,0xb2c8,0x79e5,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x4903,0x4903,0x4903,0x8a26,0xb2c8,0xb2c8,0xb2c8,0xb2c8,0xb2c8,0x79e5,0x0000,0x0000,
@@ -3363,8 +3398,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x9aa8,0x9287,0x9aa8,0xacd2,0x9aa8,0x9aa8,0x8a87,0xa2c8,0x9aa8,0xaae9,0x8a67,0xacf2,0x9aa8,0xa2c8,0x9aa8,0x9aa8, //bricks
-		0x7a26,0x7a26,0x8247,0xb533,0xb309,0x7a26,0x69e6,0x61c5,0x7a26,0x7206,0x8247,0xacf2,0x9aa8,0x7a26,0x7a26,0x7a26, //48
+		0x9aa8,0x9287,0x9aa8,0xacd2,0x9aa8,0x9aa8,0x8a87,0xa2c8,0x9aa8,0xaae9,0x8a67,0xacf2,0x9aa8,0xa2c8,0x9aa8,0x9aa8,//bricks
+		0x7a26,0x7a26,0x8247,0xb533,0xb309,0x7a26,0x69e6,0x61c5,0x7a26,0x7206,0x8247,0xacf2,0x9aa8,0x7a26,0x7a26,0x7a26,//48
 		0x7a26,0x8a67,0x69e5,0xacf2,0x9aa8,0x7a26,0x7a26,0x71e6,0x7a26,0x7a26,0x7a26,0xacf2,0x8247,0x8a87,0x7a26,0x8a67,
 		0xa471,0x9c70,0x9c50,0xb4f3,0x9c50,0x9c50,0x9c50,0x9c50,0x9c50,0xa470,0x9c50,0xb513,0x9c50,0x9c50,0x9c50,0xa491,
 		0x8a67,0x9aa8,0x9aa8,0x9aa8,0x9aa8,0x9287,0x9aa8,0xacf2,0xa2c8,0xa2c8,0x9ac8,0x9aa8,0x9aa8,0x9aa8,0x9aa8,0xacd2,
@@ -3381,8 +3416,8 @@ const static int skyboxColors[16][128] = {
 		0x9c50,0x9c50,0x9c30,0x9c70,0x9c50,0x9c70,0x9c50,0xb4f3,0xa470,0x9c50,0x9c50,0x9c50,0xa470,0x9c50,0x9c50,0xacd2
 	},
     {
-		0xfec0,0xfc60,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //torch
-		0xfff2,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //49
+		0xfec0,0xfc60,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//torch
+		0xfff2,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//49
 		0x7b07,0x49e4,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x93a8,0x3963,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x93a8,0x41a4,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3399,8 +3434,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x9b48,0x61e4,0x9b48,0x9b48,0x61e4,0x61e4,0x9b48,0x9b48,0x61e4,0x4142,0x9b48,0x61e4,0x7aa6,0x9b48,0x61e4,0x9b48, //farmland dry
-		0x61e4,0x4142,0x7aa6,0x7aa6,0x7aa6,0x61e4,0x4142,0x9b48,0x61e4,0x4142,0x7aa6,0x61e4,0x61e4,0x61e4,0x4142,0x9b48, //50
+		0x9b48,0x61e4,0x9b48,0x9b48,0x61e4,0x61e4,0x9b48,0x9b48,0x61e4,0x4142,0x9b48,0x61e4,0x7aa6,0x9b48,0x61e4,0x9b48,//farmland dry
+		0x61e4,0x4142,0x7aa6,0x7aa6,0x7aa6,0x61e4,0x4142,0x9b48,0x61e4,0x4142,0x7aa6,0x61e4,0x61e4,0x61e4,0x4142,0x9b48,//50
 		0x9b48,0x4142,0x9b48,0x9b48,0x7aa6,0x61e4,0x4142,0x7aa6,0x7aa6,0x4142,0x9b48,0x61e4,0x61e4,0x61e4,0x61e4,0x7aa6,
 		0x7aa6,0x61e4,0x9b48,0x52aa,0x7aa6,0x61e4,0x61e4,0x9b48,0x7aa6,0x4142,0x7aa6,0x7aa6,0x61e4,0x61e4,0x4142,0x9b48,
 		0x7aa6,0x61e4,0x7aa6,0x7aa6,0x61e4,0x61e4,0x9b48,0x7aa6,0x7aa6,0x4142,0x9b48,0x52aa,0x7aa6,0x61e4,0x4142,0x9b48,
@@ -3417,8 +3452,8 @@ const static int skyboxColors[16][128] = {
 		0x7aa6,0x7aa6,0x4142,0x9b48,0x7aa6,0x7aa6,0x61e4,0x9b48,0x7aa6,0x61e4,0x61e4,0x9b48,0x7aa6,0x61e4,0x9b48,0x4142
 	},
     {
-		0x7202,0x4941,0x71e2,0x69e2,0x4121,0x4121,0x69c2,0x69c2,0x4121,0x30c0,0x69c2,0x4121,0x5982,0x69e2,0x4921,0x71e2, //farmland wet
-		0x4941,0x30c1,0x5982,0x5162,0x5161,0x4121,0x30c0,0x61a2,0x4101,0x30c0,0x5161,0x4121,0x4121,0x4121,0x30c1,0x71e2, //51
+		0x7202,0x4941,0x71e2,0x69e2,0x4121,0x4121,0x69c2,0x69c2,0x4121,0x30c0,0x69c2,0x4121,0x5982,0x69e2,0x4921,0x71e2,//farmland wet
+		0x4941,0x30c1,0x5982,0x5162,0x5161,0x4121,0x30c0,0x61a2,0x4101,0x30c0,0x5161,0x4121,0x4121,0x4121,0x30c1,0x71e2,//51
 		0x71e2,0x30c1,0x69c2,0x69c2,0x5161,0x4101,0x28a0,0x4941,0x4941,0x28a0,0x61a2,0x4101,0x4121,0x4121,0x4121,0x5982,
 		0x5982,0x4121,0x69c2,0x3186,0x5161,0x3901,0x3901,0x5982,0x4941,0x28a0,0x4941,0x4941,0x4101,0x4121,0x30c1,0x69c2,
 		0x5982,0x4121,0x5161,0x5161,0x3901,0x3901,0x5982,0x4921,0x4921,0x28a0,0x5982,0x2965,0x4941,0x4101,0x30c0,0x69c2,
@@ -3435,8 +3470,8 @@ const static int skyboxColors[16][128] = {
 		0x61a2,0x61a2,0x38c1,0x71e2,0x5982,0x5982,0x4921,0x69c2,0x5982,0x4121,0x4921,0x69e2,0x5982,0x4941,0x71e2,0x38e1
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //wheat stage0
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //52
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//wheat stage0
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//52
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3453,8 +3488,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x05e2,0x0000,0x0000,0x0000,0x0000,0x0702,0x0340,0x0000,0x0000,0x0622,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //wheat stage1
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //53
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//wheat stage1
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//53
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3471,8 +3506,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x3e60,0x14c2,0x04a2,0x0000,0x0000,0x3d21,0x0340,0x05c2,0x0000,0x3cc2,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //wheat stage2
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //54
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//wheat stage2
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//54
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3489,8 +3524,8 @@ const static int skyboxColors[16][128] = {
 		0x04c2,0x0000,0x6481,0x02a0,0x5c01,0x01c0,0x0000,0x6d00,0x09a0,0x53e2,0x0280,0x6461,0x0000,0x0442,0x0000,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //wheat stage3
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //55
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//wheat stage3
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//55
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3507,8 +3542,8 @@ const static int skyboxColors[16][128] = {
 		0x3c02,0x0060,0x6481,0x1200,0x6481,0x1a60,0x0000,0x6481,0x11e0,0x5c01,0x22c0,0x5be2,0x0000,0x5c01,0x01c0,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //wheat stage4
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //56
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//wheat stage4
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//56
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0640,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0520,0x1c61,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3525,8 +3560,8 @@ const static int skyboxColors[16][128] = {
 		0x63e1,0x0960,0x5bc2,0x0960,0x6401,0x11e0,0x0000,0x6401,0x00c0,0x5342,0x0980,0x5362,0x0000,0x5382,0x0980,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //wheat stage5
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5da1,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //57
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//wheat stage5
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5da1,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//57
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5d81,0x1b60,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5e40,0x1340,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x5561,0x0000,0x0000,0x0000,0x0000,0x0000,0x4c42,0x0000,0x0000,0x0000,0x0000,0x5e00,0x0000,0x0000,0x0000,
@@ -3543,8 +3578,8 @@ const static int skyboxColors[16][128] = {
 		0x5321,0x0100,0x5321,0x0020,0x4ac1,0x0000,0x0000,0x42a1,0x0060,0x4281,0x0060,0x5342,0x0000,0x6c21,0x00e0,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6620,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //wheat stage6
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x95a0,0x2401,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //58
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6620,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//wheat stage6
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x95a0,0x2401,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//58
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x84c1,0x3b61,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x5ce2,0x0000,0x0000,0x0000,0x0000,0x0000,0x5d61,0x0000,0x0000,0x0000,0x0000,0x65a1,0x0000,0x0000,0x0000,
 		0x0000,0x65a1,0x1280,0x0000,0x0000,0x6600,0x0000,0x9e20,0x1b20,0x0000,0x0000,0x0000,0x5d41,0x1b60,0x0000,0x0000,
@@ -3561,8 +3596,8 @@ const static int skyboxColors[16][128] = {
 		0x5b61,0x0080,0x63a2,0x0080,0x6382,0x00c0,0x0000,0x6382,0x0000,0x4281,0x0080,0x63a2,0x0000,0x5301,0x0940,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6b02,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //wheat stage7
-		0x0000,0x7322,0x0000,0x0000,0x0000,0x0000,0x8ba2,0x10c0,0x0000,0x0000,0x0000,0x0000,0x7b42,0x0000,0x0000,0x0000, //59
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6b02,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//wheat stage7
+		0x0000,0x7322,0x0000,0x0000,0x0000,0x0000,0x8ba2,0x10c0,0x0000,0x0000,0x0000,0x0000,0x7b42,0x0000,0x0000,0x0000,//59
 		0x0000,0x7b62,0x2120,0x0000,0x0000,0x0000,0x0000,0x83a2,0x0000,0x0000,0x0000,0x0000,0x83a2,0x2940,0x0000,0x0000,
 		0x0000,0x0000,0x93c1,0x0000,0x0000,0x7b42,0x0000,0x9520,0x39a0,0x0000,0x0000,0x93e1,0x0000,0x39a0,0x0000,0x0000,
 		0x0000,0x0000,0x9d80,0x4220,0x0000,0x93e1,0x2940,0x9520,0x32c0,0x7b42,0x0000,0x9500,0x0000,0x0000,0x7302,0x0000,
@@ -3579,26 +3614,26 @@ const static int skyboxColors[16][128] = {
 		0x52e1,0x0900,0x6ba1,0x0060,0x52e1,0x00c0,0x0000,0x52e1,0x0040,0x4241,0x0060,0x6362,0x0000,0x4aa1,0x00a0,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //wheat seed
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //60
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//wheat seed
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//60
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0702,0x0000,0x0000,0x0000,0x0000,0x0000,0x0702,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x6d87,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0702,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x2a01,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6d87,0x6d87,0x0000,0x0000,
-		0x0000,0x0000,0x0000,0x0000,0x0702,0x0000,0x0000,0x0000,0x6d87,0x4320,0x0000,0x0000,0x2a01,0x2a01,0x0000,0x0000,
+		0x0000,0x0000,0x0000,0x0000,0x0702,0x0000,0x0000,0x0000,0x6d87,0x4384,0x0000,0x0000,0x2a01,0x2a01,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0702,0x0000,0xad87,0x0000,0x2a01,0x2a01,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-		0x0000,0x0000,0x0000,0x6d87,0x4320,0x0000,0x2a01,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+		0x0000,0x0000,0x0000,0x6d87,0x4384,0x0000,0x2a01,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x2a01,0x2a01,0x0000,0x0000,0x0000,0x0702,0x0000,0x0000,0xad87,0x6b84,0x0000,0x0000,0x0000,
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6d87,0x4320,0x0000,0x0000,0x2a01,0x2a01,0x0000,0x0000,0x0000,
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6d87,0x4384,0x0000,0x0000,0x2a01,0x2a01,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x2a01,0x2a01,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8ba7,0x0000,0x0000,0x0000,0x0000,0x0000, //wheat
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5287,0x7b46,0xa4aa,0x0000,0x8ba7,0x0000,0x0000,0x0000, //61
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8ba7,0x0000,0x0000,0x0000,0x0000,0x0000,//wheat
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5287,0x7b46,0xa4aa,0x0000,0x8ba7,0x0000,0x0000,0x0000,//61
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5287,0x0000,0x7b46,0xa4aa,0x8ba7,0x7b46,0x0000,0x0000,0x0000,0x8ba7,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5287,0x7b46,0x8ba7,0xcd8b,0x8ba7,0xa4aa,0x7b46,0xa4aa,0x8ba7,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7b46,0x8ba7,0xcd8b,0x8ba7,0xa4aa,0x8ba7,0xa4aa,0x8ba7,0x0000,0x0000,
@@ -3615,8 +3650,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x5287,0x0000,0x0000,0x5287,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //short grass
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //62
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//short grass
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//62
 		0x0000,0x0000,0x0000,0x0000,0x4ba8,0x0000,0x0000,0x4ba8,0x0000,0x0000,0x5c49,0x0000,0x0000,0x4ba8,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x4ba8,0x0000,0x5c49,0x0000,0x0000,0x5c49,0x0000,0x4ba8,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x4ba8,0x0000,0x5c49,0x0000,0x5c49,0x0000,0x4306,0x4ba8,0x0000,0x5c49,0x0000,0x0000,0x0000,
@@ -3633,8 +3668,8 @@ const static int skyboxColors[16][128] = {
 		0x4347,0x4306,0x3285,0x4ba8,0x3285,0x4306,0x3285,0x4ba8,0x4306,0x3285,0x4306,0x3285,0x4ba8,0x3285,0x4306,0x3ac6
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //bread
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6242,0x6242,0x6242,0x6242,0x0000,0x0000,0x0000, //63
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//bread
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6242,0x6242,0x6242,0x6242,0x0000,0x0000,0x0000,//63
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6242,0x6242,0x8b23,0xa3c4,0xa3c4,0x8b23,0x6242,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6242,0x8b23,0xbc44,0xbc44,0xbc44,0xbc44,0xa3c4,0x8b23,0x3961,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x6242,0xbc44,0xa3c4,0x8b23,0x8b23,0xbc44,0xbc44,0xbc44,0x8b23,0x3961,0x0000,
@@ -3651,8 +3686,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x49c2,0x3961,0x3961,0x3961,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x6b6d,0x8b46,0x7a84,0x8b46,0x8b46,0x9367,0x9367,0xa448,0x7a84,0x9367,0x9367,0x9367,0x9367,0xa449,0x9367,0x6a03, //door bottom
-		0xb4aa,0x9367,0x8b46,0x9387,0xa448,0xa448,0xa408,0xa408,0x8b46,0xa408,0xa408,0xa448,0xa408,0xa448,0x9367,0x6a03, //64
+		0x6b6d,0x8b46,0x7a84,0x8b46,0x8b46,0x9367,0x9367,0xa448,0x7a84,0x9367,0x9367,0x9367,0x9367,0xa449,0x9367,0x6a03,//door bottom
+		0xb4aa,0x9367,0x8b46,0x9387,0xa448,0xa448,0xa408,0xa408,0x8b46,0xa408,0xa408,0xa448,0xa408,0xa448,0x9367,0x6a03,//64
 		0xb4aa,0x9367,0x8b46,0x8b46,0x8b46,0x8b46,0x8b46,0x8b46,0x9367,0x9367,0x9367,0x8b46,0x7ac5,0x9367,0x9367,0x6a03,
 		0x9ba7,0x72a5,0x6224,0x6244,0x6244,0x6244,0x6244,0x7ac5,0x6244,0x6244,0x6224,0x6224,0x6224,0x72a5,0x7ac5,0x51e3,
 		0xb4aa,0x8b46,0x7a84,0x8b46,0x8b46,0x9367,0x9367,0xa408,0x82c5,0x8b46,0x8b46,0x7ac5,0x8b46,0xa448,0x8b46,0x7224,
@@ -3669,8 +3704,8 @@ const static int skyboxColors[16][128] = {
 		0x7ac5,0x51e3,0x51e3,0x59e3,0x51c3,0x51c3,0x59e3,0x51c3,0x51e3,0x51e3,0x51e3,0x51c3,0x49a3,0x51c3,0x51c3,0x51e3
 	},
     {
-		0xb4aa,0xac68,0xac68,0xac68,0xac68,0xb4aa,0xb4aa,0xaca9,0xac68,0xb4aa,0xb4aa,0xb4aa,0xb4aa,0xb4aa,0xb4aa,0x8b46, //door top
-		0xb4aa,0x9367,0x8b46,0x7ac5,0x8b46,0x8b46,0x8b46,0x8b46,0x8b46,0x8b46,0x8b46,0x8b46,0x8b46,0x8b46,0x9367,0x6a03, //65
+		0xb4aa,0xac68,0xac68,0xac68,0xac68,0xb4aa,0xb4aa,0xaca9,0xac68,0xb4aa,0xb4aa,0xb4aa,0xb4aa,0xb4aa,0xb4aa,0x8b46,//door top
+		0xb4aa,0x9367,0x8b46,0x7ac5,0x8b46,0x8b46,0x8b46,0x8b46,0x8b46,0x8b46,0x8b46,0x8b46,0x8b46,0x8b46,0x9367,0x6a03,//65
 		0xb4aa,0x9367,0x7a84,0x7a84,0x7a84,0x7a84,0x82a5,0x8b46,0x82c5,0x82c5,0x82c5,0x82a5,0x6244,0x9367,0x9367,0x6a03,
 		0x9ba7,0x72a5,0x6224,0x0000,0x0000,0x0000,0x0000,0x9387,0x6244,0x0000,0x0000,0x0000,0x0000,0x9366,0x7ac5,0x51e3,
 		0x31a6,0x7a84,0x7a84,0x0000,0x0000,0x0000,0x0000,0xa408,0x82c5,0x0000,0x0000,0x0000,0x0000,0xa448,0x8b46,0x7224,
@@ -3688,8 +3723,8 @@ const static int skyboxColors[16][128] = {
 	},
 
     {
-		0x8061,0x8041,0x8021,0x8040,0x8021,0x7841,0x8041,0x8082,0x8062,0x7882,0x8081,0x8061,0x8061,0x8041,0x7882,0x8062, //bed back
-		0x8041,0x88a2,0x8882,0x8882,0x88a2,0x80a2,0x88a2,0x8081,0x8082,0x7862,0x8042,0x8082,0x8862,0x80a2,0x8882,0x7862, //66
+		0x8061,0x8041,0x8021,0x8040,0x8021,0x7841,0x8041,0x8082,0x8062,0x7882,0x8081,0x8061,0x8061,0x8041,0x7882,0x8062,//bed back
+		0x8041,0x88a2,0x8882,0x8882,0x88a2,0x80a2,0x88a2,0x8081,0x8082,0x7862,0x8042,0x8082,0x8862,0x80a2,0x8882,0x7862,//66
 		0x8021,0x8882,0x98e4,0x9904,0x98e4,0x9904,0x90e3,0x9903,0x8882,0x8882,0x88c2,0x8062,0x8082,0x8061,0x88a2,0x88a2,
 		0x6800,0x6000,0x6820,0x6020,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,
 		0xa469,0x9366,0x8b46,0x9366,0x8b66,0x9367,0x8b25,0x8b46,0x9366,0x9346,0x8346,0x8b46,0x9366,0x9366,0x9367,0x5203,
@@ -3706,8 +3741,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0xbd96,0xce99,0xce79,0xce59,0xb5b6,0xbdd6,0xb596,0xb596,0xb5b6,0xce9a,0xce7a,0xce79,0xbdb6,0xbdb7,0xb5b6,0xb5b6, //bed front
-		0xb5b7,0xce79,0xef5d,0xef7d,0xffdf,0xffdf,0xffdf,0xf7de,0xffbe,0xffbf,0xef7d,0xf77d,0xef9e,0xef5d,0xce7a,0xb5b6, //67
+		0xbd96,0xce99,0xce79,0xce59,0xb5b6,0xbdd6,0xb596,0xb596,0xb5b6,0xce9a,0xce7a,0xce79,0xbdb6,0xbdb7,0xb5b6,0xb5b6,//bed front
+		0xb5b7,0xce79,0xef5d,0xef7d,0xffdf,0xffdf,0xffdf,0xf7de,0xffbe,0xffbf,0xef7d,0xf77d,0xef9e,0xef5d,0xce7a,0xb5b6,//67
 		0xb5b6,0xd699,0xef7e,0xef7e,0xf77d,0xef7d,0xef7d,0xf75d,0xffdf,0xf77d,0xef9d,0xf7be,0xef9d,0xf77d,0xce9a,0xb596,
 		0xb596,0xb5d6,0xce59,0xce39,0xce59,0xb5b6,0xb5b6,0xb5b6,0xb5b7,0xbdd7,0xd67a,0xce59,0xce79,0xbdb6,0xb5d7,0xb5b6,
 		0xaca8,0x9347,0x8326,0x9366,0x9367,0x9366,0x8b26,0x8b26,0x93a7,0x9367,0x8326,0x8b46,0x9346,0x8b66,0x9367,0x51c3,
@@ -3724,8 +3759,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x8041,0x8021,0x7841,0x8021,0x8041,0x8040,0x8041,0x8082,0x8082,0x7882,0x8062,0x7882,0x7841,0x7841,0x8082,0x8062, //bed side1
-		0x8041,0x88a2,0x88a2,0x88a2,0x8882,0x88a2,0x88a2,0x8082,0x7882,0x7882,0x8082,0x7882,0x88a3,0x8882,0x88a2,0x8081, //68
+		0x8041,0x8021,0x7841,0x8021,0x8041,0x8040,0x8041,0x8082,0x8082,0x7882,0x8062,0x7882,0x7841,0x7841,0x8082,0x8062,//bed side1
+		0x8041,0x88a2,0x88a2,0x88a2,0x8882,0x88a2,0x88a2,0x8082,0x7882,0x7882,0x8082,0x7882,0x88a3,0x8882,0x88a2,0x8081,//68
 		0x7841,0x8882,0x9904,0x9904,0x9104,0x9903,0x9904,0x98e4,0x88a2,0x8882,0x88a2,0x7861,0x7881,0x8082,0x80a2,0x88a2,
 		0x6800,0x7000,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,
 		0xac69,0x9366,0x8346,0x9366,0x8b47,0x9347,0x8b26,0x8b25,0x9366,0x9346,0x8326,0x8306,0x9347,0x8b86,0x9347,0x8326,
@@ -3742,8 +3777,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x8061,0x8020,0x7820,0x8040,0x9965,0x8061,0x8041,0x6800,0xb5b6,0xce7a,0xce99,0xce59,0xb5b7,0xbdd6,0xb5b7,0xb576, //bed side2
-		0x8882,0x88a2,0x7820,0xb1a6,0xa125,0x88a2,0x8062,0x6800,0xbdb6,0xef7d,0xef9d,0xef7e,0xef9d,0xef7d,0xce99,0xb5b6, //69
+		0x8061,0x8020,0x7820,0x8040,0x9965,0x8061,0x8041,0x6800,0xb5b6,0xce7a,0xce99,0xce59,0xb5b7,0xbdd6,0xb5b7,0xb576,//bed side2
+		0x8882,0x88a2,0x7820,0xb1a6,0xa125,0x88a2,0x8062,0x6800,0xbdb6,0xef7d,0xef9d,0xef7e,0xef9d,0xef7d,0xce99,0xb5b6,//69
 		0x8882,0x7882,0x7000,0xa125,0x8081,0x88a2,0x8883,0x6800,0xb5b6,0xce7a,0xef5d,0xef5d,0xef7d,0xef3d,0xd679,0xb5b6,
 		0x6800,0x6800,0x6800,0x6820,0x6800,0x6800,0x6800,0x6800,0xb5b6,0xb5d7,0xd6b9,0xce59,0xce59,0xb5b6,0xb5b6,0xb5b6,
 		0x8b46,0x8b25,0x9346,0x9346,0x8b67,0x9367,0x9346,0x8b46,0x8b26,0x9346,0x8b26,0x9367,0x8b66,0x9366,0x8b66,0x59c3,
@@ -3757,11 +3792,11 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000 
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x8062,0x8082,0x7841,0x7841,0x7882,0x8062,0x7882,0x8082,0x8082,0x8041,0x8040,0x8041,0x8021,0x7841,0x8021,0x8041, //bed side3
-		0x8081,0x88a2,0x8882,0x88a3,0x7882,0x8082,0x7882,0x7882,0x8082,0x88a2,0x88a2,0x8882,0x88a2,0x88a2,0x88a2,0x8041, //70
+		0x8062,0x8082,0x7841,0x7841,0x7882,0x8062,0x7882,0x8082,0x8082,0x8041,0x8040,0x8041,0x8021,0x7841,0x8021,0x8041,//bed side3
+		0x8081,0x88a2,0x8882,0x88a3,0x7882,0x8082,0x7882,0x7882,0x8082,0x88a2,0x88a2,0x8882,0x88a2,0x88a2,0x88a2,0x8041,//70
 		0x88a2,0x80a2,0x8082,0x7881,0x7861,0x88a2,0x8882,0x88a2,0x98e4,0x9904,0x9903,0x9104,0x9904,0x9904,0x8882,0x7841,
 		0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x6800,0x7000,0x6800,
 		0x8326,0x9347,0x8b86,0x9347,0x8306,0x8326,0x9346,0x9366,0x8b25,0x8b26,0x9347,0x8b47,0x9366,0x8346,0x9366,0xac69,
@@ -3778,8 +3813,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0xb576,0xb5b7,0xbdd6,0xb5b7,0xce59,0xce99,0xce7a,0xb5b6,0x6800,0x8041,0x8061,0x9965,0x8040,0x7820,0x8020,0x8061, //bed side4
-		0xb5b6,0xce99,0xef7d,0xef9d,0xef7e,0xef9d,0xef7d,0xbdb6,0x6800,0x8062,0x88a2,0xa125,0xb1a6,0x7820,0x88a2,0x8882, //71
+		0xb576,0xb5b7,0xbdd6,0xb5b7,0xce59,0xce99,0xce7a,0xb5b6,0x6800,0x8041,0x8061,0x9965,0x8040,0x7820,0x8020,0x8061,//bed side4
+		0xb5b6,0xce99,0xef7d,0xef9d,0xef7e,0xef9d,0xef7d,0xbdb6,0x6800,0x8062,0x88a2,0xa125,0xb1a6,0x7820,0x88a2,0x8882,//71
 		0xb5b6,0xd679,0xef3d,0xef7d,0xef5d,0xef5d,0xce7a,0xb5b6,0x6800,0x8883,0x88a2,0x8081,0xa125,0x7000,0x7882,0x8882,
 		0xb5b6,0xb5b6,0xb5b6,0xce59,0xce59,0xd6b9,0xb5d7,0xb5b6,0x6800,0x6800,0x6800,0x6800,0x6820,0x6800,0x6800,0x6800,
 		0x59c3,0x8b66,0x9366,0x8b66,0x9367,0x8b26,0x9346,0x8b26,0x8b46,0x9346,0x9367,0x8b67,0x9346,0x9346,0x8b25,0x8b46,
@@ -3796,8 +3831,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x8041,0x8041,0x8061,0x8861,0x8021,0x8041,0x8861,0x8861,0x8881,0x8041,0x7821,0x8041,0x8041,0x8861,0x8062,0x8061, //bed top1
-		0x8041,0x8041,0x8882,0x90a2,0x90a2,0x9082,0x9082,0x98a3,0x9882,0x8862,0x8041,0x98a3,0x98c3,0x98e3,0xa0a3,0xa0e3, //72
+		0x8041,0x8041,0x8061,0x8861,0x8021,0x8041,0x8861,0x8861,0x8881,0x8041,0x7821,0x8041,0x8041,0x8861,0x8062,0x8061,//bed top1
+		0x8041,0x8041,0x8882,0x90a2,0x90a2,0x9082,0x9082,0x98a3,0x9882,0x8862,0x8041,0x98a3,0x98c3,0x98e3,0xa0a3,0xa0e3,//72
 		0x8041,0x8861,0xa945,0xb1a6,0xa986,0xa986,0xa9c6,0xb186,0xa966,0xa144,0xa124,0xa965,0xb1a7,0xb1c7,0xb1a7,0xb1e7,
 		0x8041,0x9062,0xa965,0xa9a6,0xa9a6,0xa9a6,0xa9a6,0xa986,0xa986,0xa965,0xa945,0xa125,0xa966,0xa986,0xb1a6,0xb186,
 		0x8040,0x9883,0xa966,0xa965,0x9904,0xa144,0xa965,0xa145,0xa965,0xa145,0x9904,0x98e3,0x98e4,0x9904,0x9924,0x9924,
@@ -3814,8 +3849,8 @@ const static int skyboxColors[16][128] = {
 		0x7861,0x8040,0x8041,0x8041,0x7840,0x8041,0x8041,0x8041,0x8041,0x8041,0x8040,0x8021,0x8020,0x8041,0x7841,0x8041
 	},
     {
-		0x8041,0x7840,0x8040,0x90e3,0x90e3,0x8882,0x8041,0x7000,0xb595,0xad75,0xbdf7,0xce38,0xad96,0x9cf3,0x9cd3,0xb575, //bed top2
-		0xa104,0x98c2,0x8821,0x9904,0x9944,0x8861,0x8021,0x7020,0xc619,0xd69a,0xe75d,0xf7be,0xd6ba,0xb596,0xad55,0x9d14, //73
+		0x8041,0x7840,0x8040,0x90e3,0x90e3,0x8882,0x8041,0x7000,0xb595,0xad75,0xbdf7,0xce38,0xad96,0x9cf3,0x9cd3,0xb575,//bed top2
+		0xa104,0x98c2,0x8821,0x9904,0x9944,0x8861,0x8021,0x7020,0xc619,0xd69a,0xe75d,0xf7be,0xd6ba,0xb596,0xad55,0x9d14,//73
 		0xb1e7,0xa9a6,0x90c2,0xba49,0xb1e8,0xa124,0x7821,0x6800,0xc658,0xf79e,0xffff,0xffff,0xf79f,0xd67a,0xb595,0x9cd3,
 		0xa986,0xa965,0x90a3,0xc2aa,0xb208,0x9925,0x8041,0x7000,0xce59,0xffdf,0xffff,0xffdf,0xf79e,0xe73c,0xbdd7,0x9cf3,
 		0x9945,0x90e3,0x9082,0xba8a,0xb208,0x90e3,0x7841,0x7000,0xd6ba,0xffff,0xffff,0xffbf,0xef3d,0xf75d,0xce39,0xa514,
@@ -3832,8 +3867,8 @@ const static int skyboxColors[16][128] = {
 		0x8021,0x8041,0x7840,0x8021,0x8041,0x7820,0x7021,0x6800,0xb5b7,0xadb6,0xb5b5,0xa574,0xad75,0xb5b6,0xb5b6,0xbdb7
 	},
     {
-		0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,0x8c71,0x8c71,0x6b4d,0x8c71,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef, //redstone ore 
-		0x7bef,0x7bef,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x73ae,0x8c71,0x8c71,0x8c71,0x6b4d,0x7bef,0x7bef,0x73ae, //74
+		0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,0x8c71,0x8c71,0x6b4d,0x8c71,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,//redstone ore
+		0x7bef,0x7bef,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x73ae,0x8c71,0x8c71,0x8c71,0x6b4d,0x7bef,0x7bef,0x73ae,//74
 		0x7bef,0x6b4d,0x73ae,0x73ae,0x9000,0x73ae,0x73ae,0x73ae,0x8c71,0x73ae,0x7bef,0x7bef,0xf800,0x9000,0x7bef,0x7bef,
 		0x7bef,0x8c71,0x7bef,0x7bef,0x7bef,0x6b4d,0x7bef,0xf800,0x8800,0x7bef,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x7bef,
 		0x7bef,0x8c71,0x8c71,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x8c71,0x8c71,0x8c71,0x8c71,0x8c71,0x6b4d,
@@ -3850,8 +3885,8 @@ const static int skyboxColors[16][128] = {
 		0x73ae,0x73ae,0x73ae,0x73ae,0x6b4d,0x8c71,0x8c71,0x7bef,0x7bef,0x7bef,0x7bef,0x73ae,0x73ae,0x73ae,0x7bef,0x7bef
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone dust
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //75
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone dust
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//75
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5820,0x5820,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5820,0x7000,0xa860,0x5820,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3868,8 +3903,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone line 0
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //76
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone line 0
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//76
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4800,0x4000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4800,0x0000,0x4000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3886,8 +3921,8 @@ const static int skyboxColors[16][128] = {
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone line 1
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //77
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone line 1
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//77
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5000,0x4800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5000,0x0000,0x4800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3904,8 +3939,8 @@ const static int skyboxColors[16][128] = {
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone line 2
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //78
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone line 2
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//78
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5800,0x5000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5800,0x0000,0x5000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3922,8 +3957,8 @@ const static int skyboxColors[16][128] = {
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6020,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone line 3
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //79
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6020,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone line 3
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//79
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6820,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6020,0x5820,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6020,0x0000,0x5820,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3940,8 +3975,8 @@ const static int skyboxColors[16][128] = {
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6820,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7020,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone line 4
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //80
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7020,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone line 4
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//80
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7820,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7020,0x6020,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7020,0x0000,0x6020,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3958,8 +3993,8 @@ const static int skyboxColors[16][128] = {
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7820,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7840,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone line 5
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //81
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7840,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone line 5
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//81
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8040,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7840,0x7020,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7840,0x0000,0x7020,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3976,8 +4011,8 @@ const static int skyboxColors[16][128] = {
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8040,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8040,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone line 6
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //82
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8040,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone line 6
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//82
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8840,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8040,0x7840,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8040,0x0000,0x7840,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -3994,8 +4029,8 @@ const static int skyboxColors[16][128] = {
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8840,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8840,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone line 7
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //83
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8840,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone line 7
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//83
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x9860,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8840,0x8040,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8840,0x0000,0x8040,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4012,8 +4047,8 @@ const static int skyboxColors[16][128] = {
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x9860,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x9860,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone line 8
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //84
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x9860,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone line 8
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//84
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa060,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x9860,0x8860,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x9860,0x0000,0x8860,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4030,8 +4065,8 @@ const static int skyboxColors[16][128] = {
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa060,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa060,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone line 9
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //85
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa060,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone line 9
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//85
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa880,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa060,0x9060,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa060,0x0000,0x9060,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4048,8 +4083,8 @@ const static int skyboxColors[16][128] = {
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa880,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa880,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone line 10
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //86
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa880,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone line 10
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//86
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb880,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa880,0x9860,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa880,0x0000,0x9860,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4066,8 +4101,8 @@ const static int skyboxColors[16][128] = {
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb880,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb080,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone line 11
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //87
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb080,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone line 11
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//87
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xc080,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb080,0xa880,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb080,0x0000,0xa880,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4084,8 +4119,8 @@ const static int skyboxColors[16][128] = {
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xc080,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xc0a0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone line 12
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //88
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xc0a0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone line 12
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//88
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xc8a0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xc0a0,0xb080,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xc0a0,0x0000,0xb080,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4102,8 +4137,8 @@ const static int skyboxColors[16][128] = {
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xc8a0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xc8a0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone line 13
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //89
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xc8a0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone line 13
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//89
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xd8a0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xc8a0,0xb880,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xc8a0,0x0000,0xb880,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4120,8 +4155,8 @@ const static int skyboxColors[16][128] = {
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xd8a0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xd0a0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone line 14
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //90
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xd0a0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone line 14
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//90
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xe0c0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xd0a0,0xc0a0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xd0a0,0x0000,0xc0a0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4138,8 +4173,8 @@ const static int skyboxColors[16][128] = {
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xe0c0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xd8c0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone line 15
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //91
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xd8c0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone line 15
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//91
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xf0c0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xd8c0,0xc8a0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xd8c0,0x0000,0xc8a0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4156,8 +4191,8 @@ const static int skyboxColors[16][128] = {
         0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xf0c0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-        0xf800,0xf800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone torch on
-		0xfec0,0xfc60,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //92
+        0xf800,0xf800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone torch on
+		0xfec0,0xfc60,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//92
 		0xfff2,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0xf800,0xa800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x93a8,0x41a4,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4174,8 +4209,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
     },
     {
-        0x5000,0x4800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone torch off
-		0x4800,0x2800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //93
+        0x5000,0x4800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone torch off
+		0x4800,0x2800,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//93
 		0x7b07,0x49e4,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x9388,0x3963,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x93a8,0x41a4,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4192,8 +4227,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
     },
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //redstone torch
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //94
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//redstone torch
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//94
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4210,8 +4245,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6286,0x3142,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //repeater
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //95
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//repeater
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//95
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8020,0x6000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8020,0x4021,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x93a8,0x6286,0x0000,0x0000,
@@ -4228,8 +4263,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x8430,0x8410,0x8410,0x8410,0x8410,0x8430,0x9492,0x9492,0x7bcf,0x9492,0x8430,0x8410,0x8410,0x8410,0x8410,0x8430, //repeater off
-		0x8430,0xad55,0xb596,0xb596,0xb596,0xb596,0xb596,0xb596,0xa514,0xb596,0xb596,0xb596,0x9cf3,0xad55,0xad55,0x8410, //96
+		0x8430,0x8410,0x8410,0x8410,0x8410,0x8430,0x9492,0x9492,0x7bcf,0x9492,0x8430,0x8410,0x8410,0x8410,0x8410,0x8430,//repeater off
+		0x8430,0xad55,0xb596,0xb596,0xb596,0xb596,0xb596,0xb596,0xa514,0xb596,0xb596,0xb596,0x9cf3,0xad55,0xad55,0x8410,//96
 		0x8430,0x9cf3,0xa514,0xa514,0x9cf3,0xa514,0xa514,0xa514,0xb596,0xa514,0xad55,0xad55,0xad55,0xb596,0xad55,0x8430,
 		0x8430,0xb596,0xad55,0xad55,0xad55,0x9cf3,0xad55,0xb596,0xad55,0xad55,0xa514,0xa514,0xa514,0xa514,0xa514,0x8430,
 		0x8430,0xb596,0xb596,0xa514,0xa514,0xa514,0x9492,0x9492,0x9492,0x9492,0xb596,0xb596,0xb596,0xb596,0xb596,0x7bcf,
@@ -4246,8 +4281,8 @@ const static int skyboxColors[16][128] = {
 		0x8410,0x8410,0x8410,0x8410,0x7bcf,0x9492,0x8c51,0x8410,0x8410,0x8410,0x8430,0x8410,0x8410,0x8410,0x8430,0x8430
 	},
     {
-		0x8430,0x8410,0x8410,0x8410,0x8410,0x8430,0x9492,0x9492,0x7bcf,0x9492,0x8430,0x8410,0x8410,0x8410,0x8410,0x8430, //repeater on
-		0x8430,0xad55,0xb596,0xb596,0xb596,0xb596,0xb596,0xb596,0xa514,0xb596,0xb596,0xb596,0x9cf3,0xad55,0xad55,0x8410, //97
+		0x8430,0x8410,0x8410,0x8410,0x8410,0x8430,0x9492,0x9492,0x7bcf,0x9492,0x8430,0x8410,0x8410,0x8410,0x8410,0x8430,//repeater on
+		0x8430,0xad55,0xb596,0xb596,0xb596,0xb596,0xb596,0xb596,0xa514,0xb596,0xb596,0xb596,0x9cf3,0xad55,0xad55,0x8410,//97
 		0x8430,0x9cf3,0xa514,0xa514,0x9cf3,0xa514,0xa514,0xa514,0xb596,0xa514,0xad55,0xad55,0xad55,0xb596,0xad55,0x8430,
 		0x8430,0xb596,0xad55,0xad55,0xad55,0x9cf3,0xad55,0xb596,0xad55,0xad55,0xa514,0xa514,0xa514,0xa514,0xa514,0x8430,
 		0x8430,0xb596,0xb596,0xa514,0xa514,0xa514,0x9492,0x9492,0x9492,0x9492,0xb596,0xb596,0xb596,0xb596,0xb596,0x7bcf,
@@ -4264,8 +4299,8 @@ const static int skyboxColors[16][128] = {
 		0x8410,0x8410,0x8410,0x8410,0x7bcf,0x9492,0x8c51,0x8410,0x8410,0x8410,0x8430,0x8410,0x8410,0x8410,0x8430,0x8430
 	},
     {
-		0x8410,0xc618,0xbdd7,0xc618,0xc618,0xc618,0xc618,0xce59,0xbdd7,0xc618,0xc618,0xc618,0xbdf7,0xc638,0xbdf7,0xad55, //iron door bottom
-		0xd69a,0xc638,0xc638,0xc638,0xce79,0xce79,0xce79,0xce59,0xc638,0xce59,0xce59,0xce59,0xc618,0xc618,0xb5b6,0xa534, //98
+		0x8410,0xc618,0xbdd7,0xc618,0xc618,0xc618,0xc618,0xce59,0xbdd7,0xc618,0xc618,0xc618,0xbdf7,0xc638,0xbdf7,0xad55,//iron door bottom
+		0xd69a,0xc638,0xc638,0xc638,0xce79,0xce79,0xce79,0xce59,0xc638,0xce59,0xce59,0xce59,0xc618,0xc618,0xb5b6,0xa534,//98
 		0xd69a,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638,0xbdf7,0xbdf7,0xbdd7,0xb596,0xb5b6,0xb5b6,0xa514,
 		0xc638,0xbdf7,0xbdd7,0xbdd7,0xbdd7,0xbdd7,0xb5b6,0xbdd7,0xb596,0xad75,0xad55,0xad55,0xad55,0xad75,0xad75,0x9cf3,
 		0xce79,0xc638,0xbdf7,0xc638,0xc618,0xc638,0xc618,0xc618,0xb5b6,0xb5b6,0xb5b6,0xb596,0xb5b6,0xbdf7,0xb5b6,0xa514,
@@ -4282,8 +4317,8 @@ const static int skyboxColors[16][128] = {
 		0x8430,0x7bcf,0x73ae,0x73ae,0x738e,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x73ae,0x738e,0x738e,0x738e,0x738e,0x738e
 	},
     {
-		0xa534,0xa514,0xa534,0xad75,0xb5b6,0xbdf7,0xc618,0xbdf7,0xbdf7,0xbdf7,0xc618,0xc618,0xc638,0xc638,0xc638,0xbdd7, //iron door top
-		0xbdf7,0xc618,0xbdf7,0xbdd7,0xc618,0xc618,0xc618,0xc618,0xc618,0xc618,0xc618,0xc618,0xc618,0xc618,0xc618,0xa534, //99
+		0xa534,0xa514,0xa534,0xad75,0xb5b6,0xbdf7,0xc618,0xbdf7,0xbdf7,0xbdf7,0xc618,0xc618,0xc638,0xc638,0xc638,0xbdd7,//iron door top
+		0xbdf7,0xc618,0xbdf7,0xbdd7,0xc618,0xc618,0xc618,0xc618,0xc618,0xc618,0xc618,0xc618,0xc618,0xc618,0xc618,0xa534,//99
 		0xc618,0xc638,0xbdd7,0xbdd7,0xbdd7,0xbdd7,0xbdf7,0xc618,0xbdf7,0xbdf7,0xbdf7,0xbdf7,0xb5b6,0xc618,0xbdf7,0xa534,
 		0xbdd7,0xbdf7,0xb5b6,0x0000,0x0000,0x0000,0x0000,0xc638,0xb5b6,0x0000,0x0000,0x0000,0x0000,0xc618,0xbdf7,0xa514,
 		0x4a69,0xbdf7,0xbdd7,0x0000,0x0000,0x0000,0x0000,0xce59,0xbdf7,0x0000,0x0000,0x0000,0x0000,0xce59,0xc618,0xad55,
@@ -4300,8 +4335,8 @@ const static int skyboxColors[16][128] = {
 		0x4a69,0xbdd7,0xb596,0xbdd7,0xb596,0xb596,0xb596,0xb596,0xa534,0xb596,0xad75,0xb596,0xbdd7,0xb596,0xa514,0x9cf3
 	},
     {
-		0x1061,0x1061,0x18a2,0x1061,0x1061,0x1061,0x1061,0x1061,0x1061,0x1061,0x1061,0x1061,0x1061,0x18a2,0x1061,0x1061, //redstone lamp on
-		0x1061,0x2903,0x1061,0x28a0,0x8a85,0x4922,0x5184,0x18a2,0x1061,0x5207,0x9ae7,0x3901,0x8a85,0x1061,0x2903,0x1061, //100
+		0x1061,0x1061,0x18a2,0x1061,0x1061,0x1061,0x1061,0x1061,0x1061,0x1061,0x1061,0x1061,0x1061,0x18a2,0x1061,0x1061,//redstone lamp on
+		0x1061,0x2903,0x1061,0x28a0,0x8a85,0x4922,0x5184,0x18a2,0x1061,0x5207,0x9ae7,0x3901,0x8a85,0x1061,0x2903,0x1061,//100
 		0x18a2,0x1061,0x4942,0x71e4,0x7204,0x92a6,0x4922,0x2903,0x1061,0x5207,0x8a85,0x7204,0x4942,0x30a0,0x1061,0x18a2,
 		0x1061,0x28a0,0x7204,0x7a44,0x92a6,0x7a04,0x30c0,0x18a2,0x1061,0x2880,0x8245,0x69c3,0x69e4,0x4942,0x4942,0x1061,
 		0x1061,0x9ae6,0x8a85,0x8a85,0x7a04,0x3902,0x18a2,0x30c0,0x4984,0x1061,0x4922,0x7204,0x8a85,0x8a85,0x8aa6,0x1061,
@@ -4318,8 +4353,8 @@ const static int skyboxColors[16][128] = {
 		0x1061,0x1061,0x18a2,0x1061,0x1061,0x1061,0x1061,0x1061,0x1061,0x1061,0x1061,0x1061,0x1061,0x18a2,0x1061,0x1061
 	},
     {
-		0x20c2,0x20c2,0x2923,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x2923,0x20c2,0x20c2, //redstone lamp on
-		0x20c2,0x41c6,0x20c2,0x4960,0xed09,0xedf1,0x8b06,0x2923,0x20c2,0x8bcc,0xf58d,0x6202,0xed09,0x20c2,0x41c6,0x20c2, //101
+		0x20c2,0x20c2,0x2923,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x2923,0x20c2,0x20c2,//redstone lamp on
+		0x20c2,0x41c6,0x20c2,0x4960,0xed09,0xedf1,0x8b06,0x2923,0x20c2,0x8bcc,0xf58d,0x6202,0xed09,0x20c2,0x41c6,0x20c2,//101
 		0x2923,0x20c2,0x82a3,0xc3e7,0xe613,0xf73a,0x7a83,0x41c6,0x20c2,0x8bcc,0xece9,0xc3e7,0x82c4,0x5181,0x20c2,0x2923,
 		0x20c2,0x5181,0xc407,0xbbc6,0xf73a,0xcc27,0x5181,0x2923,0x20c2,0x4940,0xdca8,0xb3a6,0xffff,0x8283,0x7a83,0x20c2,
 		0x20c2,0xf5ad,0xed09,0xdca8,0xf52b,0x6223,0x2923,0x5181,0x8307,0x20c2,0x7aa3,0xc407,0xfe95,0xff7a,0xed0a,0x20c2,
@@ -4336,8 +4371,8 @@ const static int skyboxColors[16][128] = {
 		0x20c2,0x20c2,0x2923,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x20c2,0x2923,0x20c2,0x20c2
 	},
 	{
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //wooden door
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //102
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//wooden door
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//102
 		0x0000,0x0000,0x0000,0x6a86,0x9c09,0x9c09,0x9c09,0x9c09,0x9c09,0x9c09,0x9c09,0x9c09,0x9c09,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x6a86,0x9c09,0x0000,0x0000,0x0000,0x9c09,0x0000,0x0000,0x0000,0x9c09,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x6b6f,0x9c09,0x0000,0x0000,0x0000,0x9c09,0x0000,0x0000,0x0000,0x9c09,0x0000,0x0000,0x0000,
@@ -4354,8 +4389,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x6a86,0x6a86,0x6a86,0x6a86,0x6a86,0x6a86,0x6a86,0x6a86,0x6a86,0x6a86,0x0000,0x0000,0x0000
 	},
 	{
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //iron door
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //103
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//iron door
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//103
 		0x0000,0x0000,0x0000,0x9492,0xce59,0xce59,0xce59,0xce59,0xce59,0xce59,0xce59,0xce59,0xce59,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x9492,0xce59,0x0000,0x0000,0x0000,0xce59,0x0000,0x0000,0x0000,0xce59,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x4a49,0xce59,0x0000,0x0000,0x0000,0xce59,0x0000,0x0000,0x0000,0xce59,0x0000,0x0000,0x0000,
@@ -4372,8 +4407,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x0000,0x0000,0x0000
 	},
 	{
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //lever
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //104
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//lever
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//104
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4390,8 +4425,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6aa6,0x3142,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
 	{
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //wooden button
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //105
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//wooden button
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//105
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4408,8 +4443,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
 	{
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //stone button
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //106
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//stone button
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//106
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4426,8 +4461,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
 	{
-		0xe121,0xe121,0xe121,0xd142,0xe121,0xe121,0xe121,0xe121,0xe121,0xc101,0xb901,0xe121,0xe121,0xe121,0xe121,0xe121, //redstone block
-		0xe121,0xc901,0xc101,0xd101,0xb101,0xc101,0xa0c1,0xa0c1,0x98c1,0x8080,0xa8e1,0xb901,0xc101,0xc101,0xc901,0xe121, //107
+		0xe121,0xe121,0xe121,0xd142,0xe121,0xe121,0xe121,0xe121,0xe121,0xc101,0xb901,0xe121,0xe121,0xe121,0xe121,0xe121,//redstone block
+		0xe121,0xc901,0xc101,0xd101,0xb101,0xc101,0xa0c1,0xa0c1,0x98c1,0x8080,0xa8e1,0xb901,0xc101,0xc101,0xc901,0xe121,//107
 		0xe121,0xc101,0xb901,0xc901,0xb0e1,0xa8e1,0x98c1,0x98c1,0x80a0,0x7880,0x98c1,0x98c1,0xa0e1,0x90a1,0xc101,0xe121,
 		0xe121,0xb901,0xa8e1,0xa8e1,0xd142,0x90c1,0x7060,0x7880,0x7880,0x88a1,0x80a0,0x98c1,0xb0e1,0xb0e1,0xb901,0xe121,
 		0xe121,0xb101,0x80a0,0x98c1,0xb0e1,0x8080,0x7860,0x7060,0x7060,0x7060,0x7860,0x8080,0xa8e1,0xc901,0xd142,0xe121,
@@ -4444,8 +4479,8 @@ const static int skyboxColors[16][128] = {
 		0xe121,0xe121,0xe121,0xe121,0xe121,0xe121,0xe121,0xe121,0xe121,0xe121,0xe121,0xe121,0xe121,0xe121,0xe121,0xe121
 	},
 	{
-		0x9775,0x9775,0x8774,0x7752,0x7772,0x2e4a,0x9775,0x9775,0x9775,0x2e4a,0x8f74,0x8f74,0x8f74,0x7f53,0x7f53,0x7f33, //emerald block
-		0x9775,0x4f0f,0x4f0e,0x46ee,0x3e4b,0x9775,0x8774,0x5f30,0x5f30,0x5f30,0x2e4a,0x5f50,0x570f,0x570f,0x5730,0x362b, //108
+		0x9775,0x9775,0x8774,0x7752,0x7772,0x2e4a,0x9775,0x9775,0x9775,0x2e4a,0x8f74,0x8f74,0x8f74,0x7f53,0x7f53,0x7f33,//emerald block
+		0x9775,0x4f0f,0x4f0e,0x46ee,0x3e4b,0x9775,0x8774,0x5f30,0x5f30,0x5f30,0x2e4a,0x5f50,0x570f,0x570f,0x5730,0x362b,//180
 		0x8774,0x4f0f,0x46ee,0x3e4b,0x9775,0x7752,0x5f30,0x4f0e,0x4f0e,0x4f0e,0x46ad,0x2e4a,0x5f30,0x4f0e,0x4eee,0x35a9,
 		0x7772,0x46ee,0x3e4b,0x9775,0x7752,0x7752,0x5f30,0x4f0f,0x4f0e,0x46ee,0x46ad,0x3e4b,0x2e4a,0x4f0e,0x4ece,0x35a9,
 		0x7772,0x3e4b,0x9775,0x7752,0x7752,0x6f51,0x5f30,0x4f0e,0x46ee,0x46ee,0x46ad,0x468c,0x3e4b,0x2e4a,0x4ece,0x35a9,
@@ -4462,8 +4497,8 @@ const static int skyboxColors[16][128] = {
 		0x6710,0x364b,0x35ea,0x35ea,0x35ea,0x35ea,0x2d89,0x2d89,0x2d89,0x2d89,0x3e2c,0x35ea,0x35ea,0x35ea,0x35ea,0x35ea
 	},
 	{
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //shears
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //109
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//shears
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//109
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x69a5,0xad55,0xd6ba,0xd6ba,0xad55,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x69a5,0x738e,0xd6ba,0xd6ba,0xad55,0x0000,0xad55,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x69a5,0x8a06,0xad55,0xd6ba,0xad55,0x0000,0xad55,0xd6ba,0x0000,0x0000,
@@ -4480,8 +4515,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
 	{
-		0xdefc,0xe73c,0xd6fb,0xdefb,0xef5d,0xf7be,0xdf1c,0xdf1c,0xf79e,0xf7be,0xd6db,0xdefb,0xef7d,0xef7d,0xdefb,0xd6db, //wool
-		0xef7d,0xef9e,0xffff,0xffff,0xffdf,0xf7be,0xe73d,0xe73c,0xdefb,0xd6db,0xdf1c,0xe73c,0xd6ba,0xd6db,0xe73c,0xe75d, //110
+		0xdefc,0xe73c,0xd6fb,0xdefb,0xef5d,0xf7be,0xdf1c,0xdf1c,0xf79e,0xf7be,0xd6db,0xdefb,0xef7d,0xef7d,0xdefb,0xd6db,//wool
+		0xef7d,0xef9e,0xffff,0xffff,0xffdf,0xf7be,0xe73d,0xe73c,0xdefb,0xd6db,0xdf1c,0xe73c,0xd6ba,0xd6db,0xe73c,0xe75d,//110
 		0xffdf,0xffdf,0xe73c,0xe75d,0xffff,0xffdf,0xef7d,0xe73c,0xf7be,0xffdf,0xf7be,0xf7be,0xffff,0xffff,0xf7be,0xef9e,
 		0xef7d,0xe73c,0xf7be,0xffdf,0xe73c,0xe73c,0xef5d,0xffdf,0xdf1c,0xe73d,0xffdf,0xffdf,0xef7d,0xe73c,0xffff,0xffdf,
 		0xef9e,0xe75d,0xdf1c,0xef7d,0xf7be,0xf7be,0xd6db,0xd6bb,0xdf1c,0xef7d,0xdf1c,0xd6db,0xf7be,0xf7be,0xdefb,0xd6db,
@@ -4498,8 +4533,8 @@ const static int skyboxColors[16][128] = {
 		0xd6db,0xdf1c,0xffdf,0xef7d,0xdefb,0xe73c,0xffdf,0xffff,0xe75d,0xe73c,0xf79e,0xffdf,0xdefb,0xdf1c,0xffdf,0xffdf
 	},
 	{
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //destroy 1
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //111
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//destroy 1
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//111
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4516,8 +4551,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
 	{
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //destroy 2
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //112
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//destroy 2
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//112
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4534,8 +4569,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
 	{
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //destroy 3
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //113
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//destroy 3
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//113
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x39e7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4552,8 +4587,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
 	{
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //destroy 4
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //114
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//destroy 4
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//114
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x39e7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x39e7,0x9cd3,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4570,8 +4605,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
 	{
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //destroy 5
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //115
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//destroy 5
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//115
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x39e7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x39e7,0x9cd3,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x39e7,0x9cd3,0x0000,0x39e7,0x0000,0x0000,0x0000,0x39e7,0x0000,0x0000,
@@ -4588,8 +4623,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
 	{
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //destroy 6
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //116
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//destroy 6
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//116
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x39e7,0x0000,0x39e7,0x39e7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x9cd3,0x39e7,0x9cd3,0x9cd3,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x39e7,0x9cd3,0x0000,0x39e7,0x0000,0x0000,0x0000,0x39e7,0x39e7,0x0000,
@@ -4606,8 +4641,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
 	{
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //destroy 7
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x39e7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //117
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//destroy 7
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x39e7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//117
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x9cd3,0x39e7,0x0000,0x39e7,0x39e7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x9cd3,0x39e7,0x9cd3,0x9cd3,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x39e7,0x0000,0x39e7,0x9cd3,0x0000,0x39e7,0x0000,0x0000,0x0000,0x39e7,0x39e7,0x0000,
@@ -4624,8 +4659,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
 	{
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //destroy 8
-		0x0000,0x0000,0x0000,0x0000,0x39e7,0x39e7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //118
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//destroy 8
+		0x0000,0x0000,0x0000,0x0000,0x39e7,0x39e7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//118
 		0x0000,0x0000,0x0000,0x0000,0x9cd3,0x9cd3,0x39e7,0x0000,0x39e7,0x39e7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x39e7,0x39e7,0x0000,0x0000,0x9cd3,0x39e7,0x9cd3,0x9cd3,0x0000,0x0000,0x0000,0x39e7,0x0000,0x0000,
 		0x0000,0x0000,0x9cd3,0x9cd3,0x39e7,0x0000,0x39e7,0x9cd3,0x0000,0x39e7,0x39e7,0x0000,0x0000,0x39e7,0x39e7,0x0000,
@@ -4642,8 +4677,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x9cd3,0x0000,0x0000,0x0000,0x9cd3,0x0000,0x0000,0x0000,0x9cd3,0x0000,0x0000,0x0000
 	},
 	{
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x39e7,0x0000,0x9cd3,0x0000,0x0000,0x0000,0x0000,0x0000,0x9cd3,0x0000, //destroy 9
-		0x0000,0x0000,0x0000,0x39e7,0x39e7,0x39e7,0x9cd3,0x0000,0x0000,0x0000,0x39e7,0x0000,0x39e7,0x0000,0x0000,0x0000, //119
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x39e7,0x0000,0x9cd3,0x0000,0x0000,0x0000,0x0000,0x0000,0x9cd3,0x0000,//destroy 9
+		0x0000,0x0000,0x0000,0x39e7,0x39e7,0x39e7,0x9cd3,0x0000,0x0000,0x0000,0x39e7,0x0000,0x39e7,0x0000,0x0000,0x0000,//119
 		0x0000,0x39e7,0x0000,0x9cd3,0x9cd3,0x9cd3,0x39e7,0x0000,0x39e7,0x39e7,0x9cd3,0x0000,0x9cd3,0x39e7,0x0000,0x0000,
 		0x0000,0x9cd3,0x39e7,0x39e7,0x0000,0x0000,0x9cd3,0x39e7,0x9cd3,0x9cd3,0x0000,0x0000,0x0000,0x39e7,0x0000,0x0000,
 		0x0000,0x39e7,0x9cd3,0x9cd3,0x39e7,0x0000,0x39e7,0x9cd3,0x0000,0x39e7,0x39e7,0x0000,0x0000,0x39e7,0x39e7,0x0000,
@@ -4660,8 +4695,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x9cd3,0x0000,0x9cd3,0x9cd3,0x0000,0x0000,0x39e7,0x0000,0x0000,0x0000,0x9cd3,0x9cd3,0x39e7,0x0000
 	},
 	{
-		0x0000,0x0000,0x39e7,0x0000,0x0000,0x0000,0x39e7,0x0000,0x9cd3,0x0000,0x39e7,0x0000,0x39e7,0x0000,0x9cd3,0x0000, //destroy 10
-		0x0000,0x0000,0x9cd3,0x39e7,0x39e7,0x39e7,0x9cd3,0x0000,0x0000,0x0000,0x39e7,0x0000,0x39e7,0x0000,0x0000,0x0000, //120
+		0x0000,0x0000,0x39e7,0x0000,0x0000,0x0000,0x39e7,0x0000,0x9cd3,0x0000,0x39e7,0x0000,0x39e7,0x0000,0x9cd3,0x0000,//destroy 10
+		0x0000,0x0000,0x9cd3,0x39e7,0x39e7,0x39e7,0x9cd3,0x0000,0x0000,0x0000,0x39e7,0x0000,0x39e7,0x0000,0x0000,0x0000,//120
 		0x0000,0x39e7,0x0000,0x9cd3,0x9cd3,0x9cd3,0x39e7,0x0000,0x39e7,0x39e7,0x9cd3,0x0000,0x9cd3,0x39e7,0x0000,0x0000,
 		0x0000,0x9cd3,0x39e7,0x39e7,0x0000,0x0000,0x9cd3,0x39e7,0x9cd3,0x9cd3,0x0000,0x0000,0x0000,0x39e7,0x0000,0x0000,
 		0x39e7,0x39e7,0x9cd3,0x9cd3,0x39e7,0x0000,0x39e7,0x9cd3,0x0000,0x39e7,0x39e7,0x0000,0x0000,0x39e7,0x39e7,0x0000,
@@ -4678,8 +4713,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x39e7,0x0000,0x9cd3,0x9cd3,0x0000,0x0000,0x39e7,0x0000,0x0000,0x0000,0x9cd3,0x9cd3,0x39e7,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //sheep spawn egg
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //121
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//sheep spawn egg
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//121
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x738e,0x630c,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x82cb,0x82cb,0xce59,0xb5b6,0x738e,0x7acb,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x82cb,0xa3ae,0xa3ae,0xcc92,0xd69a,0xb5b6,0x8b2c,0x7aaa,0x0000,0x0000,0x0000,0x0000,
@@ -4696,8 +4731,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //pig spawn egg
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //122
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//pig spawn egg
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//122
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x728a,0x6228,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x6985,0x6985,0xd471,0xbc10,0x728a,0x6986,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x6985,0x8a07,0x8a07,0xaa89,0xdcb2,0xbc10,0x79a6,0x6985,0x0000,0x0000,0x0000,0x0000,
@@ -4714,140 +4749,140 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-        0xecd2,0xecd2,0xe450,0xe450,0xecd3,0xecd3,0xecd3,0xecd3,0xed14,0xed14,0xed13,0xed13,0xecf3,0xecf3,0xed34,0xed34, //pig face front
-        0xecd2,0xecd2,0xe450,0xe450,0xecd3,0xecd3,0xecd3,0xecd3,0xed14,0xed14,0xed13,0xed13,0xecf3,0xecf3,0xed34,0xed34, //123
-        0xe4b2,0xe4b2,0xe430,0xe430,0xecf3,0xecf3,0xed13,0xed13,0xecd3,0xecd3,0xf534,0xf534,0xf575,0xf575,0xf595,0xf595, 
-        0xe4b2,0xe4b2,0xe430,0xe430,0xecf3,0xecf3,0xed13,0xed13,0xecd3,0xecd3,0xf534,0xf534,0xf575,0xf575,0xf595,0xf595, 
-        0xecb2,0xecb2,0xed34,0xed34,0xed54,0xed54,0xed34,0xed34,0xed14,0xed14,0xed14,0xed14,0xed54,0xed54,0xf595,0xf595, 
-        0xecb2,0xecb2,0xed34,0xed34,0xed54,0xed54,0xed34,0xed34,0xed14,0xed14,0xed14,0xed14,0xed54,0xed54,0xf595,0xf595, 
-        0x0001,0x0001,0xffff,0xffff,0xecf3,0xecf3,0xecf3,0xecf3,0xed54,0xed54,0xf534,0xf534,0xffdf,0xffdf,0x0001,0x0001, 
-        0x0001,0x0001,0xffff,0xffff,0xecf3,0xecf3,0xecf3,0xecf3,0xed54,0xed54,0xf534,0xf534,0xffdf,0xffdf,0x0001,0x0001, 
-        0xecb3,0xecb3,0xed14,0xed14,0xedd7,0xedd7,0xf618,0xf618,0xee18,0xee18,0xf618,0xf618,0xed14,0xed14,0xed34,0xed34, 
-        0xecb3,0xecb3,0xed14,0xed14,0xedd7,0xedd7,0xf618,0xf618,0xee18,0xee18,0xf618,0xf618,0xed14,0xed14,0xed34,0xed34, 
-        0xed13,0xed13,0xed13,0xed13,0x9249,0x9249,0xed14,0xed14,0xf555,0xf555,0x9a8a,0x9a8a,0xed13,0xed13,0xf575,0xf575, 
-        0xed13,0xed13,0xed13,0xed13,0x9249,0x9249,0xed14,0xed14,0xf555,0xf555,0x9a8a,0x9a8a,0xed13,0xed13,0xf575,0xf575, 
-        0xec92,0xec92,0xed14,0xed14,0xedd7,0xedd7,0xf618,0xf618,0xee18,0xee18,0xf618,0xf618,0xed14,0xed14,0xed95,0xed95, 
-        0xec92,0xec92,0xed14,0xed14,0xedd7,0xedd7,0xf618,0xf618,0xee18,0xee18,0xf618,0xf618,0xed14,0xed14,0xed95,0xed95, 
-        0xecf3,0xecf3,0xecf3,0xecf3,0xed14,0xed14,0xed54,0xed54,0xed95,0xed95,0xed55,0xed55,0xf575,0xf575,0xf575,0xf575, 
-        0xecf3,0xecf3,0xecf3,0xecf3,0xed14,0xed14,0xed54,0xed54,0xed95,0xed95,0xed55,0xed55,0xf575,0xf575,0xf575,0xf575, 
-    
+        0xecd2,0xecd2,0xe450,0xe450,0xecd3,0xecd3,0xecd3,0xecd3,0xed14,0xed14,0xed13,0xed13,0xecf3,0xecf3,0xed34,0xed34,//pig face front
+        0xecd2,0xecd2,0xe450,0xe450,0xecd3,0xecd3,0xecd3,0xecd3,0xed14,0xed14,0xed13,0xed13,0xecf3,0xecf3,0xed34,0xed34,//123
+        0xe4b2,0xe4b2,0xe430,0xe430,0xecf3,0xecf3,0xed13,0xed13,0xecd3,0xecd3,0xf534,0xf534,0xf575,0xf575,0xf595,0xf595,
+        0xe4b2,0xe4b2,0xe430,0xe430,0xecf3,0xecf3,0xed13,0xed13,0xecd3,0xecd3,0xf534,0xf534,0xf575,0xf575,0xf595,0xf595,
+        0xecb2,0xecb2,0xed34,0xed34,0xed54,0xed54,0xed34,0xed34,0xed14,0xed14,0xed14,0xed14,0xed54,0xed54,0xf595,0xf595,
+        0xecb2,0xecb2,0xed34,0xed34,0xed54,0xed54,0xed34,0xed34,0xed14,0xed14,0xed14,0xed14,0xed54,0xed54,0xf595,0xf595,
+        0x0001,0x0001,0xffff,0xffff,0xecf3,0xecf3,0xecf3,0xecf3,0xed54,0xed54,0xf534,0xf534,0xffdf,0xffdf,0x0001,0x0001,
+        0x0001,0x0001,0xffff,0xffff,0xecf3,0xecf3,0xecf3,0xecf3,0xed54,0xed54,0xf534,0xf534,0xffdf,0xffdf,0x0001,0x0001,
+        0xecb3,0xecb3,0xed14,0xed14,0xedd7,0xedd7,0xf618,0xf618,0xee18,0xee18,0xf618,0xf618,0xed14,0xed14,0xed34,0xed34,
+        0xecb3,0xecb3,0xed14,0xed14,0xedd7,0xedd7,0xf618,0xf618,0xee18,0xee18,0xf618,0xf618,0xed14,0xed14,0xed34,0xed34,
+        0xed13,0xed13,0xed13,0xed13,0x9249,0x9249,0xed14,0xed14,0xf555,0xf555,0x9a8a,0x9a8a,0xed13,0xed13,0xf575,0xf575,
+        0xed13,0xed13,0xed13,0xed13,0x9249,0x9249,0xed14,0xed14,0xf555,0xf555,0x9a8a,0x9a8a,0xed13,0xed13,0xf575,0xf575,
+        0xec92,0xec92,0xed14,0xed14,0xedd7,0xedd7,0xf618,0xf618,0xee18,0xee18,0xf618,0xf618,0xed14,0xed14,0xed95,0xed95,
+        0xec92,0xec92,0xed14,0xed14,0xedd7,0xedd7,0xf618,0xf618,0xee18,0xee18,0xf618,0xf618,0xed14,0xed14,0xed95,0xed95,
+        0xecf3,0xecf3,0xecf3,0xecf3,0xed14,0xed14,0xed54,0xed54,0xed95,0xed95,0xed55,0xed55,0xf575,0xf575,0xf575,0xf575,
+        0xecf3,0xecf3,0xecf3,0xecf3,0xed14,0xed14,0xed54,0xed54,0xed95,0xed95,0xed55,0xed55,0xf575,0xf575,0xf575,0xf575,
+
     },
     {
-        0xed54,0xed54,0xed14,0xed14,0xed54,0xed54,0xf514,0xf514,0xecd3,0xecd3,0xed74,0xed74,0xed34,0xed34,0xed14,0xed14, //pig face right
-        0xed54,0xed54,0xed14,0xed14,0xed54,0xed54,0xf514,0xf514,0xecd3,0xecd3,0xed74,0xed74,0xed34,0xed34,0xed14,0xed14, //124
-        0xf575,0xf575,0xe4d3,0xe4d3,0xe4b1,0xe4b1,0xe451,0xe451,0xe430,0xe430,0xecf3,0xecf3,0xecd3,0xecd3,0xecf3,0xecf3, 
-        0xf575,0xf575,0xe4d3,0xe4d3,0xe4b1,0xe4b1,0xe451,0xe451,0xe430,0xe430,0xecf3,0xecf3,0xecd3,0xecd3,0xecf3,0xecf3, 
-        0xf595,0xf595,0xed14,0xed14,0xc431,0xc431,0xc40f,0xc40f,0xecb2,0xecb2,0xe430,0xe430,0xe430,0xe430,0xecb3,0xecb3, 
-        0xf595,0xf595,0xed14,0xed14,0xc431,0xc431,0xc40f,0xc40f,0xecb2,0xecb2,0xe430,0xe430,0xe430,0xe430,0xecb3,0xecb3, 
-        0xf534,0xf534,0xc431,0xc431,0x9249,0x9249,0xbbcf,0xbbcf,0xecd2,0xecd2,0xecd3,0xecd3,0xed13,0xed13,0xed13,0xed13, 
-        0xf534,0xf534,0xc431,0xc431,0x9249,0x9249,0xbbcf,0xbbcf,0xecd2,0xecd2,0xecd3,0xecd3,0xed13,0xed13,0xed13,0xed13, 
-        0xf554,0xf554,0xc3f0,0xc3f0,0x9249,0x9249,0xc3ef,0xc3ef,0xec92,0xec92,0xecb2,0xecb2,0xecb2,0xecb2,0xec92,0xec92, 
-        0xf554,0xf554,0xc3f0,0xc3f0,0x9249,0x9249,0xc3ef,0xc3ef,0xec92,0xec92,0xecb2,0xecb2,0xecb2,0xecb2,0xec92,0xec92, 
-        0xf575,0xf575,0xed54,0xed54,0x8a49,0x8a49,0xc40f,0xc40f,0xecb2,0xecb2,0xec92,0xec92,0xecb2,0xecb2,0xecb2,0xecb2, 
-        0xf575,0xf575,0xed54,0xed54,0x8a49,0x8a49,0xc40f,0xc40f,0xecb2,0xecb2,0xec92,0xec92,0xecb2,0xecb2,0xecb2,0xecb2, 
-        0xe491,0xe491,0xe451,0xe451,0xed14,0xed14,0xed33,0xed33,0xecf3,0xecf3,0xdbef,0xdbef,0xecd2,0xecd2,0xec92,0xec92, 
-        0xe491,0xe491,0xe451,0xe451,0xed14,0xed14,0xed33,0xed33,0xecf3,0xecf3,0xdbef,0xdbef,0xecd2,0xecd2,0xec92,0xec92, 
-        0xecf4,0xecf4,0xed34,0xed34,0xed13,0xed13,0xecf3,0xecf3,0xecd3,0xecd3,0xecb2,0xecb2,0xec92,0xec92,0xec71,0xec71, 
-        0xecf4,0xecf4,0xed34,0xed34,0xed13,0xed13,0xecf3,0xecf3,0xecd3,0xecd3,0xecb2,0xecb2,0xec92,0xec92,0xec71,0xec71, 
-    
+        0xed54,0xed54,0xed14,0xed14,0xed54,0xed54,0xf514,0xf514,0xecd3,0xecd3,0xed74,0xed74,0xed34,0xed34,0xed14,0xed14,//pig face right
+        0xed54,0xed54,0xed14,0xed14,0xed54,0xed54,0xf514,0xf514,0xecd3,0xecd3,0xed74,0xed74,0xed34,0xed34,0xed14,0xed14,//124
+        0xf575,0xf575,0xe4d3,0xe4d3,0xe4b1,0xe4b1,0xe451,0xe451,0xe430,0xe430,0xecf3,0xecf3,0xecd3,0xecd3,0xecf3,0xecf3,
+        0xf575,0xf575,0xe4d3,0xe4d3,0xe4b1,0xe4b1,0xe451,0xe451,0xe430,0xe430,0xecf3,0xecf3,0xecd3,0xecd3,0xecf3,0xecf3,
+        0xf595,0xf595,0xed14,0xed14,0xc431,0xc431,0xc40f,0xc40f,0xecb2,0xecb2,0xe430,0xe430,0xe430,0xe430,0xecb3,0xecb3,
+        0xf595,0xf595,0xed14,0xed14,0xc431,0xc431,0xc40f,0xc40f,0xecb2,0xecb2,0xe430,0xe430,0xe430,0xe430,0xecb3,0xecb3,
+        0xf534,0xf534,0xc431,0xc431,0x9249,0x9249,0xbbcf,0xbbcf,0xecd2,0xecd2,0xecd3,0xecd3,0xed13,0xed13,0xed13,0xed13,
+        0xf534,0xf534,0xc431,0xc431,0x9249,0x9249,0xbbcf,0xbbcf,0xecd2,0xecd2,0xecd3,0xecd3,0xed13,0xed13,0xed13,0xed13,
+        0xf554,0xf554,0xc3f0,0xc3f0,0x9249,0x9249,0xc3ef,0xc3ef,0xec92,0xec92,0xecb2,0xecb2,0xecb2,0xecb2,0xec92,0xec92,
+        0xf554,0xf554,0xc3f0,0xc3f0,0x9249,0x9249,0xc3ef,0xc3ef,0xec92,0xec92,0xecb2,0xecb2,0xecb2,0xecb2,0xec92,0xec92,
+        0xf575,0xf575,0xed54,0xed54,0x8a49,0x8a49,0xc40f,0xc40f,0xecb2,0xecb2,0xec92,0xec92,0xecb2,0xecb2,0xecb2,0xecb2,
+        0xf575,0xf575,0xed54,0xed54,0x8a49,0x8a49,0xc40f,0xc40f,0xecb2,0xecb2,0xec92,0xec92,0xecb2,0xecb2,0xecb2,0xecb2,
+        0xe491,0xe491,0xe451,0xe451,0xed14,0xed14,0xed33,0xed33,0xecf3,0xecf3,0xdbef,0xdbef,0xecd2,0xecd2,0xec92,0xec92,
+        0xe491,0xe491,0xe451,0xe451,0xed14,0xed14,0xed33,0xed33,0xecf3,0xecf3,0xdbef,0xdbef,0xecd2,0xecd2,0xec92,0xec92,
+        0xecf4,0xecf4,0xed34,0xed34,0xed13,0xed13,0xecf3,0xecf3,0xecd3,0xecd3,0xecb2,0xecb2,0xec92,0xec92,0xec71,0xec71,
+        0xecf4,0xecf4,0xed34,0xed34,0xed13,0xed13,0xecf3,0xecf3,0xecd3,0xecd3,0xecb2,0xecb2,0xec92,0xec92,0xec71,0xec71,
+
     },
     {
-        0xec30,0xec30,0xec71,0xec71,0xec91,0xec91,0xdb8e,0xdb8e,0xe42f,0xe42f,0xec91,0xec91,0xecb2,0xecb2,0xec92,0xec92, //pig face left
-        0xec30,0xec30,0xec71,0xec71,0xec91,0xec91,0xdb8e,0xdb8e,0xe42f,0xe42f,0xec91,0xec91,0xecb2,0xecb2,0xec92,0xec92, //125
-        0xe3ef,0xe3ef,0xdc2f,0xdc2f,0xdbae,0xdbae,0xe40f,0xe40f,0xec71,0xec71,0xe3ef,0xe3ef,0xe3cf,0xe3cf,0xdbf0,0xdbf0, 
-        0xe3ef,0xe3ef,0xdc2f,0xdc2f,0xdbae,0xdbae,0xe40f,0xe40f,0xec71,0xec71,0xe3ef,0xe3ef,0xe3cf,0xe3cf,0xdbf0,0xdbf0, 
-        0xe3af,0xe3af,0xdbae,0xdbae,0xec30,0xec30,0xe451,0xe451,0xb36e,0xb36e,0xbb8e,0xbb8e,0xecb2,0xecb2,0xecd3,0xecd3, 
-        0xe3af,0xe3af,0xdbae,0xdbae,0xec30,0xec30,0xe451,0xe451,0xb36e,0xb36e,0xbb8e,0xbb8e,0xecb2,0xecb2,0xecd3,0xecd3, 
-        0xebf0,0xebf0,0xdb6d,0xdb6d,0xec30,0xec30,0xec92,0xec92,0xb36e,0xb36e,0x8228,0x8228,0xbbef,0xbbef,0xecd3,0xecd3, 
-        0xebf0,0xebf0,0xdb6d,0xdb6d,0xec30,0xec30,0xec92,0xec92,0xb36e,0xb36e,0x8228,0x8228,0xbbef,0xbbef,0xecd3,0xecd3, 
-        0xe3d0,0xe3d0,0xe430,0xe430,0xec30,0xec30,0xec51,0xec51,0xb36e,0xb36e,0x8228,0x8228,0xbbae,0xbbae,0xec92,0xec92, 
-        0xe3d0,0xe3d0,0xe430,0xe430,0xec30,0xec30,0xec51,0xec51,0xb36e,0xb36e,0x8228,0x8228,0xbbae,0xbbae,0xec92,0xec92, 
-        0xebf0,0xebf0,0xdb8d,0xdb8d,0xdb6d,0xdb6d,0xe471,0xe471,0xb34d,0xb34d,0x7a08,0x7a08,0xecd2,0xecd2,0xecf3,0xecf3, 
-        0xebf0,0xebf0,0xdb8d,0xdb8d,0xdb6d,0xdb6d,0xe471,0xe471,0xb34d,0xb34d,0x7a08,0x7a08,0xecd2,0xecd2,0xecf3,0xecf3, 
-        0xdb6d,0xdb6d,0xdbad,0xdbad,0xec10,0xec10,0xec70,0xec70,0xec10,0xec10,0xec51,0xec51,0xec71,0xec71,0xecd3,0xecd3, 
-        0xdb6d,0xdb6d,0xdbad,0xdbad,0xec10,0xec10,0xec70,0xec70,0xec10,0xec10,0xec51,0xec51,0xec71,0xec71,0xecd3,0xecd3, 
-        0xec30,0xec30,0xec10,0xec10,0xec51,0xec51,0xec50,0xec50,0xec71,0xec71,0xec71,0xec71,0xec91,0xec91,0xec92,0xec92, 
-        0xec30,0xec30,0xec10,0xec10,0xec51,0xec51,0xec50,0xec50,0xec71,0xec71,0xec71,0xec71,0xec91,0xec91,0xec92,0xec92, 
-    
+        0xec30,0xec30,0xec71,0xec71,0xec91,0xec91,0xdb8e,0xdb8e,0xe42f,0xe42f,0xec91,0xec91,0xecb2,0xecb2,0xec92,0xec92,//pig face left
+        0xec30,0xec30,0xec71,0xec71,0xec91,0xec91,0xdb8e,0xdb8e,0xe42f,0xe42f,0xec91,0xec91,0xecb2,0xecb2,0xec92,0xec92,//125
+        0xe3ef,0xe3ef,0xdc2f,0xdc2f,0xdbae,0xdbae,0xe40f,0xe40f,0xec71,0xec71,0xe3ef,0xe3ef,0xe3cf,0xe3cf,0xdbf0,0xdbf0,
+        0xe3ef,0xe3ef,0xdc2f,0xdc2f,0xdbae,0xdbae,0xe40f,0xe40f,0xec71,0xec71,0xe3ef,0xe3ef,0xe3cf,0xe3cf,0xdbf0,0xdbf0,
+        0xe3af,0xe3af,0xdbae,0xdbae,0xec30,0xec30,0xe451,0xe451,0xb36e,0xb36e,0xbb8e,0xbb8e,0xecb2,0xecb2,0xecd3,0xecd3,
+        0xe3af,0xe3af,0xdbae,0xdbae,0xec30,0xec30,0xe451,0xe451,0xb36e,0xb36e,0xbb8e,0xbb8e,0xecb2,0xecb2,0xecd3,0xecd3,
+        0xebf0,0xebf0,0xdb6d,0xdb6d,0xec30,0xec30,0xec92,0xec92,0xb36e,0xb36e,0x8228,0x8228,0xbbef,0xbbef,0xecd3,0xecd3,
+        0xebf0,0xebf0,0xdb6d,0xdb6d,0xec30,0xec30,0xec92,0xec92,0xb36e,0xb36e,0x8228,0x8228,0xbbef,0xbbef,0xecd3,0xecd3,
+        0xe3d0,0xe3d0,0xe430,0xe430,0xec30,0xec30,0xec51,0xec51,0xb36e,0xb36e,0x8228,0x8228,0xbbae,0xbbae,0xec92,0xec92,
+        0xe3d0,0xe3d0,0xe430,0xe430,0xec30,0xec30,0xec51,0xec51,0xb36e,0xb36e,0x8228,0x8228,0xbbae,0xbbae,0xec92,0xec92,
+        0xebf0,0xebf0,0xdb8d,0xdb8d,0xdb6d,0xdb6d,0xe471,0xe471,0xb34d,0xb34d,0x7a08,0x7a08,0xecd2,0xecd2,0xecf3,0xecf3,
+        0xebf0,0xebf0,0xdb8d,0xdb8d,0xdb6d,0xdb6d,0xe471,0xe471,0xb34d,0xb34d,0x7a08,0x7a08,0xecd2,0xecd2,0xecf3,0xecf3,
+        0xdb6d,0xdb6d,0xdbad,0xdbad,0xec10,0xec10,0xec70,0xec70,0xec10,0xec10,0xec51,0xec51,0xec71,0xec71,0xecd3,0xecd3,
+        0xdb6d,0xdb6d,0xdbad,0xdbad,0xec10,0xec10,0xec70,0xec70,0xec10,0xec10,0xec51,0xec51,0xec71,0xec71,0xecd3,0xecd3,
+        0xec30,0xec30,0xec10,0xec10,0xec51,0xec51,0xec50,0xec50,0xec71,0xec71,0xec71,0xec71,0xec91,0xec91,0xec92,0xec92,
+        0xec30,0xec30,0xec10,0xec10,0xec51,0xec51,0xec50,0xec50,0xec71,0xec71,0xec71,0xec71,0xec91,0xec91,0xec92,0xec92,
+
     },
     {
-        0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecf3,0xecf3,0xecf4,0xecf4,0xf534,0xf534, //pig face sides
-        0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecf3,0xecf3,0xecf4,0xecf4,0xf534,0xf534, //126
-        0xecd3,0xecd3,0xecf3,0xecf3,0xecb3,0xecb3,0xecb2,0xecb2,0xecd3,0xecd3,0xed13,0xed13,0xecf3,0xecf3,0xe4b1,0xe4b1, 
-        0xecd3,0xecd3,0xecf3,0xecf3,0xecb3,0xecb3,0xecb2,0xecb2,0xecd3,0xecd3,0xed13,0xed13,0xecf3,0xecf3,0xe4b1,0xe4b1, 
-        0xed13,0xed13,0xecb2,0xecb2,0xecd3,0xecd3,0xe471,0xe471,0xecd3,0xecd3,0xecf3,0xecf3,0xecd3,0xecd3,0xe491,0xe491, 
-        0xed13,0xed13,0xecb2,0xecb2,0xecd3,0xecd3,0xe471,0xe471,0xecd3,0xecd3,0xecf3,0xecf3,0xecd3,0xecd3,0xe491,0xe491, 
-        0xec92,0xec92,0xe40f,0xe40f,0xecf2,0xecf2,0xe450,0xe450,0xed14,0xed14,0xe451,0xe451,0xecd3,0xecd3,0xe471,0xe471, 
-        0xec92,0xec92,0xe40f,0xe40f,0xecf2,0xecf2,0xe450,0xe450,0xed14,0xed14,0xe451,0xe451,0xecd3,0xecd3,0xe471,0xe471, 
-        0xecd2,0xecd2,0xe470,0xe470,0xed33,0xed33,0xe450,0xe450,0xecd3,0xecd3,0xdc10,0xdc10,0xed14,0xed14,0xe471,0xe471, 
-        0xecd2,0xecd2,0xe470,0xe470,0xed33,0xed33,0xe450,0xe450,0xecd3,0xecd3,0xdc10,0xdc10,0xed14,0xed14,0xe471,0xe471, 
-        0xecd3,0xecd3,0xe430,0xe430,0xecb3,0xecb3,0xe3ef,0xe3ef,0xecd3,0xecd3,0xe471,0xe471,0xf575,0xf575,0xecd3,0xecd3, 
-        0xecd3,0xecd3,0xe430,0xe430,0xecb3,0xecb3,0xe3ef,0xe3ef,0xecd3,0xecd3,0xe471,0xe471,0xf575,0xf575,0xecd3,0xecd3, 
-        0xecf3,0xecf3,0xe491,0xe491,0xecf3,0xecf3,0xec91,0xec91,0xed33,0xed33,0xe491,0xe491,0xed14,0xed14,0xecd3,0xecd3, 
-        0xecf3,0xecf3,0xe491,0xe491,0xecf3,0xecf3,0xec91,0xec91,0xed33,0xed33,0xe491,0xe491,0xed14,0xed14,0xecd3,0xecd3, 
-        0xecf3,0xecf3,0xe471,0xe471,0xecb2,0xecb2,0xecd3,0xecd3,0xed34,0xed34,0xe4b2,0xe4b2,0xecf3,0xecf3,0xed14,0xed14, 
-        0xecf3,0xecf3,0xe471,0xe471,0xecb2,0xecb2,0xecd3,0xecd3,0xed34,0xed34,0xe4b2,0xe4b2,0xecf3,0xecf3,0xed14,0xed14, 
-    
+        0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecf3,0xecf3,0xecf4,0xecf4,0xf534,0xf534,//pig face sides
+        0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecd3,0xecf3,0xecf3,0xecf4,0xecf4,0xf534,0xf534,//126
+        0xecd3,0xecd3,0xecf3,0xecf3,0xecb3,0xecb3,0xecb2,0xecb2,0xecd3,0xecd3,0xed13,0xed13,0xecf3,0xecf3,0xe4b1,0xe4b1,
+        0xecd3,0xecd3,0xecf3,0xecf3,0xecb3,0xecb3,0xecb2,0xecb2,0xecd3,0xecd3,0xed13,0xed13,0xecf3,0xecf3,0xe4b1,0xe4b1,
+        0xed13,0xed13,0xecb2,0xecb2,0xecd3,0xecd3,0xe471,0xe471,0xecd3,0xecd3,0xecf3,0xecf3,0xecd3,0xecd3,0xe491,0xe491,
+        0xed13,0xed13,0xecb2,0xecb2,0xecd3,0xecd3,0xe471,0xe471,0xecd3,0xecd3,0xecf3,0xecf3,0xecd3,0xecd3,0xe491,0xe491,
+        0xec92,0xec92,0xe40f,0xe40f,0xecf2,0xecf2,0xe450,0xe450,0xed14,0xed14,0xe451,0xe451,0xecd3,0xecd3,0xe471,0xe471,
+        0xec92,0xec92,0xe40f,0xe40f,0xecf2,0xecf2,0xe450,0xe450,0xed14,0xed14,0xe451,0xe451,0xecd3,0xecd3,0xe471,0xe471,
+        0xecd2,0xecd2,0xe470,0xe470,0xed33,0xed33,0xe450,0xe450,0xecd3,0xecd3,0xdc10,0xdc10,0xed14,0xed14,0xe471,0xe471,
+        0xecd2,0xecd2,0xe470,0xe470,0xed33,0xed33,0xe450,0xe450,0xecd3,0xecd3,0xdc10,0xdc10,0xed14,0xed14,0xe471,0xe471,
+        0xecd3,0xecd3,0xe430,0xe430,0xecb3,0xecb3,0xe3ef,0xe3ef,0xecd3,0xecd3,0xe471,0xe471,0xf575,0xf575,0xecd3,0xecd3,
+        0xecd3,0xecd3,0xe430,0xe430,0xecb3,0xecb3,0xe3ef,0xe3ef,0xecd3,0xecd3,0xe471,0xe471,0xf575,0xf575,0xecd3,0xecd3,
+        0xecf3,0xecf3,0xe491,0xe491,0xecf3,0xecf3,0xec91,0xec91,0xed33,0xed33,0xe491,0xe491,0xed14,0xed14,0xecd3,0xecd3,
+        0xecf3,0xecf3,0xe491,0xe491,0xecf3,0xecf3,0xec91,0xec91,0xed33,0xed33,0xe491,0xe491,0xed14,0xed14,0xecd3,0xecd3,
+        0xecf3,0xecf3,0xe471,0xe471,0xecb2,0xecb2,0xecd3,0xecd3,0xed34,0xed34,0xe4b2,0xe4b2,0xecf3,0xecf3,0xed14,0xed14,
+        0xecf3,0xecf3,0xe471,0xe471,0xecb2,0xecb2,0xecd3,0xecd3,0xed34,0xed34,0xe4b2,0xe4b2,0xecf3,0xecf3,0xed14,0xed14,
+
     },
     {
-        0xec51,0xecb1,0xecd2,0xec51,0xec71,0xec50,0xec51,0xe410,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //pig body sides
-        0xec51,0xec91,0xec51,0xecd2,0xec31,0xe451,0xec92,0xec91,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //127
-        0xe3f0,0xe3cf,0xdb6d,0xec10,0xe410,0xec30,0xdb6d,0xec10,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xec10,0xec70,0xd32c,0xec51,0xec50,0xec30,0xdb4d,0xe3cf,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xebf0,0xebef,0xdbae,0xec10,0xdb6d,0xec50,0xd30c,0xe3ef,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xec0f,0xdbef,0xdb8d,0xec30,0xdb4c,0xe40f,0xdb4c,0xebaf,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xe430,0xec0f,0xdb2c,0xec0f,0xd30c,0xe3ce,0xd2eb,0xebae,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xe410,0xe3ce,0xdb2c,0xe3ae,0xd2eb,0xe3cf,0xd2cb,0xe34d,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xe3cf,0xe3cf,0xdb0c,0xe38e,0xd2cb,0xe36e,0xd2ca,0xe3ad,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xe3cf,0xebcf,0xd2cb,0xe34d,0xe36d,0xe30c,0xd269,0xe36c,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xe3cf,0xe3ce,0xdacb,0xe36d,0xe38e,0xe3ad,0xd2aa,0xe30c,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xecd1,0xe3af,0xdaeb,0xdb2c,0xe32c,0xe38d,0xe38d,0xe3cd,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xe3cf,0xebcf,0xdb0b,0xe36e,0xe36d,0xe36d,0xe3ce,0xe3ae,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xe3af,0xe3ae,0xec0f,0xebce,0xec2f,0xe3ae,0xebee,0xec0f,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xe3ef,0xe3ef,0xe38e,0xec0f,0xe3ce,0xe3ae,0xe36e,0xe3ae,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xe3f0,0xe3ef,0xe3cf,0xe3cf,0xec30,0xebcf,0xec30,0xdb8d,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-    
+        0xec51,0xecb1,0xecd2,0xec51,0xec71,0xec50,0xec51,0xe410,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//pig body sides
+        0xec51,0xec91,0xec51,0xecd2,0xec31,0xe451,0xec92,0xec91,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//127
+        0xe3f0,0xe3cf,0xdb6d,0xec10,0xe410,0xec30,0xdb6d,0xec10,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xec10,0xec70,0xd32c,0xec51,0xec50,0xec30,0xdb4d,0xe3cf,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xebf0,0xebef,0xdbae,0xec10,0xdb6d,0xec50,0xd30c,0xe3ef,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xec0f,0xdbef,0xdb8d,0xec30,0xdb4c,0xe40f,0xdb4c,0xebaf,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xe430,0xec0f,0xdb2c,0xec0f,0xd30c,0xe3ce,0xd2eb,0xebae,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xe410,0xe3ce,0xdb2c,0xe3ae,0xd2eb,0xe3cf,0xd2cb,0xe34d,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xe3cf,0xe3cf,0xdb0c,0xe38e,0xd2cb,0xe36e,0xd2ca,0xe3ad,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xe3cf,0xebcf,0xd2cb,0xe34d,0xe36d,0xe30c,0xd269,0xe36c,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xe3cf,0xe3ce,0xdacb,0xe36d,0xe38e,0xe3ad,0xd2aa,0xe30c,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xecd1,0xe3af,0xdaeb,0xdb2c,0xe32c,0xe38d,0xe38d,0xe3cd,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xe3cf,0xebcf,0xdb0b,0xe36e,0xe36d,0xe36d,0xe3ce,0xe3ae,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xe3af,0xe3ae,0xec0f,0xebce,0xec2f,0xe3ae,0xebee,0xec0f,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xe3ef,0xe3ef,0xe38e,0xec0f,0xe3ce,0xe3ae,0xe36e,0xe3ae,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xe3f0,0xe3ef,0xe3cf,0xe3cf,0xec30,0xebcf,0xec30,0xdb8d,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+
     },
     {
-        0xec30,0xec30,0xec51,0xec51,0xe3cf,0xe3cf,0xe40f,0xe40f,0xec10,0xec10,0xec31,0xec31,0xec71,0xec71,0xec10,0xec10, //pig body back
-        0xec30,0xec30,0xec51,0xec51,0xe3cf,0xe3cf,0xe40f,0xe40f,0xec10,0xec10,0xec31,0xec31,0xec71,0xec71,0xec10,0xec10, //128
-        0xec30,0xec30,0xe3cf,0xe3cf,0xe430,0xe430,0xec30,0xec30,0xec30,0xec30,0xec31,0xec31,0xec30,0xec30,0xe410,0xe410, 
-        0xec30,0xec30,0xe3cf,0xe3cf,0xe430,0xe430,0xec30,0xec30,0xec30,0xec30,0xec31,0xec31,0xec30,0xec30,0xe410,0xe410, 
-        0xe3cf,0xe3cf,0xebef,0xebef,0xe40f,0xe40f,0xb30c,0xb30c,0xb32c,0xb32c,0xec70,0xec70,0xec50,0xec50,0xec30,0xec30, 
-        0xe3cf,0xe3cf,0xebef,0xebef,0xe40f,0xe40f,0xb30c,0xb30c,0xb32c,0xb32c,0xec70,0xec70,0xec50,0xec50,0xec30,0xec30, 
-        0xe3af,0xe3af,0xec2f,0xec2f,0xb2eb,0xb2eb,0xec91,0xec91,0xec10,0xec10,0xb32c,0xb32c,0xe3f0,0xe3f0,0xec50,0xec50, 
-        0xe3af,0xe3af,0xec2f,0xec2f,0xb2eb,0xb2eb,0xec91,0xec91,0xec10,0xec10,0xb32c,0xb32c,0xe3f0,0xe3f0,0xec50,0xec50, 
-        0xe3ef,0xe3ef,0xec2f,0xec2f,0xb2eb,0xb2eb,0xe40f,0xe40f,0xb30c,0xb30c,0xec10,0xec10,0xe430,0xe430,0xe3cf,0xe3cf, 
-        0xe3ef,0xe3ef,0xec2f,0xec2f,0xb2eb,0xb2eb,0xe40f,0xe40f,0xb30c,0xb30c,0xec10,0xec10,0xe430,0xe430,0xe3cf,0xe3cf, 
-        0xe3ef,0xe3ef,0xe3ce,0xe3ce,0xb2eb,0xb2eb,0xe410,0xe410,0xec50,0xec50,0xe3ef,0xe3ef,0xe3cf,0xe3cf,0xe40f,0xe40f, 
-        0xe3ef,0xe3ef,0xe3ce,0xe3ce,0xb2eb,0xb2eb,0xe410,0xe410,0xec50,0xec50,0xe3ef,0xe3ef,0xe3cf,0xe3cf,0xe40f,0xe40f, 
-        0xe3cf,0xe3cf,0xebef,0xebef,0xec30,0xec30,0xb32c,0xb32c,0xb30c,0xb30c,0xb2eb,0xb2eb,0xec10,0xec10,0xec50,0xec50, 
-        0xe3cf,0xe3cf,0xebef,0xebef,0xec30,0xec30,0xb32c,0xb32c,0xb30c,0xb30c,0xb2eb,0xb2eb,0xec10,0xec10,0xec50,0xec50, 
-        0xe410,0xe410,0xec31,0xec31,0xec50,0xec50,0xec30,0xec30,0xe3f0,0xe3f0,0xebaf,0xebaf,0xe430,0xe430,0xec30,0xec30, 
-        0xe410,0xe410,0xec31,0xec31,0xec50,0xec50,0xec30,0xec30,0xe3f0,0xe3f0,0xebaf,0xebaf,0xe430,0xe430,0xec30,0xec30, 
-    
+        0xec30,0xec30,0xec51,0xec51,0xe3cf,0xe3cf,0xe40f,0xe40f,0xec10,0xec10,0xec31,0xec31,0xec71,0xec71,0xec10,0xec10,//pig body back
+        0xec30,0xec30,0xec51,0xec51,0xe3cf,0xe3cf,0xe40f,0xe40f,0xec10,0xec10,0xec31,0xec31,0xec71,0xec71,0xec10,0xec10,//128
+        0xec30,0xec30,0xe3cf,0xe3cf,0xe430,0xe430,0xec30,0xec30,0xec30,0xec30,0xec31,0xec31,0xec30,0xec30,0xe410,0xe410,
+        0xec30,0xec30,0xe3cf,0xe3cf,0xe430,0xe430,0xec30,0xec30,0xec30,0xec30,0xec31,0xec31,0xec30,0xec30,0xe410,0xe410,
+        0xe3cf,0xe3cf,0xebef,0xebef,0xe40f,0xe40f,0xb30c,0xb30c,0xb32c,0xb32c,0xec70,0xec70,0xec50,0xec50,0xec30,0xec30,
+        0xe3cf,0xe3cf,0xebef,0xebef,0xe40f,0xe40f,0xb30c,0xb30c,0xb32c,0xb32c,0xec70,0xec70,0xec50,0xec50,0xec30,0xec30,
+        0xe3af,0xe3af,0xec2f,0xec2f,0xb2eb,0xb2eb,0xec91,0xec91,0xec10,0xec10,0xb32c,0xb32c,0xe3f0,0xe3f0,0xec50,0xec50,
+        0xe3af,0xe3af,0xec2f,0xec2f,0xb2eb,0xb2eb,0xec91,0xec91,0xec10,0xec10,0xb32c,0xb32c,0xe3f0,0xe3f0,0xec50,0xec50,
+        0xe3ef,0xe3ef,0xec2f,0xec2f,0xb2eb,0xb2eb,0xe40f,0xe40f,0xb30c,0xb30c,0xec10,0xec10,0xe430,0xe430,0xe3cf,0xe3cf,
+        0xe3ef,0xe3ef,0xec2f,0xec2f,0xb2eb,0xb2eb,0xe40f,0xe40f,0xb30c,0xb30c,0xec10,0xec10,0xe430,0xe430,0xe3cf,0xe3cf,
+        0xe3ef,0xe3ef,0xe3ce,0xe3ce,0xb2eb,0xb2eb,0xe410,0xe410,0xec50,0xec50,0xe3ef,0xe3ef,0xe3cf,0xe3cf,0xe40f,0xe40f,
+        0xe3ef,0xe3ef,0xe3ce,0xe3ce,0xb2eb,0xb2eb,0xe410,0xe410,0xec50,0xec50,0xe3ef,0xe3ef,0xe3cf,0xe3cf,0xe40f,0xe40f,
+        0xe3cf,0xe3cf,0xebef,0xebef,0xec30,0xec30,0xb32c,0xb32c,0xb30c,0xb30c,0xb2eb,0xb2eb,0xec10,0xec10,0xec50,0xec50,
+        0xe3cf,0xe3cf,0xebef,0xebef,0xec30,0xec30,0xb32c,0xb32c,0xb30c,0xb30c,0xb2eb,0xb2eb,0xec10,0xec10,0xec50,0xec50,
+        0xe410,0xe410,0xec31,0xec31,0xec50,0xec50,0xec30,0xec30,0xe3f0,0xe3f0,0xebaf,0xebaf,0xe430,0xe430,0xec30,0xec30,
+        0xe410,0xe410,0xec31,0xec31,0xec50,0xec50,0xec30,0xec30,0xe3f0,0xe3f0,0xebaf,0xebaf,0xe430,0xe430,0xec30,0xec30,
+
     },
     {
-        0xec91,0xec51,0xec92,0xec31,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //pig feet back
-        0xec71,0xec31,0xec51,0xec71,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //129
-        0xec51,0xec51,0xec51,0xec71,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xec71,0xecb1,0xec71,0xec72,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xec71,0xec91,0xec51,0xec71,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xec30,0xe410,0xec71,0xecd2,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xebef,0xec10,0xe491,0xec71,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xec90,0xe410,0xec30,0xe410,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xe3ef,0xdb8e,0xe3cf,0xe3ef,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0xebef,0xe3ef,0xe3ef,0xebcf,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
-        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 
+        0xec91,0xec51,0xec92,0xec31,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//pig feet back
+        0xec71,0xec31,0xec51,0xec71,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//129
+        0xec51,0xec51,0xec51,0xec71,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xec71,0xecb1,0xec71,0xec72,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xec71,0xec91,0xec51,0xec71,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xec30,0xe410,0xec71,0xecd2,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xebef,0xec10,0xe491,0xec71,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xec90,0xe410,0xec30,0xe410,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xe3ef,0xdb8e,0xe3cf,0xe3ef,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0xebef,0xe3ef,0xe3ef,0xebcf,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+        0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
     },
     {
-		0xf7be,0xef5d,0xe73c,0xdefb,0xe73c,0xe73c,0xef5d,0xef7d,0xef5d,0xe73c,0xe73c,0xe73c,0xef5d,0xf7be,0xffdf,0xffff, //sheep wool 
-		0xffdf,0xf79e,0xdefb,0xe73c,0xe73c,0xe73c,0xef5d,0xef7d,0xef7d,0xef7d,0xef7d,0xef7d,0xf79e,0xffff,0xf7be,0xf79e, //130
+		0xf7be,0xef5d,0xe73c,0xdefb,0xe73c,0xe73c,0xef5d,0xef7d,0xef5d,0xe73c,0xe73c,0xe73c,0xef5d,0xf7be,0xffdf,0xffff,//sheep wool
+		0xffdf,0xf79e,0xdefb,0xe73c,0xe73c,0xe73c,0xef5d,0xef7d,0xef7d,0xef7d,0xef7d,0xef7d,0xf79e,0xffff,0xf7be,0xf79e,//130
 		0xef7d,0xef7d,0xdefb,0xef5d,0xe73c,0xef5d,0xef5d,0xf79e,0xf79e,0xe71c,0xffff,0xef5d,0xef7d,0xf7be,0xef7d,0xef5d,
 		0xdefb,0xd6ba,0xdefb,0xdedb,0xef5d,0xffdf,0xef7d,0xffdf,0xffdf,0xf79e,0xffff,0xf7be,0xe73c,0xef5d,0xef5d,0xe71c,
 		0xce59,0xef5d,0xd6ba,0xdedb,0xe73c,0xef7d,0xf79e,0xef5d,0xf7be,0xffff,0xffdf,0xffff,0xdefb,0xe73c,0xef5d,0xdedb,
@@ -4864,8 +4899,8 @@ const static int skyboxColors[16][128] = {
 		0xf79e,0xf79e,0xef7d,0xffdf,0xef5d,0xf7be,0xf7be,0xffdf,0xffff,0xef7d,0xf7be,0xf79e,0xf79e,0xe73c,0xe71c,0xdedb
 	},
     {
-		0xdefb,0xce79,0xe73c,0xd6ba,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //sheep leg
-		0xd6ba,0xdedb,0xdedb,0xdefb,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //131
+		0xdefb,0xce79,0xe73c,0xd6ba,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//sheep leg
+		0xd6ba,0xdedb,0xdedb,0xdefb,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//131
 		0xd6ba,0xd6ba,0xdedb,0xce59,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0xce59,0xd69a,0xdedb,0xdedb,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0xa3eb,0x9baa,0xa40c,0xac6e,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -4882,8 +4917,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0xd6ba,0xd6ba,0xd6ba,0xd6ba,0xd6ba,0xce59,0xce59,0xce59,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638, //sheap face
-		0xd6ba,0xd6ba,0xd6ba,0xd6ba,0xd6ba,0xce59,0xce59,0xce59,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638, //132
+		0xd6ba,0xd6ba,0xd6ba,0xd6ba,0xd6ba,0xce59,0xce59,0xce59,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638,//sheap face
+		0xd6ba,0xd6ba,0xd6ba,0xd6ba,0xd6ba,0xce59,0xce59,0xce59,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638,//132
 		0xd6ba,0xd6ba,0xd6ba,0xd6ba,0xd6ba,0xce59,0xce59,0xce59,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638,0xc638,
 		0xb48f,0xb48f,0xb48f,0xb4af,0xb4af,0xb4af,0xb4af,0xb4af,0xb4af,0xb4af,0xb4af,0xb4d0,0xb4d0,0xac8f,0xac8f,0xac8f,
 		0xb48f,0xb48f,0xb48f,0xb4af,0xb4af,0xb4af,0xb4af,0xb4af,0xb4af,0xb4af,0xb4af,0xb4d0,0xb4d0,0xac8f,0xac8f,0xac8f,
@@ -4900,8 +4935,8 @@ const static int skyboxColors[16][128] = {
 		0xc638,0xc638,0xc638,0x8b8b,0x8b8b,0xd4b2,0xd4b2,0xd4b2,0xdcf3,0xdcf3,0xdcf3,0x8b8b,0x8b8b,0xdefb,0xdefb,0xdefb
 	},
     {
-		0xe71c,0xbd32,0xbcf1,0xbd11,0xb4d0,0xc552,0xc552,0xbcf1,0xd6ba,0xd69a,0xd69a,0xbd11,0xbd11,0xe71c,0xbd11,0xb4d0, //sheep sheared
-		0xb4d0,0xbd11,0xbcf0,0xbcf1,0xc532,0xc593,0xcd94,0xdedb,0xbd32,0xbd12,0xbcf1,0xbd11,0xb4d0,0xb4d0,0xac6e,0xac4e, //133
+		0xe71c,0xbd32,0xbcf1,0xbd11,0xb4d0,0xc552,0xc552,0xbcf1,0xd6ba,0xd69a,0xd69a,0xbd11,0xbd11,0xe71c,0xbd11,0xb4d0,//sheep sheared
+		0xb4d0,0xbd11,0xbcf0,0xbcf1,0xc532,0xc593,0xcd94,0xdedb,0xbd32,0xbd12,0xbcf1,0xbd11,0xb4d0,0xb4d0,0xac6e,0xac4e,//133
 		0xbcf1,0xb48f,0xb4d0,0xbd11,0xbd11,0xbd32,0xc553,0xc532,0xc552,0xce79,0xbcf0,0xb4af,0xb48f,0xe71c,0xac4e,0xb46e,
 		0xce59,0xc618,0xbd11,0xbd11,0xd6ba,0xc532,0xc552,0xbd32,0xef5d,0xbcd0,0xef5d,0xb48f,0xd69a,0xac6e,0xac4d,0xac4e,
 		0xbcf1,0xbcf0,0xc531,0xc511,0xbcf0,0xdedb,0xdefb,0xbd32,0xc552,0xbd11,0xb48f,0xc532,0xce59,0xb48f,0xd6ba,0xac4e,
@@ -4918,8 +4953,8 @@ const static int skyboxColors[16][128] = {
 		0xc573,0xcdb4,0xdedb,0xe73c,0xc573,0xc553,0xc552,0xbd32,0xc552,0xdedb,0xe73c,0xb4d0,0xdefb,0xbcf1,0xbcf1,0xbcf1
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //raw pork
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //134
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//raw pork
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//134
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa28a,0xa28a,0xa28a,0xa28a,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa28a,0xeb8e,0xeb8e,0xeb8e,0xfbae,0x81e7,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa28a,0xeb8e,0xeb8e,0xfbae,0xfc71,0xfc71,0xa28a,0x81e7,0x0000,
@@ -4936,8 +4971,8 @@ const static int skyboxColors[16][128] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //cooked pork 
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, //135
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//cooked pork
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,//135
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8b46,0x9bc8,0x9bc8,0x8b46,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8b46,0xb4ef,0xb50f,0xa3c8,0xb469,0x5a64,0x0000,0x0000,
@@ -4956,116 +4991,116 @@ const static int skyboxColors[16][128] = {
 };
 const static color_t itemIcons[itemAmount][676] = {
     {//missing texture
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0001,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xf81f,0xf81f,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xf81f,0xf81f,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0x0001,0x0001,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0x0000,0x0000,
-    	0x0000,0x0001,0x0001,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0x0001,0x0001,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0x9813,0x9813,0x0000,
-    	0x0000,0x0001,0x0001,0x0001,0x0001,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0x9813,0x9813,0x9813,0x9813,0x0000,
-    	0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xf81f,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xf81f,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0000,
-    	0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0000,
-    	0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0000,
-    	0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0000,
-    	0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0000,
-    	0x0000,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x0001,0x0000,
-    	0x0000,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x0001,0x0001,0x0001,0x0000,
-    	0x0000,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,
-    	0x0000,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,
-    	0x0000,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,
-    	0x0000,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0xd01a,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,
-    	0x0000,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,
-    	0x0000,0x0000,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0001,0x0001,0x0001,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0001,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x9813,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0001,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xf81f,0xf81f,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xf81f,0xf81f,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0x0001,0x0001,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0x0000,0x0000,
+	0x0000,0x0001,0x0001,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0x0001,0x0001,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0x9813,0x9813,0x0000,
+	0x0000,0x0001,0x0001,0x0001,0x0001,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xf81f,0xf81f,0xf81f,0xf81f,0xf81f,0x9813,0x9813,0x9813,0x9813,0x0000,
+	0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xf81f,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xf81f,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0000,
+	0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0000,
+	0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0000,
+	0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0000,
+	0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0000,
+	0x0000,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x0001,0x0000,
+	0x0000,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x0001,0x0001,0x0001,0x0000,
+	0x0000,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,
+	0x0000,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,
+	0x0000,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,
+	0x0000,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0xd01a,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,
+	0x0000,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,
+	0x0000,0x0000,0xd01a,0xd01a,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0xd01a,0xd01a,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0001,0x0001,0x0001,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xd01a,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x9813,0x0001,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x9813,0x9813,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0001,0x0001,0x9813,0x9813,0x9813,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x9813,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
     },
     {//grass_block
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7589,0x7589,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x54a5,0x54a5,0xa66e,0x8dab,0x6527,0x6527,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5ce6,0x75a9,0x75a9,0x960c,0x6d48,0x6507,0x6d27,0x5ce6,0x6d68,0x5ce6,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x75a9,0x64e6,0x6527,0x858a,0x6d68,0x8deb,0x64e6,0x962c,0x75a9,0x5cc6,0x6d68,0x6507,0x7dca,0x7589,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x6507,0x6507,0x85aa,0x9e6e,0x9e6e,0x960c,0x6d68,0x5cc6,0x6507,0x7589,0x858a,0x960c,0x5ce6,0x7dea,0x7dea,0x8deb,0x6527,0x6527,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x8dcb,0x8dcb,0x95ec,0x64e6,0x8dcb,0x8dcb,0x6507,0x856a,0x856a,0x960c,0x6507,0x6507,0x6507,0x7589,0x7589,0x5ce6,0x75a9,0x960c,0x6527,0x6d48,0x4c64,0x4c64,0x0000,0x0000,
-    	0x0000,0x5c87,0x64a7,0x6527,0x5cc6,0x5cc6,0x5cc6,0x6d68,0x6507,0x7568,0x7d49,0x5ce6,0x6527,0x960c,0x960c,0x6527,0x960c,0x6507,0x54a5,0x5ce6,0x6d68,0x6d68,0x9e6d,0x32c2,0x4345,0x0000,
-    	0x0000,0x64a7,0x5c66,0x5c87,0x5446,0x75a9,0x960c,0x7589,0xaecf,0x5cc6,0x75a9,0x7568,0x5ca5,0x7568,0x862b,0x7568,0x6d68,0x8dab,0x75a9,0x6d68,0x7589,0x3b24,0x3b04,0x3b24,0x4345,0x0000,
-    	0x0000,0x74c9,0x4984,0x74a9,0x6c88,0x5c67,0x5c66,0xa66e,0x5ce6,0x7589,0xaeef,0x6d48,0x5cc6,0x5cc6,0x6d68,0x9e4d,0x6d68,0x5ce6,0x95ec,0x4b65,0x4345,0x4365,0x4345,0x3b04,0x3123,0x0000,
-    	0x0000,0x4984,0x5acb,0x7d2b,0x5446,0x4984,0x5425,0x64c8,0x64a7,0x5cc6,0x6527,0x6527,0x7dea,0x8dcb,0x5cc6,0x5cc6,0x6d68,0x3b04,0x4345,0x5ba7,0x5ba7,0x5bc8,0x32e3,0x3123,0x49a4,0x0000,
-    	0x0000,0x6226,0x6226,0x7ac7,0x5c87,0x4984,0x4984,0x4c05,0x7cea,0x5446,0x5446,0x6d68,0x6d48,0x6d48,0x962c,0x3b24,0x3b24,0x4324,0x3b04,0x4ba6,0x5ba7,0x3123,0x5a05,0x3123,0x7287,0x0000,
-    	0x0000,0x9369,0x4984,0x7ac7,0x4984,0x4984,0x4984,0x5c87,0x6ce8,0x5c87,0x4c25,0x4c25,0x5c66,0x4365,0x4365,0x4b46,0x5366,0x4345,0x3123,0x3123,0x4345,0x4208,0x49a4,0x49a4,0x5a05,0x0000,
-    	0x0000,0x9369,0x4984,0x6226,0x6226,0x7ac7,0x6226,0x4984,0x4984,0x7d0a,0x4984,0x5c66,0x5466,0x4365,0x5387,0x3b24,0x4324,0x3123,0x49a4,0x3123,0x49a4,0x3123,0x5a05,0x49a4,0x5a05,0x0000,
-    	0x0000,0x7ac7,0x6226,0x9369,0x6b6d,0x6226,0x4984,0x4984,0x4984,0x4984,0x6226,0x43c4,0x4984,0x5387,0x5be8,0x3123,0x4365,0x49a4,0x3123,0x49a4,0x7287,0x7287,0x49a4,0x5a05,0x49a4,0x0000,
-    	0x0000,0x7ac7,0x7ac7,0x6226,0x7ac7,0x7ac7,0x9369,0x9369,0x6226,0x4984,0x6226,0x7ac7,0x6226,0x3123,0x5a05,0x7287,0x49a4,0x3123,0x7287,0x49a4,0x5a05,0x5a05,0x49a4,0x49a4,0x5a05,0x0000,
-    	0x0000,0x7ac7,0x7ac7,0x4984,0x6226,0x7ac7,0x6226,0x7ac7,0x6226,0x9369,0x6226,0x6226,0x6226,0x5a05,0x5a05,0x5a05,0x528a,0x49a4,0x49a4,0x3123,0x5a05,0x49a4,0x7287,0x528a,0x49a4,0x0000,
-    	0x0000,0x7ac7,0x6226,0x6226,0x9369,0x4984,0x6226,0x6226,0x4984,0x7ac7,0x6226,0x7ac7,0x9369,0x49a4,0x49a4,0x49a4,0x5a05,0x49a4,0x3123,0x49a4,0x49a4,0x49a4,0x5a05,0x49a4,0x3123,0x0000,
-    	0x0000,0x6226,0x4984,0x6226,0x7ac7,0x6226,0x7ac7,0x6226,0x7ac7,0x6226,0x6226,0x6226,0x7ac7,0x7287,0x7287,0x7287,0x49a4,0x49a4,0x49a4,0x7287,0x7287,0x49a4,0x5a05,0x7287,0x7287,0x0000,
-    	0x0000,0x7ac7,0x7ac7,0x7ac7,0x7ac7,0x9369,0x7ac7,0x4984,0x9369,0x6226,0x9369,0x6226,0x7ac7,0x7287,0x49a4,0x49a4,0x49a4,0x7287,0x5a05,0x5a05,0x5a05,0x49a4,0x49a4,0x5a05,0x5a05,0x0000,
-    	0x0000,0x7ac7,0x6226,0x4984,0x4984,0x6226,0x6226,0x5acb,0x7ac7,0x6226,0x7ac7,0x9369,0x7ac7,0x5a05,0x3123,0x7287,0x7287,0x49a4,0x5a05,0x49a4,0x7287,0x3123,0x49a4,0x5a05,0x3123,0x0000,
-    	0x0000,0x0000,0x6226,0x9369,0x6226,0x4984,0x7ac7,0x6226,0x6226,0x6226,0x4984,0x7ac7,0x6226,0x5a05,0x49a4,0x5a05,0x5a05,0x7287,0x49a4,0x3123,0x49a4,0x3123,0x5a05,0x49a4,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x7ac7,0x6226,0x4984,0x6226,0x4984,0x4984,0x6226,0x7ac7,0x4984,0x5a05,0x49a4,0x49a4,0x3123,0x5a05,0x3123,0x49a4,0x49a4,0x49a4,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7ac7,0x7ac7,0x6226,0x4984,0x6226,0x6226,0x9369,0x49a4,0x5a05,0x49a4,0x49a4,0x49a4,0x5a05,0x5a05,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7ac7,0x6226,0x6226,0x6226,0x7ac7,0x49a4,0x3123,0x7287,0x5a05,0x528a,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7ac7,0x7ac7,0x7ac7,0x5a05,0x7287,0x5a05,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4984,0x5a05,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7589,0x7589,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x54a5,0x54a5,0xa66e,0x8dab,0x6527,0x6527,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5ce6,0x75a9,0x75a9,0x960c,0x6d48,0x6507,0x6d27,0x5ce6,0x6d68,0x5ce6,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x75a9,0x64e6,0x6527,0x858a,0x6d68,0x8deb,0x64e6,0x962c,0x75a9,0x5cc6,0x6d68,0x6507,0x7dca,0x7589,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x6507,0x6507,0x85aa,0x9e6e,0x9e6e,0x960c,0x6d68,0x5cc6,0x6507,0x7589,0x858a,0x960c,0x5ce6,0x7dea,0x7dea,0x8deb,0x6527,0x6527,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x8dcb,0x8dcb,0x95ec,0x64e6,0x8dcb,0x8dcb,0x6507,0x856a,0x856a,0x960c,0x6507,0x6507,0x6507,0x7589,0x7589,0x5ce6,0x75a9,0x960c,0x6527,0x6d48,0x4c64,0x4c64,0x0000,0x0000,
+	0x0000,0x5c87,0x64a7,0x6527,0x5cc6,0x5cc6,0x5cc6,0x6d68,0x6507,0x7568,0x7d49,0x5ce6,0x6527,0x960c,0x960c,0x6527,0x960c,0x6507,0x54a5,0x5ce6,0x6d68,0x6d68,0x9e6d,0x32c2,0x4345,0x0000,
+	0x0000,0x64a7,0x5c66,0x5c87,0x5446,0x75a9,0x960c,0x7589,0xaecf,0x5cc6,0x75a9,0x7568,0x5ca5,0x7568,0x862b,0x7568,0x6d68,0x8dab,0x75a9,0x6d68,0x7589,0x3b24,0x3b04,0x3b24,0x4345,0x0000,
+	0x0000,0x74c9,0x4984,0x74a9,0x6c88,0x5c67,0x5c66,0xa66e,0x5ce6,0x7589,0xaeef,0x6d48,0x5cc6,0x5cc6,0x6d68,0x9e4d,0x6d68,0x5ce6,0x95ec,0x4b65,0x4345,0x4365,0x4345,0x3b04,0x3123,0x0000,
+	0x0000,0x4984,0x5acb,0x7d2b,0x5446,0x4984,0x5425,0x64c8,0x64a7,0x5cc6,0x6527,0x6527,0x7dea,0x8dcb,0x5cc6,0x5cc6,0x6d68,0x3b04,0x4345,0x5ba7,0x5ba7,0x5bc8,0x32e3,0x3123,0x49a4,0x0000,
+	0x0000,0x6226,0x6226,0x7ac7,0x5c87,0x4984,0x4984,0x4c05,0x7cea,0x5446,0x5446,0x6d68,0x6d48,0x6d48,0x962c,0x3b24,0x3b24,0x4324,0x3b04,0x4ba6,0x5ba7,0x3123,0x5a05,0x3123,0x7287,0x0000,
+	0x0000,0x9369,0x4984,0x7ac7,0x4984,0x4984,0x4984,0x5c87,0x6ce8,0x5c87,0x4c25,0x4c25,0x5c66,0x4365,0x4365,0x4b46,0x5366,0x4345,0x3123,0x3123,0x4345,0x4208,0x49a4,0x49a4,0x5a05,0x0000,
+	0x0000,0x9369,0x4984,0x6226,0x6226,0x7ac7,0x6226,0x4984,0x4984,0x7d0a,0x4984,0x5c66,0x5466,0x4365,0x5387,0x3b24,0x4324,0x3123,0x49a4,0x3123,0x49a4,0x3123,0x5a05,0x49a4,0x5a05,0x0000,
+	0x0000,0x7ac7,0x6226,0x9369,0x6b6d,0x6226,0x4984,0x4984,0x4984,0x4984,0x6226,0x43c4,0x4984,0x5387,0x5be8,0x3123,0x4365,0x49a4,0x3123,0x49a4,0x7287,0x7287,0x49a4,0x5a05,0x49a4,0x0000,
+	0x0000,0x7ac7,0x7ac7,0x6226,0x7ac7,0x7ac7,0x9369,0x9369,0x6226,0x4984,0x6226,0x7ac7,0x6226,0x3123,0x5a05,0x7287,0x49a4,0x3123,0x7287,0x49a4,0x5a05,0x5a05,0x49a4,0x49a4,0x5a05,0x0000,
+	0x0000,0x7ac7,0x7ac7,0x4984,0x6226,0x7ac7,0x6226,0x7ac7,0x6226,0x9369,0x6226,0x6226,0x6226,0x5a05,0x5a05,0x5a05,0x528a,0x49a4,0x49a4,0x3123,0x5a05,0x49a4,0x7287,0x528a,0x49a4,0x0000,
+	0x0000,0x7ac7,0x6226,0x6226,0x9369,0x4984,0x6226,0x6226,0x4984,0x7ac7,0x6226,0x7ac7,0x9369,0x49a4,0x49a4,0x49a4,0x5a05,0x49a4,0x3123,0x49a4,0x49a4,0x49a4,0x5a05,0x49a4,0x3123,0x0000,
+	0x0000,0x6226,0x4984,0x6226,0x7ac7,0x6226,0x7ac7,0x6226,0x7ac7,0x6226,0x6226,0x6226,0x7ac7,0x7287,0x7287,0x7287,0x49a4,0x49a4,0x49a4,0x7287,0x7287,0x49a4,0x5a05,0x7287,0x7287,0x0000,
+	0x0000,0x7ac7,0x7ac7,0x7ac7,0x7ac7,0x9369,0x7ac7,0x4984,0x9369,0x6226,0x9369,0x6226,0x7ac7,0x7287,0x49a4,0x49a4,0x49a4,0x7287,0x5a05,0x5a05,0x5a05,0x49a4,0x49a4,0x5a05,0x5a05,0x0000,
+	0x0000,0x7ac7,0x6226,0x4984,0x4984,0x6226,0x6226,0x5acb,0x7ac7,0x6226,0x7ac7,0x9369,0x7ac7,0x5a05,0x3123,0x7287,0x7287,0x49a4,0x5a05,0x49a4,0x7287,0x3123,0x49a4,0x5a05,0x3123,0x0000,
+	0x0000,0x0000,0x6226,0x9369,0x6226,0x4984,0x7ac7,0x6226,0x6226,0x6226,0x4984,0x7ac7,0x6226,0x5a05,0x49a4,0x5a05,0x5a05,0x7287,0x49a4,0x3123,0x49a4,0x3123,0x5a05,0x49a4,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x7ac7,0x6226,0x4984,0x6226,0x4984,0x4984,0x6226,0x7ac7,0x4984,0x5a05,0x49a4,0x49a4,0x3123,0x5a05,0x3123,0x49a4,0x49a4,0x49a4,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7ac7,0x7ac7,0x6226,0x4984,0x6226,0x6226,0x9369,0x49a4,0x5a05,0x49a4,0x49a4,0x49a4,0x5a05,0x5a05,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7ac7,0x6226,0x6226,0x6226,0x7ac7,0x49a4,0x3123,0x7287,0x5a05,0x528a,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7ac7,0x7ac7,0x7ac7,0x5a05,0x7287,0x5a05,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4984,0x5a05,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
     },
     {//dirt
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb40b,0xb40b,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x9349,0xb40b,0x7287,0x51e5,0x9349,0x7287,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb40b,0x7287,0x7287,0x9349,0xb40b,0x51e5,0xb40b,0x7287,0xb40b,0x9349,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7287,0x9349,0x7287,0xb40b,0x7287,0x9349,0x7287,0x9349,0x51e5,0x7287,0x7287,0x51e5,0x7287,0x7287,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x9349,0x9349,0x9349,0x51e5,0x51e5,0x9349,0x9349,0x9349,0x7287,0x51e5,0x7287,0x7287,0x9349,0x7287,0x7287,0x9349,0x7287,0x7287,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x9349,0x7287,0x9349,0x9349,0x7287,0x9349,0xb40b,0x51e5,0x51e5,0x7287,0x7287,0x7287,0xb40b,0x7287,0x7287,0x7287,0x9349,0x7287,0x51e5,0x9349,0xb40b,0x7287,0x0000,0x0000,
-    	0x0000,0x9349,0x7aa7,0xb40b,0x51e5,0xb40b,0x72a8,0x9349,0xb40b,0x7287,0x9349,0x7287,0x7287,0x9349,0x51e5,0x9349,0xb40b,0x51e5,0x7287,0x9349,0x9349,0xb40b,0x7287,0x49a4,0x7287,0x0000,
-    	0x0000,0x6225,0x7aa7,0x7aa7,0x6225,0x7287,0x51e5,0x9349,0x9349,0x7287,0x6b4d,0x9349,0xb40b,0x7287,0x7287,0x7287,0x7287,0x7287,0x9349,0x7287,0xb40b,0x49a4,0x7287,0x3123,0x3123,0x0000,
-    	0x0000,0x9349,0x6225,0x4184,0x6225,0x9349,0x7aa7,0x7287,0xb40b,0xb40b,0x51e5,0x7287,0x7287,0x7287,0x9349,0xb40b,0x7287,0x51e5,0x9349,0x49a4,0x3123,0x49a4,0x5a05,0x7287,0x49a4,0x0000,
-    	0x0000,0x7aa7,0x52aa,0x6225,0x9349,0x7aa7,0x4184,0x6225,0x6225,0x7287,0x9349,0x51e5,0x7287,0x7287,0x9349,0x7287,0x7287,0x5a05,0x5a05,0x7287,0x5a05,0x49a4,0x3123,0x5a05,0x49a4,0x0000,
-    	0x0000,0x6225,0x6225,0x7aa7,0x7aa7,0x6225,0x6225,0x6225,0x9349,0x6225,0x6225,0x9349,0x9349,0x9349,0x9349,0x49a4,0x49a4,0x528a,0x3123,0x49a4,0x49a4,0x5a05,0x5a05,0x3123,0x7287,0x0000,
-    	0x0000,0x9349,0x4184,0x7aa7,0x4184,0x4184,0x9349,0x9349,0x6225,0x6225,0x9349,0x9349,0x9349,0x7287,0x5a05,0x49a4,0x49a4,0x49a4,0x49a4,0x5a05,0x49a4,0x4208,0x49a4,0x49a4,0x5a05,0x0000,
-    	0x0000,0x6225,0x6225,0x6225,0x6225,0x7aa7,0x6225,0x7aa7,0x7aa7,0x6225,0x4184,0x7aa7,0x4184,0x49a4,0x3123,0x3123,0x7287,0x49a4,0x49a4,0x3123,0x49a4,0x3123,0x5a05,0x49a4,0x5a05,0x0000,
-    	0x0000,0x7aa7,0x6225,0x9349,0x6b6d,0x6225,0x4184,0x4184,0x4184,0x7aa7,0x6225,0x4184,0x6225,0x7287,0x49a4,0x49a4,0x5a05,0x49a4,0x3123,0x49a4,0x7287,0x7287,0x49a4,0x5a05,0x49a4,0x0000,
-    	0x0000,0x6225,0x7aa7,0x6225,0x7aa7,0x7aa7,0x9349,0x9349,0x6225,0x4184,0x6225,0x7aa7,0x6225,0x5a05,0x5a05,0x7287,0x49a4,0x3123,0x7287,0x49a4,0x5a05,0x5a05,0x49a4,0x49a4,0x5a05,0x0000,
-    	0x0000,0x6225,0x7aa7,0x4184,0x6225,0x7aa7,0x6225,0x7aa7,0x6225,0x9349,0x6225,0x6225,0x6225,0x5a05,0x5a05,0x5a05,0x528a,0x49a4,0x49a4,0x3123,0x5a05,0x49a4,0x7287,0x528a,0x49a4,0x0000,
-    	0x0000,0x7aa7,0x6225,0x6225,0x9349,0x4184,0x6225,0x6225,0x4184,0x7aa7,0x6225,0x7aa7,0x9349,0x49a4,0x49a4,0x49a4,0x5a05,0x49a4,0x3123,0x49a4,0x49a4,0x3123,0x5a05,0x49a4,0x3123,0x0000,
-    	0x0000,0x6225,0x4184,0x6225,0x7aa7,0x6225,0x7aa7,0x6225,0x6225,0x6225,0x6225,0x6225,0x7aa7,0x7287,0x7287,0x7287,0x49a4,0x3123,0x49a4,0x7287,0x7287,0x49a4,0x5a05,0x7287,0x7287,0x0000,
-    	0x0000,0x7aa7,0x7aa7,0x6225,0x7aa7,0x9349,0x7aa7,0x4184,0x9349,0x6225,0x9349,0x6225,0x7aa7,0x49a4,0x49a4,0x49a4,0x49a4,0x7287,0x5a05,0x5a05,0x5a05,0x49a4,0x7287,0x5a05,0x5a05,0x0000,
-    	0x0000,0x7aa7,0x6225,0x4184,0x5a26,0x6225,0x6225,0x52aa,0x7aa7,0x4184,0x7aa7,0x9349,0x7aa7,0x49a4,0x3123,0x7287,0x7287,0x49a4,0x5a05,0x49a4,0x7287,0x3123,0x49a4,0x5a05,0x3123,0x0000,
-    	0x0000,0x0000,0x6225,0x9349,0x6225,0x4184,0x7aa7,0x6225,0x6225,0x6225,0x4184,0x7aa7,0x6225,0x49a4,0x49a4,0x5a05,0x5a05,0x7287,0x5a05,0x3123,0x49a4,0x5a05,0x5a05,0x49a4,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x7aa7,0x6225,0x4184,0x9349,0x4184,0x4184,0x6225,0x7aa7,0x4184,0x5a05,0x49a4,0x49a4,0x41a5,0x5a05,0x3123,0x7287,0x49a4,0x49a4,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6225,0x7aa7,0x9349,0x7aa7,0x6225,0x9349,0x9349,0x49a4,0x49a4,0x49a4,0x49a4,0x49a4,0x49a4,0x5a05,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7aa7,0x6225,0x6225,0x6225,0x7aa7,0x49a4,0x3123,0x7287,0x5a05,0x528a,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7aa7,0x7aa7,0x7aa7,0x5a05,0x7287,0x5a05,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4184,0x5a05,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb40b,0xb40b,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x9349,0xb40b,0x7287,0x51e5,0x9349,0x7287,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb40b,0x7287,0x7287,0x9349,0xb40b,0x51e5,0xb40b,0x7287,0xb40b,0x9349,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7287,0x9349,0x7287,0xb40b,0x7287,0x9349,0x7287,0x9349,0x51e5,0x7287,0x7287,0x51e5,0x7287,0x7287,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x9349,0x9349,0x9349,0x51e5,0x51e5,0x9349,0x9349,0x9349,0x7287,0x51e5,0x7287,0x7287,0x9349,0x7287,0x7287,0x9349,0x7287,0x7287,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x9349,0x7287,0x9349,0x9349,0x7287,0x9349,0xb40b,0x51e5,0x51e5,0x7287,0x7287,0x7287,0xb40b,0x7287,0x7287,0x7287,0x9349,0x7287,0x51e5,0x9349,0xb40b,0x7287,0x0000,0x0000,
+	0x0000,0x9349,0x7aa7,0xb40b,0x51e5,0xb40b,0x72a8,0x9349,0xb40b,0x7287,0x9349,0x7287,0x7287,0x9349,0x51e5,0x9349,0xb40b,0x51e5,0x7287,0x9349,0x9349,0xb40b,0x7287,0x49a4,0x7287,0x0000,
+	0x0000,0x6225,0x7aa7,0x7aa7,0x6225,0x7287,0x51e5,0x9349,0x9349,0x7287,0x6b4d,0x9349,0xb40b,0x7287,0x7287,0x7287,0x7287,0x7287,0x9349,0x7287,0xb40b,0x49a4,0x7287,0x3123,0x3123,0x0000,
+	0x0000,0x9349,0x6225,0x4184,0x6225,0x9349,0x7aa7,0x7287,0xb40b,0xb40b,0x51e5,0x7287,0x7287,0x7287,0x9349,0xb40b,0x7287,0x51e5,0x9349,0x49a4,0x3123,0x49a4,0x5a05,0x7287,0x49a4,0x0000,
+	0x0000,0x7aa7,0x52aa,0x6225,0x9349,0x7aa7,0x4184,0x6225,0x6225,0x7287,0x9349,0x51e5,0x7287,0x7287,0x9349,0x7287,0x7287,0x5a05,0x5a05,0x7287,0x5a05,0x49a4,0x3123,0x5a05,0x49a4,0x0000,
+	0x0000,0x6225,0x6225,0x7aa7,0x7aa7,0x6225,0x6225,0x6225,0x9349,0x6225,0x6225,0x9349,0x9349,0x9349,0x9349,0x49a4,0x49a4,0x528a,0x3123,0x49a4,0x49a4,0x5a05,0x5a05,0x3123,0x7287,0x0000,
+	0x0000,0x9349,0x4184,0x7aa7,0x4184,0x4184,0x9349,0x9349,0x6225,0x6225,0x9349,0x9349,0x9349,0x7287,0x5a05,0x49a4,0x49a4,0x49a4,0x49a4,0x5a05,0x49a4,0x4208,0x49a4,0x49a4,0x5a05,0x0000,
+	0x0000,0x6225,0x6225,0x6225,0x6225,0x7aa7,0x6225,0x7aa7,0x7aa7,0x6225,0x4184,0x7aa7,0x4184,0x49a4,0x3123,0x3123,0x7287,0x49a4,0x49a4,0x3123,0x49a4,0x3123,0x5a05,0x49a4,0x5a05,0x0000,
+	0x0000,0x7aa7,0x6225,0x9349,0x6b6d,0x6225,0x4184,0x4184,0x4184,0x7aa7,0x6225,0x4184,0x6225,0x7287,0x49a4,0x49a4,0x5a05,0x49a4,0x3123,0x49a4,0x7287,0x7287,0x49a4,0x5a05,0x49a4,0x0000,
+	0x0000,0x6225,0x7aa7,0x6225,0x7aa7,0x7aa7,0x9349,0x9349,0x6225,0x4184,0x6225,0x7aa7,0x6225,0x5a05,0x5a05,0x7287,0x49a4,0x3123,0x7287,0x49a4,0x5a05,0x5a05,0x49a4,0x49a4,0x5a05,0x0000,
+	0x0000,0x6225,0x7aa7,0x4184,0x6225,0x7aa7,0x6225,0x7aa7,0x6225,0x9349,0x6225,0x6225,0x6225,0x5a05,0x5a05,0x5a05,0x528a,0x49a4,0x49a4,0x3123,0x5a05,0x49a4,0x7287,0x528a,0x49a4,0x0000,
+	0x0000,0x7aa7,0x6225,0x6225,0x9349,0x4184,0x6225,0x6225,0x4184,0x7aa7,0x6225,0x7aa7,0x9349,0x49a4,0x49a4,0x49a4,0x5a05,0x49a4,0x3123,0x49a4,0x49a4,0x3123,0x5a05,0x49a4,0x3123,0x0000,
+	0x0000,0x6225,0x4184,0x6225,0x7aa7,0x6225,0x7aa7,0x6225,0x6225,0x6225,0x6225,0x6225,0x7aa7,0x7287,0x7287,0x7287,0x49a4,0x3123,0x49a4,0x7287,0x7287,0x49a4,0x5a05,0x7287,0x7287,0x0000,
+	0x0000,0x7aa7,0x7aa7,0x6225,0x7aa7,0x9349,0x7aa7,0x4184,0x9349,0x6225,0x9349,0x6225,0x7aa7,0x49a4,0x49a4,0x49a4,0x49a4,0x7287,0x5a05,0x5a05,0x5a05,0x49a4,0x7287,0x5a05,0x5a05,0x0000,
+	0x0000,0x7aa7,0x6225,0x4184,0x5a26,0x6225,0x6225,0x52aa,0x7aa7,0x4184,0x7aa7,0x9349,0x7aa7,0x49a4,0x3123,0x7287,0x7287,0x49a4,0x5a05,0x49a4,0x7287,0x3123,0x49a4,0x5a05,0x3123,0x0000,
+	0x0000,0x0000,0x6225,0x9349,0x6225,0x4184,0x7aa7,0x6225,0x6225,0x6225,0x4184,0x7aa7,0x6225,0x49a4,0x49a4,0x5a05,0x5a05,0x7287,0x5a05,0x3123,0x49a4,0x5a05,0x5a05,0x49a4,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x7aa7,0x6225,0x4184,0x9349,0x4184,0x4184,0x6225,0x7aa7,0x4184,0x5a05,0x49a4,0x49a4,0x41a5,0x5a05,0x3123,0x7287,0x49a4,0x49a4,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6225,0x7aa7,0x9349,0x7aa7,0x6225,0x9349,0x9349,0x49a4,0x49a4,0x49a4,0x49a4,0x49a4,0x49a4,0x5a05,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7aa7,0x6225,0x6225,0x6225,0x7aa7,0x49a4,0x3123,0x7287,0x5a05,0x528a,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7aa7,0x7aa7,0x7aa7,0x5a05,0x7287,0x5a05,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4184,0x5a05,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
     },
     {//stone
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8430,0x8430,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x73ae,0x73ae,0x6b6d,0x6b6d,0x8430,0x8430,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6b6d,0x73ae,0x8430,0x73ae,0x8430,0x630c,0x6b6d,0x73ae,0x6b6d,0x6b6d,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x73ae,0x8430,0x6b6d,0x630c,0x8430,0x73ae,0x73ae,0x6b6d,0x8430,0x73ae,0x630c,0x73ae,0x6b6d,0x630c,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x73ae,0x73ae,0x73ae,0x8430,0x8430,0x73ae,0x6b6d,0x630c,0x8430,0x73ae,0x73ae,0x6b6d,0x8430,0x6b6d,0x6b6d,0x73ae,0x6b6d,0x6b6d,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x73ae,0x8430,0x8430,0x6b6d,0x73ae,0x73ae,0x6b6d,0x73ae,0x73ae,0x73ae,0x6b6d,0x6b6d,0x8430,0x6b6d,0x6b6d,0x8430,0x73ae,0x73ae,0x73ae,0x6b6d,0x73ae,0x73ae,0x0000,0x0000,
-    	0x0000,0x6b4d,0x6b4d,0x73ae,0x73ae,0x73ae,0x6b6d,0x8430,0x8430,0x8430,0x630c,0x8430,0x8430,0x8430,0x73ae,0x6b6d,0x6b6d,0x630c,0x6b6d,0x6b6d,0x6b6d,0x6b6d,0x73ae,0x4228,0x4228,0x0000,
-    	0x0000,0x5aeb,0x5aeb,0x6b4d,0x5aeb,0x73ae,0x73ae,0x73ae,0x6b6d,0x6b6d,0x73ae,0x73ae,0x73ae,0x73ae,0x8430,0x73ae,0x6b6d,0x73ae,0x73ae,0x6b6d,0x8430,0x4208,0x4228,0x4228,0x4208,0x0000,
-    	0x0000,0x5aeb,0x52aa,0x52aa,0x52aa,0x52aa,0x5aeb,0x6b6d,0x73ae,0x73ae,0x6b6d,0x73ae,0x73ae,0x73ae,0x73ae,0x8430,0x8430,0x73ae,0x73ae,0x39c7,0x4208,0x39c7,0x4208,0x4228,0x4228,0x0000,
-    	0x0000,0x5aeb,0x5aeb,0x4a69,0x52aa,0x5aeb,0x5aeb,0x52aa,0x4a69,0x8430,0x73ae,0x73ae,0x6b6d,0x6b6d,0x8430,0x73ae,0x6b6d,0x4208,0x4228,0x4228,0x4228,0x4228,0x4228,0x4208,0x4208,0x0000,
-    	0x0000,0x5aeb,0x5aeb,0x5aeb,0x5aeb,0x52aa,0x4a69,0x5aeb,0x5aeb,0x52aa,0x5aeb,0x6b6d,0x8430,0x8430,0x8430,0x528a,0x4228,0x4228,0x4228,0x4208,0x4208,0x4228,0x4208,0x4228,0x528a,0x0000,
-    	0x0000,0x52aa,0x6b4d,0x5aeb,0x52aa,0x6b4d,0x5aeb,0x52aa,0x52aa,0x4a69,0x4a69,0x5aeb,0x5aeb,0x528a,0x528a,0x4228,0x4208,0x4208,0x39c7,0x528a,0x4228,0x528a,0x39c7,0x4208,0x4228,0x0000,
-    	0x0000,0x52aa,0x5aeb,0x5aeb,0x5aeb,0x5aeb,0x52aa,0x5aeb,0x6b4d,0x5aeb,0x5aeb,0x52aa,0x52aa,0x4228,0x4208,0x39c7,0x4208,0x4228,0x4208,0x528a,0x4208,0x39c7,0x4228,0x4228,0x4228,0x0000,
-    	0x0000,0x6b4d,0x52aa,0x4a69,0x6b4d,0x6b4d,0x5aeb,0x5aeb,0x6b4d,0x5aeb,0x5aeb,0x5aeb,0x5aeb,0x4228,0x39c7,0x528a,0x4228,0x4228,0x4228,0x4208,0x4208,0x4208,0x4228,0x4228,0x4208,0x0000,
-    	0x0000,0x5aeb,0x5aeb,0x6b4d,0x52aa,0x4a69,0x6b4d,0x6b4d,0x52aa,0x4a69,0x6b4d,0x52aa,0x52aa,0x4228,0x4228,0x4208,0x4228,0x4228,0x528a,0x4208,0x4208,0x4208,0x4228,0x528a,0x4228,0x0000,
-    	0x0000,0x4a69,0x5aeb,0x6b4d,0x5aeb,0x5aeb,0x52aa,0x5aeb,0x52aa,0x52aa,0x52aa,0x4a69,0x5aeb,0x4208,0x4228,0x4228,0x528a,0x4208,0x4208,0x4228,0x4228,0x528a,0x528a,0x4208,0x4208,0x0000,
-    	0x0000,0x5aeb,0x5aeb,0x52aa,0x52aa,0x5aeb,0x6b4d,0x6b4d,0x5aeb,0x52aa,0x5aeb,0x5aeb,0x6b4d,0x4228,0x4228,0x528a,0x4208,0x4208,0x528a,0x4228,0x4228,0x4228,0x4208,0x4228,0x528a,0x0000,
-    	0x0000,0x5aeb,0x52aa,0x5aeb,0x5aeb,0x52aa,0x4a69,0x6b4d,0x6b4d,0x5aeb,0x52aa,0x5aeb,0x5aeb,0x4208,0x39c7,0x39c7,0x528a,0x4228,0x528a,0x4228,0x4208,0x4228,0x528a,0x39c7,0x4208,0x0000,
-    	0x0000,0x5aeb,0x6b4d,0x52aa,0x5aeb,0x6b4d,0x5aeb,0x52aa,0x5aeb,0x6b4d,0x6b4d,0x5aeb,0x5aeb,0x4208,0x528a,0x4228,0x4228,0x39c7,0x39c7,0x4228,0x4228,0x39c7,0x4208,0x4208,0x528a,0x0000,
-    	0x0000,0x5aeb,0x52aa,0x52aa,0x52aa,0x5aeb,0x52aa,0x5aeb,0x5aeb,0x5aeb,0x5aeb,0x6b4d,0x5aeb,0x4228,0x528a,0x4228,0x4208,0x528a,0x4228,0x4228,0x4228,0x4228,0x528a,0x528a,0x4228,0x0000,
-    	0x0000,0x0000,0x5aeb,0x5aeb,0x5aeb,0x5aeb,0x52aa,0x52aa,0x5aeb,0x5aeb,0x6b4d,0x52aa,0x52aa,0x39c7,0x4208,0x4228,0x4228,0x4228,0x4208,0x4208,0x4228,0x4228,0x4208,0x4228,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x5aeb,0x5aeb,0x5aeb,0x5aeb,0x52aa,0x5aeb,0x4a69,0x6b4d,0x6b4d,0x4228,0x4228,0x4208,0x4208,0x4228,0x4228,0x4228,0x528a,0x4228,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x52aa,0x5aeb,0x5aeb,0x5aeb,0x52aa,0x52aa,0x52aa,0x4228,0x4208,0x4208,0x4228,0x4228,0x4208,0x528a,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6b4d,0x5aeb,0x6b4d,0x6b4d,0x6b4d,0x528a,0x4208,0x4228,0x4228,0x4208,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5aeb,0x52aa,0x6b4d,0x4228,0x4228,0x4228,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5aeb,0x4228,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8430,0x8430,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x73ae,0x73ae,0x6b6d,0x6b6d,0x8430,0x8430,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6b6d,0x73ae,0x8430,0x73ae,0x8430,0x630c,0x6b6d,0x73ae,0x6b6d,0x6b6d,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x73ae,0x8430,0x6b6d,0x630c,0x8430,0x73ae,0x73ae,0x6b6d,0x8430,0x73ae,0x630c,0x73ae,0x6b6d,0x630c,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x73ae,0x73ae,0x73ae,0x8430,0x8430,0x73ae,0x6b6d,0x630c,0x8430,0x73ae,0x73ae,0x6b6d,0x8430,0x6b6d,0x6b6d,0x73ae,0x6b6d,0x6b6d,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x73ae,0x8430,0x8430,0x6b6d,0x73ae,0x73ae,0x6b6d,0x73ae,0x73ae,0x73ae,0x6b6d,0x6b6d,0x8430,0x6b6d,0x6b6d,0x8430,0x73ae,0x73ae,0x73ae,0x6b6d,0x73ae,0x73ae,0x0000,0x0000,
+	0x0000,0x6b4d,0x6b4d,0x73ae,0x73ae,0x73ae,0x6b6d,0x8430,0x8430,0x8430,0x630c,0x8430,0x8430,0x8430,0x73ae,0x6b6d,0x6b6d,0x630c,0x6b6d,0x6b6d,0x6b6d,0x6b6d,0x73ae,0x4228,0x4228,0x0000,
+	0x0000,0x5aeb,0x5aeb,0x6b4d,0x5aeb,0x73ae,0x73ae,0x73ae,0x6b6d,0x6b6d,0x73ae,0x73ae,0x73ae,0x73ae,0x8430,0x73ae,0x6b6d,0x73ae,0x73ae,0x6b6d,0x8430,0x4208,0x4228,0x4228,0x4208,0x0000,
+	0x0000,0x5aeb,0x52aa,0x52aa,0x52aa,0x52aa,0x5aeb,0x6b6d,0x73ae,0x73ae,0x6b6d,0x73ae,0x73ae,0x73ae,0x73ae,0x8430,0x8430,0x73ae,0x73ae,0x39c7,0x4208,0x39c7,0x4208,0x4228,0x4228,0x0000,
+	0x0000,0x5aeb,0x5aeb,0x4a69,0x52aa,0x5aeb,0x5aeb,0x52aa,0x4a69,0x8430,0x73ae,0x73ae,0x6b6d,0x6b6d,0x8430,0x73ae,0x6b6d,0x4208,0x4228,0x4228,0x4228,0x4228,0x4228,0x4208,0x4208,0x0000,
+	0x0000,0x5aeb,0x5aeb,0x5aeb,0x5aeb,0x52aa,0x4a69,0x5aeb,0x5aeb,0x52aa,0x5aeb,0x6b6d,0x8430,0x8430,0x8430,0x528a,0x4228,0x4228,0x4228,0x4208,0x4208,0x4228,0x4208,0x4228,0x528a,0x0000,
+	0x0000,0x52aa,0x6b4d,0x5aeb,0x52aa,0x6b4d,0x5aeb,0x52aa,0x52aa,0x4a69,0x4a69,0x5aeb,0x5aeb,0x528a,0x528a,0x4228,0x4208,0x4208,0x39c7,0x528a,0x4228,0x528a,0x39c7,0x4208,0x4228,0x0000,
+	0x0000,0x52aa,0x5aeb,0x5aeb,0x5aeb,0x5aeb,0x52aa,0x5aeb,0x6b4d,0x5aeb,0x5aeb,0x52aa,0x52aa,0x4228,0x4208,0x39c7,0x4208,0x4228,0x4208,0x528a,0x4208,0x39c7,0x4228,0x4228,0x4228,0x0000,
+	0x0000,0x6b4d,0x52aa,0x4a69,0x6b4d,0x6b4d,0x5aeb,0x5aeb,0x6b4d,0x5aeb,0x5aeb,0x5aeb,0x5aeb,0x4228,0x39c7,0x528a,0x4228,0x4228,0x4228,0x4208,0x4208,0x4208,0x4228,0x4228,0x4208,0x0000,
+	0x0000,0x5aeb,0x5aeb,0x6b4d,0x52aa,0x4a69,0x6b4d,0x6b4d,0x52aa,0x4a69,0x6b4d,0x52aa,0x52aa,0x4228,0x4228,0x4208,0x4228,0x4228,0x528a,0x4208,0x4208,0x4208,0x4228,0x528a,0x4228,0x0000,
+	0x0000,0x4a69,0x5aeb,0x6b4d,0x5aeb,0x5aeb,0x52aa,0x5aeb,0x52aa,0x52aa,0x52aa,0x4a69,0x5aeb,0x4208,0x4228,0x4228,0x528a,0x4208,0x4208,0x4228,0x4228,0x528a,0x528a,0x4208,0x4208,0x0000,
+	0x0000,0x5aeb,0x5aeb,0x52aa,0x52aa,0x5aeb,0x6b4d,0x6b4d,0x5aeb,0x52aa,0x5aeb,0x5aeb,0x6b4d,0x4228,0x4228,0x528a,0x4208,0x4208,0x528a,0x4228,0x4228,0x4228,0x4208,0x4228,0x528a,0x0000,
+	0x0000,0x5aeb,0x52aa,0x5aeb,0x5aeb,0x52aa,0x4a69,0x6b4d,0x6b4d,0x5aeb,0x52aa,0x5aeb,0x5aeb,0x4208,0x39c7,0x39c7,0x528a,0x4228,0x528a,0x4228,0x4208,0x4228,0x528a,0x39c7,0x4208,0x0000,
+	0x0000,0x5aeb,0x6b4d,0x52aa,0x5aeb,0x6b4d,0x5aeb,0x52aa,0x5aeb,0x6b4d,0x6b4d,0x5aeb,0x5aeb,0x4208,0x528a,0x4228,0x4228,0x39c7,0x39c7,0x4228,0x4228,0x39c7,0x4208,0x4208,0x528a,0x0000,
+	0x0000,0x5aeb,0x52aa,0x52aa,0x52aa,0x5aeb,0x52aa,0x5aeb,0x5aeb,0x5aeb,0x5aeb,0x6b4d,0x5aeb,0x4228,0x528a,0x4228,0x4208,0x528a,0x4228,0x4228,0x4228,0x4228,0x528a,0x528a,0x4228,0x0000,
+	0x0000,0x0000,0x5aeb,0x5aeb,0x5aeb,0x5aeb,0x52aa,0x52aa,0x5aeb,0x5aeb,0x6b4d,0x52aa,0x52aa,0x39c7,0x4208,0x4228,0x4228,0x4228,0x4208,0x4208,0x4228,0x4228,0x4208,0x4228,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x5aeb,0x5aeb,0x5aeb,0x5aeb,0x52aa,0x5aeb,0x4a69,0x6b4d,0x6b4d,0x4228,0x4228,0x4208,0x4208,0x4228,0x4228,0x4228,0x528a,0x4228,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x52aa,0x5aeb,0x5aeb,0x5aeb,0x52aa,0x52aa,0x52aa,0x4228,0x4208,0x4208,0x4228,0x4228,0x4208,0x528a,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6b4d,0x5aeb,0x6b4d,0x6b4d,0x6b4d,0x528a,0x4208,0x4228,0x4228,0x4208,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5aeb,0x52aa,0x6b4d,0x4228,0x4228,0x4228,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5aeb,0x4228,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
     },
     {//leave
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4e66,0x4e66,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -5086,42 +5121,42 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x1b63,0x1162,0x1162,0x3503,0x22e4,0x3524,0x1162,0x1162,0x1162,0x1162,0x1b63,0x3503,0x1102,0x23a2,0x1102,0x1262,0x2c63,0x2be3,0x3483,0x2be3,0x1102,0x34a3,0x1102,0x1102,0x0000,
 		0x0000,0x4625,0x1162,0x1162,0x1162,0x1162,0x1162,0x1162,0x4604,0x1322,0x1162,0x1322,0x2ce3,0x1102,0x1102,0x0a41,0x3cc4,0x34a4,0x2be3,0x1102,0x2be3,0x1102,0x2c03,0x0a41,0x3483,0x0000,
 		0x0000,0x3503,0x1162,0x4625,0x1162,0x1aa3,0x1162,0x1342,0x3d44,0x1162,0x1162,0x1322,0x1b63,0x0a61,0x1102,0x2c83,0x2be3,0x2c03,0x1102,0x3483,0x1102,0x3483,0x1102,0x0a41,0x2c63,0x0000,
-		0x0000,0x23a4,0x1162,0x4e45,0x1162,0x1162,0x1162,0x4604,0x4625,0x1162,0x1342,0x5686,0x2320,0x2c63,0x1102,0x1262,0x23c2,0x1262,0x1102,0x2c03,0x1102,0x2422,0x1102,0x3483,0x1262,0x0000,
+		0x0000,0x23a4,0x1162,0x4e45,0x1162,0x1162,0x1162,0x4604,0x4625,0x1162,0x1342,0x5686,0x2384,0x2c63,0x1102,0x1262,0x23c2,0x1262,0x1102,0x2c03,0x1102,0x2422,0x1102,0x3483,0x1262,0x0000,
 		0x0000,0x3de4,0x1162,0x1162,0x1162,0x3e04,0x1162,0x4625,0x3d65,0x1162,0x1b43,0x4625,0x1162,0x23c2,0x1102,0x1102,0x1102,0x1102,0x1102,0x23c2,0x1102,0x2be3,0x34a4,0x2be3,0x34a4,0x0000,
 		0x0000,0x0000,0x1162,0x1162,0x1b63,0x2ce3,0x1162,0x1162,0x3503,0x4625,0x2ce3,0x3d65,0x1162,0x1282,0x1102,0x34c4,0x1102,0x34c4,0x1102,0x0a41,0x0a41,0x2be3,0x2bc3,0x1262,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x1162,0x3d65,0x1162,0x1162,0x1322,0x3d44,0x3524,0x1162,0x4604,0x34a4,0x34a4,0x2c03,0x1102,0x23c2,0x1102,0x1aa3,0x0a41,0x1102,0x0000,0x0000,0x0000,0x0000,
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x1322,0x4625,0x2320,0x3d44,0x1302,0x1162,0x3de4,0x23c2,0x34a4,0x2be3,0x1282,0x1102,0x0a61,0x34a4,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x1322,0x4625,0x2384,0x3d44,0x1302,0x1162,0x3de4,0x23c2,0x34a4,0x2be3,0x1282,0x1102,0x0a61,0x34a4,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4645,0x1162,0x1162,0x4e45,0x1162,0x2be3,0x1102,0x1282,0x1102,0x1102,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x1162,0x3524,0x1b43,0x1aa3,0x1102,0x1102,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4645,0x2c63,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
     {//log
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5a45,0x5a45,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5a45,0x5a45,0xb48b,0xb48b,0x5a45,0x72c6,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5a45,0x49e4,0xac6a,0x9388,0x7b06,0x7b06,0x9388,0xb48b,0x49e4,0x5a45,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x49e4,0x5a45,0xac6a,0x9c09,0x9388,0xb48b,0xac6a,0xac6a,0xb48b,0x9c09,0x9388,0xac6a,0x72c6,0x49e4,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x5a45,0x5a45,0xac6a,0x9c09,0x9c09,0xb48b,0xac6a,0xac6a,0x7b06,0x9388,0xac6a,0xac6a,0xb48b,0x9c09,0x9c09,0xac6a,0x5a45,0x5a45,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x5a45,0x5a45,0xb48b,0x9c09,0x9c09,0xb48b,0xac6a,0x9388,0x9388,0xac6a,0x9c09,0x9c09,0xac6a,0x9388,0x9388,0xac6a,0xb48b,0x9c09,0x9388,0xb48b,0x5a45,0x5a45,0x0000,0x0000,
-    	0x0000,0x5a45,0x3983,0x5a45,0xb48b,0xb48b,0x9c09,0xac6a,0xac6a,0xac6a,0x7b06,0xac6a,0xac6a,0xac6a,0xac6a,0x9c09,0xac6a,0xac6a,0xb48b,0x9c09,0xb48b,0xbccc,0x5a45,0x41a4,0x3963,0x0000,
-    	0x0000,0x5a45,0x3983,0x72c6,0x5a45,0x49e4,0xac6a,0x9388,0x9388,0xb48b,0xac6a,0xac6a,0x9c09,0x9c09,0xac6a,0xac6a,0xb48b,0x9c09,0x9388,0xac6a,0x49e4,0x5a25,0x5a25,0x41a4,0x3963,0x0000,
-    	0x0000,0x5a45,0x2902,0x7b07,0x5a45,0x2902,0x5a45,0x5a45,0xac6a,0xbccc,0x9388,0xb48b,0xac6a,0xac6a,0xb48b,0x9388,0xac6a,0xac6a,0x5a45,0x20c1,0x41a4,0x5a25,0x41a4,0x41a4,0x3963,0x0000,
-    	0x0000,0x72c6,0x2902,0x49c4,0x5a45,0x2902,0x49c4,0x5a45,0x2902,0x5a45,0xac6a,0x9388,0x9388,0x9388,0x9388,0xac6a,0x5a45,0x5a25,0x41a4,0x20c1,0x41a4,0x2922,0x41a4,0x5a25,0x3963,0x0000,
-    	0x0000,0x72c6,0x3983,0x5a45,0x5a45,0x2902,0x49c4,0x5a45,0x2902,0x72c6,0x3983,0x72c6,0xb48b,0xb48b,0x5a45,0x41a4,0x41a4,0x5a45,0x3963,0x2922,0x41a4,0x20c1,0x2922,0x5a25,0x41a4,0x0000,
-    	0x0000,0x49c4,0x5a45,0x3983,0x5a45,0x3983,0x49c4,0x5a45,0x3983,0x72c6,0x3983,0x72c6,0x49c4,0x41a4,0x5a25,0x3963,0x41a4,0x5a45,0x3963,0x3963,0x41a4,0x3963,0x2922,0x5a25,0x41a4,0x0000,
-    	0x0000,0x49c4,0x5a45,0x3983,0x72c6,0x3983,0x49c4,0x7b07,0x49c4,0x3983,0x3983,0x5a45,0x49c4,0x41a4,0x5a45,0x3963,0x41a4,0x41a4,0x3963,0x3963,0x5a25,0x2922,0x2922,0x5a25,0x41a4,0x0000,
-    	0x0000,0x5a45,0x5a45,0x2902,0x72c6,0x49c4,0x3983,0x7b07,0x49c4,0x2902,0x3983,0x5a45,0x49c4,0x41a4,0x3963,0x3963,0x41a4,0x41a4,0x2922,0x3963,0x5a25,0x41a4,0x3963,0x5a25,0x41a4,0x0000,
-    	0x0000,0x5a45,0x5a45,0x2902,0x72c6,0x5a45,0x5a45,0x72c6,0x49c4,0x3983,0x5a45,0x3983,0x49c4,0x5a25,0x41a4,0x3963,0x5a25,0x41a4,0x41a4,0x41a4,0x5a25,0x3963,0x3963,0x20c1,0x41a4,0x0000,
-    	0x0000,0x5a45,0x5a45,0x3983,0x5a45,0x5a45,0x72c6,0x5a45,0x5a45,0x5a45,0x5a45,0x3983,0x5a45,0x5a25,0x2922,0x41a4,0x5a25,0x3963,0x5a25,0x41a4,0x5a25,0x2922,0x41a4,0x20c1,0x41a4,0x0000,
-    	0x0000,0x5a45,0x3983,0x5a45,0x5a45,0x5a45,0x5a45,0x5a45,0x5a45,0x49c4,0x5a45,0x3983,0x5a45,0x5a25,0x2922,0x41a4,0x5a25,0x3963,0x5a25,0x3963,0x5a25,0x2922,0x41a4,0x2922,0x41a4,0x0000,
-    	0x0000,0x7b07,0x3983,0x5a45,0x5a45,0x49c4,0x2902,0x5a45,0x49c4,0x49c4,0x5a45,0x49c4,0x5a45,0x3963,0x20c1,0x41a4,0x41a4,0x3963,0x41a4,0x3963,0x41a4,0x20c1,0x41a4,0x3963,0x41a4,0x0000,
-    	0x0000,0x72c6,0x5a45,0x3983,0x72c6,0x49c4,0x2902,0x5a45,0x49c4,0x3983,0x72c6,0x49c4,0x5a45,0x3963,0x20c1,0x5a45,0x41a4,0x41a4,0x20c1,0x41a4,0x41a4,0x20c1,0x41a4,0x41a4,0x41a4,0x0000,
-    	0x0000,0x72c6,0x5a45,0x3983,0x72c6,0x5a45,0x2902,0x7b07,0x5a45,0x3983,0x72c6,0x5a45,0x5a45,0x41a4,0x2922,0x5a25,0x41a4,0x41a4,0x20c1,0x3963,0x41a4,0x2922,0x5a25,0x41a4,0x3963,0x0000,
-    	0x0000,0x0000,0x5a45,0x3983,0x5a45,0x5a45,0x3983,0x72c6,0x49c4,0x2902,0x7b07,0x5a45,0x5a45,0x41a4,0x41a4,0x5a25,0x41a4,0x5a25,0x2922,0x3963,0x41a4,0x2922,0x5a25,0x41a4,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x3983,0x5a45,0x2902,0x5a45,0x49c4,0x3983,0x5a45,0x5a45,0x5a45,0x41a4,0x41a4,0x41a4,0x5a25,0x41a4,0x20c1,0x2922,0x41a4,0x41a4,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x3983,0x5a45,0x3983,0x3983,0x5a45,0x5a45,0x5a45,0x5a45,0x2922,0x41a4,0x41a4,0x5a25,0x2922,0x2922,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x3983,0x5a45,0x3983,0x72c6,0x5a45,0x5a45,0x2922,0x5a25,0x2922,0x5a25,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x3983,0x72c6,0x5a45,0x5a25,0x2922,0x5a25,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-    	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x49c4,0x5a25,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5a45,0x5a45,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5a45,0x5a45,0xb48b,0xb48b,0x5a45,0x72c6,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5a45,0x49e4,0xac6a,0x9388,0x7b06,0x7b06,0x9388,0xb48b,0x49e4,0x5a45,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x49e4,0x5a45,0xac6a,0x9c09,0x9388,0xb48b,0xac6a,0xac6a,0xb48b,0x9c09,0x9388,0xac6a,0x72c6,0x49e4,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x5a45,0x5a45,0xac6a,0x9c09,0x9c09,0xb48b,0xac6a,0xac6a,0x7b06,0x9388,0xac6a,0xac6a,0xb48b,0x9c09,0x9c09,0xac6a,0x5a45,0x5a45,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x5a45,0x5a45,0xb48b,0x9c09,0x9c09,0xb48b,0xac6a,0x9388,0x9388,0xac6a,0x9c09,0x9c09,0xac6a,0x9388,0x9388,0xac6a,0xb48b,0x9c09,0x9388,0xb48b,0x5a45,0x5a45,0x0000,0x0000,
+	0x0000,0x5a45,0x3983,0x5a45,0xb48b,0xb48b,0x9c09,0xac6a,0xac6a,0xac6a,0x7b06,0xac6a,0xac6a,0xac6a,0xac6a,0x9c09,0xac6a,0xac6a,0xb48b,0x9c09,0xb48b,0xbccc,0x5a45,0x41a4,0x3963,0x0000,
+	0x0000,0x5a45,0x3983,0x72c6,0x5a45,0x49e4,0xac6a,0x9388,0x9388,0xb48b,0xac6a,0xac6a,0x9c09,0x9c09,0xac6a,0xac6a,0xb48b,0x9c09,0x9388,0xac6a,0x49e4,0x5a25,0x5a25,0x41a4,0x3963,0x0000,
+	0x0000,0x5a45,0x2902,0x7b07,0x5a45,0x2902,0x5a45,0x5a45,0xac6a,0xbccc,0x9388,0xb48b,0xac6a,0xac6a,0xb48b,0x9388,0xac6a,0xac6a,0x5a45,0x20c1,0x41a4,0x5a25,0x41a4,0x41a4,0x3963,0x0000,
+	0x0000,0x72c6,0x2902,0x49c4,0x5a45,0x2902,0x49c4,0x5a45,0x2902,0x5a45,0xac6a,0x9388,0x9388,0x9388,0x9388,0xac6a,0x5a45,0x5a25,0x41a4,0x20c1,0x41a4,0x2922,0x41a4,0x5a25,0x3963,0x0000,
+	0x0000,0x72c6,0x3983,0x5a45,0x5a45,0x2902,0x49c4,0x5a45,0x2902,0x72c6,0x3983,0x72c6,0xb48b,0xb48b,0x5a45,0x41a4,0x41a4,0x5a45,0x3963,0x2922,0x41a4,0x20c1,0x2922,0x5a25,0x41a4,0x0000,
+	0x0000,0x49c4,0x5a45,0x3983,0x5a45,0x3983,0x49c4,0x5a45,0x3983,0x72c6,0x3983,0x72c6,0x49c4,0x41a4,0x5a25,0x3963,0x41a4,0x5a45,0x3963,0x3963,0x41a4,0x3963,0x2922,0x5a25,0x41a4,0x0000,
+	0x0000,0x49c4,0x5a45,0x3983,0x72c6,0x3983,0x49c4,0x7b07,0x49c4,0x3983,0x3983,0x5a45,0x49c4,0x41a4,0x5a45,0x3963,0x41a4,0x41a4,0x3963,0x3963,0x5a25,0x2922,0x2922,0x5a25,0x41a4,0x0000,
+	0x0000,0x5a45,0x5a45,0x2902,0x72c6,0x49c4,0x3983,0x7b07,0x49c4,0x2902,0x3983,0x5a45,0x49c4,0x41a4,0x3963,0x3963,0x41a4,0x41a4,0x2922,0x3963,0x5a25,0x41a4,0x3963,0x5a25,0x41a4,0x0000,
+	0x0000,0x5a45,0x5a45,0x2902,0x72c6,0x5a45,0x5a45,0x72c6,0x49c4,0x3983,0x5a45,0x3983,0x49c4,0x5a25,0x41a4,0x3963,0x5a25,0x41a4,0x41a4,0x41a4,0x5a25,0x3963,0x3963,0x20c1,0x41a4,0x0000,
+	0x0000,0x5a45,0x5a45,0x3983,0x5a45,0x5a45,0x72c6,0x5a45,0x5a45,0x5a45,0x5a45,0x3983,0x5a45,0x5a25,0x2922,0x41a4,0x5a25,0x3963,0x5a25,0x41a4,0x5a25,0x2922,0x41a4,0x20c1,0x41a4,0x0000,
+	0x0000,0x5a45,0x3983,0x5a45,0x5a45,0x5a45,0x5a45,0x5a45,0x5a45,0x49c4,0x5a45,0x3983,0x5a45,0x5a25,0x2922,0x41a4,0x5a25,0x3963,0x5a25,0x3963,0x5a25,0x2922,0x41a4,0x2922,0x41a4,0x0000,
+	0x0000,0x7b07,0x3983,0x5a45,0x5a45,0x49c4,0x2902,0x5a45,0x49c4,0x49c4,0x5a45,0x49c4,0x5a45,0x3963,0x20c1,0x41a4,0x41a4,0x3963,0x41a4,0x3963,0x41a4,0x20c1,0x41a4,0x3963,0x41a4,0x0000,
+	0x0000,0x72c6,0x5a45,0x3983,0x72c6,0x49c4,0x2902,0x5a45,0x49c4,0x3983,0x72c6,0x49c4,0x5a45,0x3963,0x20c1,0x5a45,0x41a4,0x41a4,0x20c1,0x41a4,0x41a4,0x20c1,0x41a4,0x41a4,0x41a4,0x0000,
+	0x0000,0x72c6,0x5a45,0x3983,0x72c6,0x5a45,0x2902,0x7b07,0x5a45,0x3983,0x72c6,0x5a45,0x5a45,0x41a4,0x2922,0x5a25,0x41a4,0x41a4,0x20c1,0x3963,0x41a4,0x2922,0x5a25,0x41a4,0x3963,0x0000,
+	0x0000,0x0000,0x5a45,0x3983,0x5a45,0x5a45,0x3983,0x72c6,0x49c4,0x2902,0x7b07,0x5a45,0x5a45,0x41a4,0x41a4,0x5a25,0x41a4,0x5a25,0x2922,0x3963,0x41a4,0x2922,0x5a25,0x41a4,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x3983,0x5a45,0x2902,0x5a45,0x49c4,0x3983,0x5a45,0x5a45,0x5a45,0x41a4,0x41a4,0x41a4,0x5a25,0x41a4,0x20c1,0x2922,0x41a4,0x41a4,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x3983,0x5a45,0x3983,0x3983,0x5a45,0x5a45,0x5a45,0x5a45,0x2922,0x41a4,0x41a4,0x5a25,0x2922,0x2922,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x3983,0x5a45,0x3983,0x72c6,0x5a45,0x5a45,0x2922,0x5a25,0x2922,0x5a25,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x3983,0x72c6,0x5a45,0x5a25,0x2922,0x5a25,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x49c4,0x5a25,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
     },
     {//water
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x3b7f,0x3b7f,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -5418,11 +5453,11 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x738e,0x5aeb,0x632c,0x5aeb,0x11d3,0x1a0d,0x738e,0x5aeb,0x738e,0x528a,0x5aeb,0x632c,0x4a69,0x4228,0x52aa,0x52aa,0x4228,0x4228,0x4a69,0x4228,0x52aa,0x4228,0x39e7,0x39e7,0x0000,
 		0x0000,0x632c,0x738e,0x632c,0x632c,0x1233,0x5aeb,0x5aeb,0x632c,0x632c,0x08f2,0x632c,0x5aeb,0x4a69,0x52aa,0x1a0c,0x11ae,0x4a69,0x4228,0x4228,0x114b,0x11ed,0x52aa,0x52aa,0x4a69,0x0000,
 		0x0000,0x632c,0x1190,0x11d2,0x11d2,0x1233,0x5aeb,0x632c,0x5aeb,0x5aeb,0x5aeb,0x11f0,0x632c,0x4a69,0x11af,0x4a69,0x4a69,0x4228,0x4228,0x39e7,0x114c,0x116a,0x4228,0x4a69,0x52aa,0x0000,
-		0x0000,0x632c,0x5aeb,0x1160,0x5aeb,0x5aeb,0x11d0,0x632c,0x528a,0x1a71,0x738e,0x738e,0x632c,0x4a69,0x52aa,0x4228,0x4a69,0x094e,0x116c,0x4a69,0x4228,0x4228,0x52aa,0x19aa,0x4a69,0x0000,
+		0x0000,0x632c,0x5aeb,0x1192,0x5aeb,0x5aeb,0x11d0,0x632c,0x528a,0x1a71,0x738e,0x738e,0x632c,0x4a69,0x52aa,0x4228,0x4a69,0x094e,0x116c,0x4a69,0x4228,0x4228,0x52aa,0x19aa,0x4a69,0x0000,
 		0x0000,0x632c,0x632c,0x5aeb,0x5aeb,0x5aeb,0x5aeb,0x5aeb,0x632c,0x19ee,0x5aeb,0x5aeb,0x528a,0x4a69,0x4a69,0x4a69,0x094d,0x094f,0x4228,0x39e7,0x198a,0x198a,0x112c,0x19ca,0x4a69,0x0000,
 		0x0000,0x528a,0x632c,0x738e,0x1171,0x5aeb,0x11d1,0x632c,0x528a,0x5aeb,0x738e,0x738e,0x632c,0x4228,0x4a69,0x092e,0x4228,0x4228,0x094e,0x114c,0x114d,0x52aa,0x114c,0x19ca,0x39e7,0x0000,
 		0x0000,0x632c,0x5aeb,0x19cf,0x090f,0x738e,0x5aeb,0x11b1,0x11d0,0x19d0,0x5aeb,0x5aeb,0x528a,0x52aa,0x096d,0x4228,0x52aa,0x4228,0x094d,0x114c,0x116b,0x4a69,0x116b,0x114a,0x4a69,0x0000,
-		0x0000,0x632c,0x738e,0x5aeb,0x5aeb,0x632c,0x632c,0x1160,0x11d0,0x21ee,0x5aeb,0x738e,0x632c,0x4a69,0x092e,0x4228,0x4228,0x52aa,0x4228,0x52aa,0x4a69,0x4228,0x4a69,0x52aa,0x4a69,0x0000,
+		0x0000,0x632c,0x738e,0x5aeb,0x5aeb,0x632c,0x632c,0x1192,0x11d0,0x21ee,0x5aeb,0x738e,0x632c,0x4a69,0x092e,0x4228,0x4228,0x52aa,0x4228,0x52aa,0x4a69,0x4228,0x4a69,0x52aa,0x4a69,0x0000,
 		0x0000,0x5aeb,0x632c,0x632c,0x1131,0x1131,0x5aeb,0x738e,0x738e,0x738e,0x738e,0x1190,0x632c,0x4a69,0x4228,0x4228,0x090d,0x4a69,0x4a69,0x112c,0x114a,0x4228,0x4228,0x4228,0x4a69,0x0000,
 		0x0000,0x0000,0x5aeb,0x5aeb,0x19ee,0x19ee,0x5aeb,0x1112,0x1190,0x632c,0x632c,0x11d0,0x632c,0x4a69,0x52aa,0x08ab,0x08cb,0x4228,0x4228,0x090b,0x52aa,0x52aa,0x4228,0x4a69,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x528a,0x738e,0x5aeb,0x632c,0x114e,0x5aeb,0x5aeb,0x19ce,0x528a,0x39e7,0x116b,0x4228,0x08ed,0x116c,0x4228,0x4a69,0x4a69,0x4228,0x0000,0x0000,0x0000,0x0000,
@@ -6468,7 +6503,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x1420,0x1420,0x1300,0x1300,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x1420,0x1420,0x1300,0x1300,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //sapling 54
+    {//sapling 54
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5567,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6496,7 +6531,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7285,0x7285,0x59e3,0x59e3,0x4982,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7285,0x7285,0x59e3,0x59e3,0x4982,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //lava 55
+    {//lava 55
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6506,8 +6541,8 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0xcac1,0xca61,0xe3c5,0xca41,0xca00,0xca01,0xd261,0xca20,0xca21,0xdae3,0xca81,0xdb22,0xdba4,0xe3c4,0xdba4,0xcb03,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0xcc08,0xe404,0xca81,0xe3c5,0xdc46,0xd2a2,0xd2a1,0xd281,0xe445,0xdb63,0xdb83,0xdbc4,0xcb02,0xd2e2,0xca01,0xd2a2,0xc220,0xca61,0xd261,0xcc48,0x0000,0x0000,0x0000,
 		0x0000,0xb283,0xca81,0xdbe4,0xe487,0xec87,0xca81,0xd2e2,0xd2e2,0xd322,0xd342,0xdb23,0xd2a1,0xca21,0xca01,0xca01,0xd2a1,0xca00,0xc1e0,0xca41,0xdae3,0xcac1,0xdb22,0xdbc4,0xc3e9,0x0000,
-		0x0000,0xa1e0,0xa261,0xd319,0xd301,0xc2a1,0xca40,0xca21,0xca20,0xdb63,0xd319,0xca61,0xc1c0,0xc9e0,0xca21,0xcae1,0xcaa1,0xd281,0xdae2,0xe466,0xd323,0xcaa1,0xc281,0x7960,0x7940,0x0000,
-		0x0000,0xa1a0,0xa1c0,0xa1e1,0xa1e1,0xcaa2,0xca81,0xca01,0xca00,0xcb02,0xe486,0xe320,0xca61,0xdac2,0xd322,0xe445,0xdc04,0xdb02,0xca41,0xca21,0xba83,0x7960,0x9305,0x8a63,0x7960,0x0000,
+		0x0000,0xa1e0,0xa261,0xd383,0xd301,0xc2a1,0xca40,0xca21,0xca20,0xdb63,0xd383,0xca61,0xc1c0,0xc9e0,0xca21,0xcae1,0xcaa1,0xd281,0xdae2,0xe466,0xd323,0xcaa1,0xc281,0x7960,0x7940,0x0000,
+		0x0000,0xa1a0,0xa1c0,0xa1e1,0xa1e1,0xcaa2,0xca81,0xca01,0xca00,0xcb02,0xe486,0xe384,0xca61,0xdac2,0xd322,0xe445,0xdc04,0xdb02,0xca41,0xca21,0xba83,0x7960,0x9305,0x8a63,0x7960,0x0000,
 		0x0000,0xa1c1,0xa201,0xb262,0xa1a0,0xaa62,0xb3a4,0xcac2,0xd2a2,0xcaa1,0xd302,0xd2a2,0xd241,0xca61,0xc221,0xca20,0xdb43,0xd2c1,0xcae3,0x71a0,0x7960,0x81e1,0x8ae4,0x81e1,0x7981,0x0000,
 		0x0000,0xa1c0,0xaa42,0xcbc6,0xa1a0,0x99a0,0xbb64,0xb323,0xa201,0xc2e2,0xd2e2,0xd2a2,0xca00,0xc200,0xcac1,0xdba4,0xdbc6,0x82c3,0x8ac4,0x7960,0x7960,0x8202,0x8222,0x79c1,0x79c1,0x0000,
 		0x0000,0xa1a0,0xa1a1,0xaa62,0xa1a0,0xa1a0,0xa201,0x9a00,0xa1e1,0xa201,0xb282,0xd2e3,0xca61,0xdae2,0xdba4,0x8181,0x7940,0x81e1,0x7180,0x7960,0x7940,0x7960,0x7940,0x8181,0x7960,0x0000,
@@ -6517,14 +6552,14 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0xaa42,0xa1e1,0xaac2,0xaa21,0xa1e0,0xa1c0,0xaa41,0xaa41,0xa1c0,0xa1a0,0x99c0,0xa200,0x7960,0x81c2,0x7981,0x7960,0x7940,0x7981,0x7981,0x81e1,0x81c1,0x8a63,0x8222,0x7960,0x0000,
 		0x0000,0xbc06,0xaa82,0xa1c0,0xa1e0,0xa1a0,0xa1a0,0xa1e1,0xaa01,0xaa20,0xa1a1,0xa1a0,0xaa41,0x7940,0x7961,0x8262,0x8a63,0x7940,0x7940,0x81e2,0x81e1,0x7980,0x8a43,0x7960,0x8ae4,0x0000,
 		0x0000,0xaac2,0xaa42,0xa1c0,0xa1c0,0xa1c0,0xa9e1,0xa200,0xaac2,0xaa41,0xa1a0,0xa1a0,0xa1e1,0x7940,0x81e2,0x8b45,0x8202,0x7120,0x7920,0x8b05,0x81e1,0x79a1,0x81e1,0x79e1,0x8201,0x0000,
-		0x0000,0x0000,0xa1c0,0xa1a0,0xa1c0,0xaa41,0xbc47,0xb320,0xbc26,0xaa41,0xaa01,0xa1c0,0xa181,0x8181,0x92e4,0x82c3,0x8181,0x7940,0x71a0,0x8283,0x7940,0x7981,0x9b46,0x81c1,0x0000,0x0000,
+		0x0000,0x0000,0xa1c0,0xa1a0,0xa1c0,0xaa41,0xbc47,0xb384,0xbc26,0xaa41,0xaa01,0xa1c0,0xa181,0x8181,0x92e4,0x82c3,0x8181,0x7940,0x71a0,0x8283,0x7940,0x7981,0x9b46,0x81c1,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0xa1e1,0xaa41,0xc467,0xaa82,0xab24,0xa221,0xaa21,0xbb64,0xa1a0,0x7980,0x81e1,0x8181,0x7961,0x8263,0x9366,0x7940,0x7920,0x7960,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xaa82,0x99c0,0xa1c0,0xaa01,0xa201,0xbb25,0xa1c0,0x7980,0x7940,0x7960,0x7960,0x8345,0x8201,0x8121,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa1a0,0xa1c0,0xaa01,0xaa82,0xab03,0x8aa3,0x7140,0x7940,0x7980,0x79e1,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb2e2,0xcc68,0xbbc6,0x9305,0x7940,0x7921,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xaac3,0x81e2,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //obsidian 56
+    {//obsidian 56
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0001,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x0001,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x1063,0x1063,0x20e7,0x1063,0x20e7,0x392a,0x20e7,0x0001,0x0001,0x1063,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6552,16 +6587,16 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0001,0x0001,0x0001,0x0001,0x0822,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0822,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //chest 57
+    {//chest 57
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x2923,0x2923,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x3164,0x3184,0x9345,0x8b25,0x3164,0x3164,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x3184,0x3164,0x7ae4,0x8b23,0x9b44,0x8b23,0x8b23,0x8b25,0x3184,0x3184,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x3164,0x3184,0x8b04,0x9b44,0xaba5,0xa320,0xa320,0xaba5,0xa363,0xa320,0xa320,0x7ae4,0x3164,0x3184,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x3164,0x3184,0x8b04,0x9b44,0xaba5,0xa384,0xa384,0xaba5,0xa363,0xa384,0xa384,0x7ae4,0x3164,0x3184,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x3164,0x3164,0x8b25,0x8b23,0x8b23,0xaba5,0x9b44,0x9b44,0xaba5,0xaba5,0x8b23,0x8b23,0xa363,0xaba5,0xaba5,0x7ae4,0x3184,0x3184,0x0000,0x0000,0x0000,0x0000,
-		0x0000,0x0000,0x3184,0x3164,0x7ae4,0xaba5,0xa363,0xa363,0xaba5,0xaba5,0xaba5,0x8b23,0xa363,0xa363,0x8b23,0xa320,0xa320,0x8b23,0x9b44,0xa320,0xa363,0x8b25,0x3184,0x3184,0x0000,0x0000,
-		0x0000,0x3985,0x3164,0x3164,0x7ae4,0x7ae4,0xaba5,0x8b23,0x9b44,0x9b44,0x8b23,0xa320,0x8b23,0xa320,0xa363,0x9b44,0xaba5,0xa320,0x8b23,0xa320,0x8b04,0x9345,0x3164,0x2923,0x18e2,0x0000,
-		0x0000,0x3985,0x8b04,0x3164,0x3164,0x3164,0x9345,0xaba5,0x8b23,0x8b23,0xa363,0xa363,0x8b23,0x8b23,0xa363,0xa320,0x9b44,0x9b44,0xaba5,0x7ae4,0x3164,0x2923,0x2923,0x6a43,0x18a2,0x0000,
-		0x0000,0x3985,0x8b04,0x82c3,0x82c3,0x3985,0x3184,0x3164,0x9345,0x9345,0xa320,0x8b23,0xa363,0xa363,0xa320,0x8b23,0x7ae4,0x9345,0x3164,0x2923,0x2923,0x6223,0x6223,0x6a43,0x18a2,0x0000,
+		0x0000,0x0000,0x3184,0x3164,0x7ae4,0xaba5,0xa363,0xa363,0xaba5,0xaba5,0xaba5,0x8b23,0xa363,0xa363,0x8b23,0xa384,0xa384,0x8b23,0x9b44,0xa384,0xa363,0x8b25,0x3184,0x3184,0x0000,0x0000,
+		0x0000,0x3985,0x3164,0x3164,0x7ae4,0x7ae4,0xaba5,0x8b23,0x9b44,0x9b44,0x8b23,0xa384,0x8b23,0xa384,0xa363,0x9b44,0xaba5,0xa384,0x8b23,0xa384,0x8b04,0x9345,0x3164,0x2923,0x18e2,0x0000,
+		0x0000,0x3985,0x8b04,0x3164,0x3164,0x3164,0x9345,0xaba5,0x8b23,0x8b23,0xa363,0xa363,0x8b23,0x8b23,0xa363,0xa384,0x9b44,0x9b44,0xaba5,0x7ae4,0x3164,0x2923,0x2923,0x6a43,0x18a2,0x0000,
+		0x0000,0x3985,0x8b04,0x82c3,0x82c3,0x3985,0x3184,0x3164,0x9345,0x9345,0xa384,0x8b23,0xa363,0xa363,0xa384,0x8b23,0x7ae4,0x9345,0x3164,0x2923,0x2923,0x6223,0x6223,0x6a43,0x18a2,0x0000,
 		0x0000,0x3184,0x82a3,0x72a2,0x72a2,0x82c3,0x72a2,0x3164,0x3985,0x3164,0x8b25,0x8b23,0x8b23,0xa363,0x9b44,0x8ae4,0x3164,0x2923,0x2923,0x5202,0x5202,0x6223,0x6a43,0x6202,0x18a2,0x0000,
 		0x0000,0x3164,0x6263,0x6263,0x82c3,0x72a2,0x6a43,0x72a2,0x72a2,0x3985,0x3985,0x3164,0x8305,0x8305,0x3164,0x2123,0x2123,0x5202,0x5202,0x6a43,0x6a43,0x6202,0x59e3,0x59e3,0x1081,0x0000,
 		0x0000,0x3985,0x2923,0x2923,0x6263,0x82c3,0xa534,0x6a63,0x8b04,0x82c3,0x72a2,0x3985,0x2923,0x2923,0x2123,0x6202,0x6223,0x6223,0x6223,0x6202,0x6202,0x59e2,0x18e2,0x18e2,0x18a2,0x0000,
@@ -6580,7 +6615,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x18e3,0x20e3,0x20e3,0x2923,0x18a2,0x18a2,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x18a2,0x18a2,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //clay 58
+    {//clay 58
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x94b4,0x94b4,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x9cf5,0x9d35,0x9d35,0x9d35,0xad57,0xadba,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x9515,0x9d35,0x9515,0x9d35,0x9515,0x9d35,0x9515,0x9d35,0x9d35,0x9d35,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6608,7 +6643,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8431,0x8431,0x8431,0x632d,0x632d,0x5b0d,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8431,0x6b90,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //clay ball 59
+    {//clay ball 59
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6636,7 +6671,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //brick 60
+    {//brick 60
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6664,7 +6699,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //bricks 61
+    {//bricks 61
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xab09,0xab09,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8b6c,0x7a26,0x71e6,0x8a67,0x9aa8,0x8b6c,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7a26,0x7a26,0xc329,0xab09,0x9c0f,0xa491,0x71e6,0x7a26,0xc329,0xc329,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6692,7 +6727,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6aca,0x834c,0x83ae,0x4123,0x5207,0x5207,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x83ae,0x6289,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //torch 62
+    {//torch 62
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6720,7 +6755,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6aa6,0x6aa6,0x3142,0x3142,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6aa6,0x6aa6,0x3142,0x3142,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //dry farmland 63
+    {//dry farmland 63
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb40b,0x9349,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb40b,0xb40b,0xb40b,0x9349,0x59e5,0x59e5,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6748,7 +6783,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7ac7,0x7ac7,0x7ac7,0x5a05,0x7287,0x5a05,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4984,0x5a05,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //wet farmland 64
+    {//wet farmland 64
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x69c2,0x5161,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x69c2,0x69c2,0x69c2,0x5161,0x30c0,0x30c0,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6776,7 +6811,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7ac7,0x7ac7,0x7ac7,0x5a05,0x7287,0x5a05,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x4984,0x5a05,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //wheat seed 65
+    {//wheat seed 65
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6788,14 +6823,14 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6d87,0x6d87,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0702,0x0702,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6d87,0x6d87,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0702,0x0702,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x2a01,0x2a01,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6d87,0x6d87,0x6d87,0x6d87,0x0000,0x0000,0x0000,
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0702,0x0702,0x0000,0x0000,0x0000,0x0000,0x0000,0x6d87,0x6d87,0x4320,0x0000,0x0000,0x0000,0x2a01,0x2a01,0x2a01,0x2a01,0x0000,0x0000,0x0000,
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0702,0x0702,0x0000,0x0000,0x0000,0x0000,0x0000,0x6d87,0x6d87,0x4320,0x0000,0x0000,0x0000,0x2a01,0x2a01,0x2a01,0x2a01,0x0000,0x0000,0x0000,
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0702,0x0702,0x0000,0x0000,0x0000,0x0000,0x0000,0x6d87,0x6d87,0x4384,0x0000,0x0000,0x0000,0x2a01,0x2a01,0x2a01,0x2a01,0x0000,0x0000,0x0000,
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0702,0x0702,0x0000,0x0000,0x0000,0x0000,0x0000,0x6d87,0x6d87,0x4384,0x0000,0x0000,0x0000,0x2a01,0x2a01,0x2a01,0x2a01,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0702,0x0702,0x0000,0x0000,0xad87,0x0000,0x0000,0x2a01,0x2a01,0x2a01,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0702,0x0702,0x0000,0x0000,0xad87,0x0000,0x0000,0x2a01,0x2a01,0x2a01,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x6d87,0x4320,0x4320,0x0000,0x0000,0x2a01,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x6d87,0x4384,0x4384,0x0000,0x0000,0x2a01,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x2a01,0x2a01,0x2a01,0x0000,0x0000,0x0000,0x0000,0x0000,0x0702,0x0702,0x0000,0x0000,0x0000,0xad87,0x6b84,0x6b84,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x2a01,0x2a01,0x2a01,0x0000,0x0000,0x0000,0x0000,0x0000,0x0702,0x0702,0x0000,0x0000,0x0000,0xad87,0x6b84,0x6b84,0x0000,0x0000,0x0000,0x0000,0x0000,
-		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6d87,0x6d87,0x4320,0x4320,0x0000,0x0000,0x0000,0x2a01,0x2a01,0x2a01,0x0000,0x0000,0x0000,0x0000,0x0000,
+		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6d87,0x6d87,0x4384,0x4384,0x0000,0x0000,0x0000,0x2a01,0x2a01,0x2a01,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x2a01,0x2a01,0x2a01,0x2a01,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x2a01,0x2a01,0x2a01,0x2a01,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6804,7 +6839,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //wheat 66
+    {//wheat 66
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8ba7,0x8ba7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8ba7,0x8ba7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5287,0x5287,0x7b46,0xa4aa,0xa4aa,0x0000,0x8ba7,0x8ba7,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6832,7 +6867,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x5287,0x0000,0x0000,0x0000,0x5287,0x5287,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x5287,0x0000,0x0000,0x0000,0x5287,0x5287,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //short grass 67
+    {//short grass 67
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6860,7 +6895,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //bread 68
+    {//bread 68
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6242,0x6242,0x6242,0x6242,0x6242,0x6242,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6888,7 +6923,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x49c2,0x3961,0x3961,0x3961,0x3961,0x3961,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x49c2,0x3961,0x3961,0x3961,0x3961,0x3961,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //wooden stair 69
+    {//wooden stair 69
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb48b,0xb48b,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x9388,0x9388,0xb48b,0xac6a,0xbccc,0xbccc,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x9c09,0xac6a,0xb48b,0x9c09,0x7b06,0xb48b,0xac6a,0x9c09,0xbccc,0xbccc,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6916,7 +6951,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5204,0x5204,0x8368,0x6aa6,0x49e4,0x3983,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5204,0x3983,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //cobblestone stair 70
+    {//cobblestone stair 70
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6b4d,0x6b4d,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x630c,0x630c,0xa534,0xb596,0xa534,0xa534,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xa534,0xb596,0x6b4d,0x630c,0x8430,0xa534,0x6b4d,0x528a,0x630c,0x630c,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6944,7 +6979,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x94b2,0x8c51,0x4a6a,0x632c,0x39c7,0x39c7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5acb,0x39c7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //stone stair 71
+    {//stone stair 71
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8c71,0x8c71,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7bef,0x7bef,0x738e,0x738e,0x8c71,0x8c71,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x738e,0x7bef,0x7bef,0x7bef,0x8c71,0x632c,0x738e,0x738e,0x738e,0x738e,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -6972,7 +7007,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x632c,0x5aeb,0x738e,0x4a69,0x4a69,0x4a69,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x632c,0x4a69,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //brick stair 72
+    {//brick stair 72
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xab09,0xab09,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8b6c,0x8b6c,0x71e6,0x8a67,0x8b6c,0x8b6c,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x7a26,0x7a26,0x9aa8,0xab09,0xa42f,0xa491,0x71e6,0x8a67,0xc32a,0xc32a,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7000,7 +7035,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x72ca,0x836c,0x8bce,0x4123,0x5208,0x5208,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8bce,0x6289,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //wooden slab 73
+    {//wooden slab 73
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7028,7 +7063,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5204,0x5204,0x8368,0x6aa6,0x49e4,0x3983,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5204,0x3983,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //cobblestone slab 74
+    {//cobblestone slab 74
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7056,7 +7091,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x94b2,0x8c51,0x4a6a,0x632c,0x39c7,0x39c7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x5acb,0x39c7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //stone slab 75
+    {//stone slab 75
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7084,7 +7119,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6b4d,0x5aec,0x73ae,0x4a69,0x4a69,0x4a69,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6b4d,0x4a69,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //brick slab 76
+    {//brick slab 76
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7112,7 +7147,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x72ca,0x836c,0x8bce,0x4123,0x5208,0x5208,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8bce,0x6289,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //wooden door 77
+    {//wooden door 77
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7140,7 +7175,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x6aa6,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //bed 78
+    {//bed 78
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x738e,0x738e,0x738e,0x738e,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7168,7 +7203,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //redstone ore 79
+    {//redstone ore 79
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8c71,0x8c71,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8c71,0x7bef,0x738e,0x738e,0x7bef,0x8c71,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x738e,0x7bef,0x7bef,0x7bef,0x8c71,0x632c,0x9000,0x632c,0x738e,0x738e,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7196,7 +7231,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x632c,0x632c,0x632c,0x4a69,0x4a69,0x4a69,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x738e,0x4a69,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //redstone dust 80
+    {//redstone dust 80
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7224,7 +7259,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //redstone torch 81
+    {//redstone torch 81
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7252,7 +7287,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6286,0x6286,0x3142,0x3142,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6286,0x6286,0x3142,0x3142,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //repeater 82
+    {//repeater 82
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7280,7 +7315,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //iron door 83
+    {//iron door 83
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7308,7 +7343,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x9492,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //redstone lamp 84
+    {//redstone lamp 84
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x30c2,0x30c2,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x30c2,0x30c2,0x30c2,0x30c2,0x30c2,0x30c2,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x30c2,0x30c2,0x5982,0x9ae6,0x8265,0x8265,0x92a6,0x8265,0x30c2,0x30c2,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7336,7 +7371,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x20a1,0x20a1,0x20a1,0x1881,0x1881,0x1881,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x20a1,0x1881,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-	{ //lever 85
+	{//lever 85
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7364,7 +7399,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6aa6,0x6aa6,0x3142,0x3142,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6aa6,0x6aa6,0x3142,0x3142,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-	{ //wooden button 86
+	{//wooden button 86
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7392,7 +7427,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-	{ //stone button 87
+	{//stone button 87
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7420,7 +7455,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-	{ //coal block 88
+	{//coal block 88
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x10a2,0x0020,0x0020,0x0020,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x10a2,0x0861,0x10a2,0x10a2,0x10a2,0x10a2,0x0861,0x0861,0x0020,0x0020,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7448,7 +7483,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0001,0x0020,0x0841,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-	{ //iron ingot 89
+	{//iron ingot 89
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xbdf7,0xe71c,0xe71c,0xbdf7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xbdf7,0xe71c,0xe71c,0xef7d,0xdedb,0xdedb,0xe71c,0xef7d,0xdedb,0xad75,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7476,7 +7511,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x73ae,0x73ae,0x4a69,0x4a69,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-	{ //gold block 90
+	{//gold block 90
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xd565,0xd565,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xe668,0xe668,0xffcd,0xff2b,0xd565,0xdda5,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xe667,0xe668,0xffca,0xffcd,0xffcd,0xffcd,0xffcd,0xff8b,0xe647,0xe667,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7504,7 +7539,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xcd05,0xcce5,0xbc84,0x8c05,0x9404,0x9404,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xccc4,0x9404,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-	{ //diamond block 91
+	{//diamond block 91
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x042e,0x042e,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0617,0x05f6,0x8f1b,0x66da,0x044e,0x04d1,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0616,0x0616,0x973c,0x8f1b,0x8f1b,0x8f1b,0x8f1b,0x7efb,0x05d5,0x05f6,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7531,8 +7566,8 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0513,0x04f2,0x04f2,0x04d2,0x0470,0x03ce,0x5471,0x4c51,0x1bef,0x03ce,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x04f2,0x04d2,0x044f,0x03ce,0x3430,0x2c10,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x04b1,0x4c50,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
-	}, 
-	{ //redstone block 92
+	},
+	{//redstone block 92
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xe0e1,0xe0e1,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xe0e1,0xd8e1,0xb8e1,0xb8e1,0xd8e1,0xe0e1,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xf9e7,0xe0e1,0xd8e1,0xc0e1,0xb0e1,0xa8c1,0xc0c1,0x98a1,0xb8e1,0xe0e1,0xe0e1,0xf9e7,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7560,7 +7595,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb8c0,0xb8c0,0xb8c0,0x8880,0x8880,0x8880,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xb0c0,0x8880,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-	{ //emerald block 93
+	{//emerald block 93
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8f55,0x8f55,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x6f32,0x8753,0x4eee,0x4eee,0x8753,0x7732,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x8f55,0x2e2a,0x3e2b,0x8f55,0x3e2b,0x3e2b,0x8f55,0x3e2b,0x2e2a,0x8f55,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7588,7 +7623,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x2cc8,0x2cc8,0x24a8,0x3c4a,0x1ba6,0x1ba6,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x2ca8,0x3c4a,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-	{ //shears 94
+	{//shears 94
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7616,7 +7651,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-	{ //wool 95
+	{//wool 95
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xf79e,0xd6db,0xd6db,0xd6db,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xe73c,0xe73c,0xf79e,0xf7be,0xffdf,0xd6db,0xd6db,0xe75d,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xdefb,0xffdf,0xce9a,0xd6db,0xd6db,0xf79e,0xef7d,0xffdf,0xef9e,0xf79e,0xd6db,0xdefb,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7644,7 +7679,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xc638,0xad96,0xbdf7,0xad96,0x9cd3,0x8c72,0x8c92,0x8431,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xbdf8,0xc638,0x8430,0x8c71,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-	{ //sheep spawn egg 96
+	{//sheep spawn egg 96
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7672,7 +7707,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-	{ //pig spawn egg 97
+	{//pig spawn egg 97
 		0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,
 		0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,
 		0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,
@@ -7700,7 +7735,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x4a6a,0x5269,0x5228,0x41c7,0x49c7,0x4a07,0x4a28,0x4a49,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,
 		0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410,0x8410
 	},
-	{ //raw pork 98
+	{//raw pork 98
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7728,7 +7763,7 @@ const static color_t itemIcons[itemAmount][676] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-	{ //cooked pork 99
+	{//cooked pork 99
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -7760,13 +7795,13 @@ const static color_t itemIcons[itemAmount][676] = {
 
 //0=normal, 1=transparent, 2=water
 int textureType[textureBlockAmount] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, //15
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //31
-    0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, //47
-    0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //63
-    0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, //79
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //95
-    0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, //111
+    0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0,//15
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,//31
+    0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,//47
+    0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,//63
+    0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1,//79
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,//95
+    0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,//111
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
@@ -7860,7 +7895,7 @@ const static color_t buttons[2][3200] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	}
 };
-const static color_t asciiMap[16320] = {
+const static color_t asciiMap[16384] = {
 	0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0x0000,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0xffff,0x0000,0x0000,0x0000,0xffff,0x0000,0x0000,0x0000,0x0000,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 	0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0x0000,0x0000,0x0000,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0x0000,0x0000,0x0000,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0xffff,0x0000,0x0000,0x0000,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0x0000,0x0000,0x0000,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 	0x0000,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0x0000,0x0000,0x0000,0xffff,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0xffff,0x0000,0x0000,0x0000,0xffff,0x0000,0x0000,0x0000,0xffff,0x0000,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0xffff,0xffff,0xffff,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -8363,7 +8398,7 @@ const static color_t hotbarSelected[1024] = {
 	0xa593,0x5b6b,0x5b6b,0x638c,0x638c,0x5b2a,0x5b4b,0x5b6b,0x5b6b,0x63ac,0x63ac,0x5b6b,0x5b6b,0x638c,0x638c,0x5b2a,0x5b4b,0x5b6b,0x5b6b,0x63ac,0x63ac,0x5b6b,0x5b6b,0x5b6b,0x5b6b,0x5b6b,0x63ac,0x5b6b,0x6bed,0x5b6b,0x532a,0x636b
 };
 const static color_t heart[2][196] = {
-    { //empty
+    {//empty
 		0x0000,0x0000,0x0000,0x0001,0x0001,0x0001,0x0000,0x0000,0x0001,0x0001,0x0001,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0001,0x0001,0x0001,0x0000,0x0000,0x0001,0x0001,0x0001,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0001,0x2945,0x2945,0x2945,0x0001,0x0001,0x2945,0x2945,0x2945,0x0001,0x0000,0x0000,
@@ -8379,7 +8414,7 @@ const static color_t heart[2][196] = {
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0001,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0001,0x0001,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000
 	},
-    { //full
+    {//full
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
 		0x0000,0x0000,0x0000,0xf882,0xf882,0xf882,0x0000,0x0000,0xf882,0xf882,0xf882,0x0000,0x0000,0x0000,
@@ -8753,18 +8788,18 @@ const unsigned char chestInv[28944] = {
 };
 
 const color_t allColors[42] = {
-    0x4404, 0x3bc3, 0x7aa6, 0x7265, 0x73ae, 0x6b6d, 0x2a62, 0x2221, 0xac4a, 0xa409, 0x49c4, 0x4183, 0x42f4, 0x3ab3, 0xd653, 0xce12, //15
-    0xffff, 0x9c0f, 0xed14, 0x0020, 0x0841, 0x4208, 0x39c7, 0xd592, 0xcd51, 0xef6d, 0xef2c, 0x675e, 0x5f1d, 0x8ba8, 0x8367, 0x7bcf, //31
+    0x4404, 0x3bc3, 0x7aa6, 0x7265, 0x73ae, 0x6b6d, 0x2a62, 0x2221, 0xac4a, 0xa409, 0x49c4, 0x4183, 0x42f4, 0x3ab3, 0xd653, 0xce12,//15
+    0xffff, 0x9c0f, 0xed14, 0x0020, 0x0841, 0x4208, 0x39c7, 0xd592, 0xcd51, 0xef6d, 0xef2c, 0x675e, 0x5f1d, 0x8ba8, 0x8367, 0x7bcf,//31
     0x738e, 0xb000, 0xa800, 0x0000, 0xca61, 0xc220, 0x1084, 0x0803, 0xa880, 0xa040
 };
 
 const blockType blockTypes[19] = {
-    { //air
+    {//air
         .verticesLength = 0,
         .vertices = {0, 0, 0},
 
         .diffrentRotationAmount = 1,
-        
+
         .facesLength = 0,
         .faces = {0, 0, 0, 0},
 
@@ -8788,12 +8823,12 @@ const blockType blockTypes[19] = {
 
         .otherBlocksRenderFace = {{0},},
     },
-    { //full block
+    {//full block
         .verticesLength = 8,
         .vertices = {{{10, 10, 10}, {10, 0 , 10}, {10, 10, 0 }, {10, 0 , 0 }, {0 , 10, 10}, {0 , 0 , 10},{0 , 10, 0 }, {0 , 0 , 0 }}},
 
         .diffrentRotationAmount = 1,
-        
+
         .facesLength = 6,
         .faces = {{0, 4, 6, 2}, {3, 2, 6, 7}, {7, 6, 4, 5}, {5, 1, 3, 7}, {1, 0, 2, 3}, {5, 4, 0, 1}, },
 
@@ -8817,20 +8852,20 @@ const blockType blockTypes[19] = {
 
         .otherBlocksRenderFace = {{1, 1, 1, 1, 1, 1},},
     },
-    { //fluid
+    {//fluid
         .verticesLength = 8,
-        .vertices = {{{10, 10 , 10}, {10, 0, 10}, {10, 10 , 0 }, {10, 0, 0 }, {0 , 10 , 10}, {0 , 0, 10},{0 , 10 , 0 }, {0 , 0, 0 }}, 
-					 {{10, 8 , 10}, {10, 0, 10}, {10, 8 , 0 }, {10, 0, 0 }, {0 , 8 , 10}, {0 , 0, 10},{0 , 8 , 0 }, {0 , 0, 0 }}, 
+        .vertices = {{{10, 10 , 10}, {10, 0, 10}, {10, 10 , 0 }, {10, 0, 0 }, {0 , 10 , 10}, {0 , 0, 10},{0 , 10 , 0 }, {0 , 0, 0 }},
+					 {{10, 8 , 10}, {10, 0, 10}, {10, 8 , 0 }, {10, 0, 0 }, {0 , 8 , 10}, {0 , 0, 10},{0 , 8 , 0 }, {0 , 0, 0 }},
 					 {{10, 7 , 10}, {10, 0, 10}, {10, 7 , 0 }, {10, 0, 0 }, {0 , 7 , 10}, {0 , 0, 10},{0 , 7 , 0 }, {0 , 0, 0 }},
-					 {{10, 6 , 10}, {10, 0, 10}, {10, 6 , 0 }, {10, 0, 0 }, {0 , 6 , 10}, {0 , 0, 10},{0 , 6 , 0 }, {0 , 0, 0 }}, 
-					 {{10, 5 , 10}, {10, 0, 10}, {10, 5 , 0 }, {10, 0, 0 }, {0 , 5 , 10}, {0 , 0, 10},{0 , 5 , 0 }, {0 , 0, 0 }}, 
-					 {{10, 4 , 10}, {10, 0, 10}, {10, 4 , 0 }, {10, 0, 0 }, {0 , 4 , 10}, {0 , 0, 10},{0 , 4 , 0 }, {0 , 0, 0 }}, 
-					 {{10, 3 , 10}, {10, 0, 10}, {10, 3 , 0 }, {10, 0, 0 }, {0 , 3 , 10}, {0 , 0, 10},{0 , 3 , 0 }, {0 , 0, 0 }}, 
-					 {{10, 2 , 10}, {10, 0, 10}, {10, 2 , 0 }, {10, 0, 0 }, {0 , 2 , 10}, {0 , 0, 10},{0 , 2 , 0 }, {0 , 0, 0 }}, 
+					 {{10, 6 , 10}, {10, 0, 10}, {10, 6 , 0 }, {10, 0, 0 }, {0 , 6 , 10}, {0 , 0, 10},{0 , 6 , 0 }, {0 , 0, 0 }},
+					 {{10, 5 , 10}, {10, 0, 10}, {10, 5 , 0 }, {10, 0, 0 }, {0 , 5 , 10}, {0 , 0, 10},{0 , 5 , 0 }, {0 , 0, 0 }},
+					 {{10, 4 , 10}, {10, 0, 10}, {10, 4 , 0 }, {10, 0, 0 }, {0 , 4 , 10}, {0 , 0, 10},{0 , 4 , 0 }, {0 , 0, 0 }},
+					 {{10, 3 , 10}, {10, 0, 10}, {10, 3 , 0 }, {10, 0, 0 }, {0 , 3 , 10}, {0 , 0, 10},{0 , 3 , 0 }, {0 , 0, 0 }},
+					 {{10, 2 , 10}, {10, 0, 10}, {10, 2 , 0 }, {10, 0, 0 }, {0 , 2 , 10}, {0 , 0, 10},{0 , 2 , 0 }, {0 , 0, 0 }},
 					 {{10, 1 , 10}, {10, 0, 10}, {10, 1 , 0 }, {10, 0, 0 }, {0 , 1 , 10}, {0 , 0, 10},{0 , 1 , 0 }, {0 , 0, 0 }}, },
 
         .diffrentRotationAmount = 16,
-        
+
         .facesLength = 6,
         .faces = {{0, 4, 6, 2}, {3, 2, 6, 7}, {7, 6, 4, 5}, {5, 1, 3, 7}, {1, 0, 2, 3}, {5, 4, 0, 1}, },
 
@@ -8879,12 +8914,12 @@ const blockType blockTypes[19] = {
 								  {1, 1, 1, 1, 1, 1},
 								  {1, 1, 1, 1, 1, 1},},
     },
-    { //glass
+    {//glass
         .verticesLength = 8,
         .vertices = {{{10, 10, 10}, {10, 0 , 10}, {10, 10, 0 }, {10, 0 , 0 }, {0 , 10, 10}, {0 , 0 , 10},{0 , 10, 0 }, {0 , 0 , 0 }}},
 
         .diffrentRotationAmount = 1,
-        
+
         .facesLength = 6,
         .faces = {{0, 4, 6, 2}, {3, 2, 6, 7}, {7, 6, 4, 5}, {5, 1, 3, 7}, {1, 0, 2, 3}, {5, 4, 0, 1}, },
 
@@ -8908,12 +8943,12 @@ const blockType blockTypes[19] = {
 
         .otherBlocksRenderFace = {{1, 1, 1, 1, 1, 1},},
     },
-    { //2-plane
+    {//2-plane
         .verticesLength = 8,
         .vertices = {{{0 , 10, 10}, {0 , 0 , 10}, {10, 10, 0 }, {10, 0 , 0 }, {0 , 10, 0 }, {0 , 0 , 0 }, {10, 10, 10}, {10, 0 , 10},}},
 
         .diffrentRotationAmount = 1,
-        
+
         .facesLength = 2,
         .faces = {{3, 2, 0, 1},{7, 6, 4, 5},},
 
@@ -8937,12 +8972,12 @@ const blockType blockTypes[19] = {
 
         .otherBlocksRenderFace = {{0, 0, 0, 0, 0, 0},},
     },
-    { //torch
+    {//torch
         .verticesLength = 8,
         .vertices = {{{5, 6, 5}, {5, 0 , 5}, {5, 6, 4 }, {5, 0 , 4 }, {4 , 6, 5}, {4 , 0 , 5},{4 , 6, 4 }, {4 , 0 , 4 }}},
 
         .diffrentRotationAmount = 1,
-        
+
         .facesLength = 6,
         .faces = {{0, 4, 6, 2}, {3, 2, 6, 7}, {7, 6, 4, 5}, {5, 1, 3, 7}, {1, 0, 2, 3}, {5, 4, 0, 1}, },
 
@@ -8966,12 +9001,12 @@ const blockType blockTypes[19] = {
 
         .otherBlocksRenderFace = {{0, 0, 0, 0, 0, 0},},
     },
-    { //farm land
+    {//farm land
         .verticesLength = 8,
         .vertices = {{{10, 9 , 10}, {10, 0, 10}, {10, 9 , 0 }, {10, 0, 0 }, {0 , 9 , 10}, {0 , 0, 10},{0 , 9 , 0 }, {0 , 0, 0 }}},
 
         .diffrentRotationAmount = 1,
-        
+
         .facesLength = 6,
         .faces = {{0, 4, 6, 2}, {3, 2, 6, 7}, {7, 6, 4, 5}, {5, 1, 3, 7}, {1, 0, 2, 3}, {5, 4, 0, 1}, },
 
@@ -8995,12 +9030,12 @@ const blockType blockTypes[19] = {
 
         .otherBlocksRenderFace = {{0, 0, 1, 0, 0, 0},},
     },
-    { //crop
+    {//crop
         .verticesLength = 16,
         .vertices = {{{0, -1, 7}, {10, -1, 7}, {0, 9, 7}, {10, 9, 7}, {0, -1, 2}, {10, -1, 2}, {0, 9, 2}, {10, 9, 2},{7, -1, 10}, {7, -1, 0}, {7, 9, 10}, {7, 9, 0}, {2, -1, 10}, {2, -1, 0}, {2, 9, 10}, {2, 9, 0},}},
 
         .diffrentRotationAmount = 1,
-        
+
         .facesLength = 4,
         .faces = {{1, 3, 2, 0}, {5, 7, 6, 4}, {9, 11, 10, 8}, {13, 15, 14, 12},},
 
@@ -9024,14 +9059,14 @@ const blockType blockTypes[19] = {
 
         .otherBlocksRenderFace = {{0, 0, 0, 0, 0, 0},},
     },
-    { //log type 
+    {//log type
         .verticesLength = 8,
         .vertices = {{{0, 0, 10}, {0, 10, 10}, {0, 0, 0}, {0, 10, 0}, {10, 0, 10}, {10, 10, 10}, {10, 0, 0}, {10, 10, 0},},
                      {{0, 0, 0}, {0, 0, 10}, {0, 10, 0}, {0, 10, 10}, {10, 0, 0}, {10, 0, 10}, {10, 10, 0}, {10, 10, 10},},
                      {{0, 0, 10}, {10, 0, 10}, {0, 10, 10}, {10, 10, 10}, {0, 0, 0}, {10, 0, 0}, {0, 10, 0}, {10, 10, 0},},},
 
         .diffrentRotationAmount = 4,
-        
+
         .facesLength = 6,
         .faces = {{0, 1, 3, 2}, {2, 3, 7, 6}, {6, 7, 5, 4}, {4, 5, 1, 0}, {2, 6, 4, 0}, {7, 3, 1, 5},},
 
@@ -9053,7 +9088,7 @@ const blockType blockTypes[19] = {
         .dir = {{{-1, 0, 0}, {0, 0, -1}, {1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {0, 1, 0},},
                 {{-1, 0, 0}, {0, 1, 0}, {1, 0, 0}, {0, -1, 0}, {0, 0, -1}, {0, 0, 1},},
                 {{0, 0, 1}, {0, 1, 0}, {0, 0, -1}, {0, -1, 0}, {-1, 0, 0}, {1, 0, 0},},},
-        
+
         .normal = {{{-127, 0, 0}, {0, 0, -127}, {127, 0, 0}, {0, 0, 127}, {0, -127, 0}, {0, 127, 0},},
                    {{-127, 0, 0}, {0, 127, 0}, {127, 0, 0}, {0, -127, 0}, {0, 0, -127}, {0, 0, 127},},
                    {{0, 0, 127}, {0, 127, 0}, {0, 0, -127}, {0, -127, 0}, {-127, 0, 0}, {127, 0, 0},},},
@@ -9064,7 +9099,7 @@ const blockType blockTypes[19] = {
                                   {1, 1, 1, 1, 1, 1},
                                   {1, 1, 1, 1, 1, 1},},
     },
-    { //furnace/crafting table
+    {//furnace/crafting table
         .verticesLength = 8,
         .vertices = {{{0, 0, 10}, {0, 10, 10}, {0, 0, 0}, {0, 10, 0}, {10, 0, 10}, {10, 10, 10}, {10, 0, 0}, {10, 10, 0},},
                      {{10, 0, 10}, {10, 10, 10}, {0, 0, 10}, {0, 10, 10}, {10, 0, 0}, {10, 10, 0}, {0, 0, 0}, {0, 10, 0},},
@@ -9072,7 +9107,7 @@ const blockType blockTypes[19] = {
                      {{0, 0, 0}, {0, 10, 0}, {10, 0, 0}, {10, 10, 0}, {0, 0, 10}, {0, 10, 10}, {10, 0, 10}, {10, 10, 10},},},
 
         .diffrentRotationAmount = 4,
-        
+
         .facesLength = 6,
         .faces = {{0, 1, 3, 2}, {2, 3, 7, 6}, {6, 7, 5, 4}, {4, 5, 1, 0}, {2, 6, 4, 0}, {7, 3, 1, 5},},
 
@@ -9095,7 +9130,7 @@ const blockType blockTypes[19] = {
                 {{0, 0, 1}, {-1, 0, 0}, {0, 0, -1}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0},},
                 {{1, 0, 0}, {0, 0, 1}, {-1, 0, 0}, {0, 0, -1}, {0, -1, 0}, {0, 1, 0},},
                 {{0, 0, -1}, {1, 0, 0}, {0, 0, 1}, {-1, 0, 0}, {0, -1, 0}, {0, 1, 0},},},
-        
+
         .normal = {{{-127, 0, 0}, {0, 0, -127}, {127, 0, 0}, {0, 0, 127}, {0, -127, 0}, {0, 127, 0},},
                    {{0, 0, 127}, {-127, 0, 0}, {0, 0, -127}, {127, 0, 0}, {0, -127, 0}, {0, 127, 0},},
                    {{127, 0, 0}, {0, 0, 127}, {-127, 0, 0}, {0, 0, -127}, {0, -127, 0}, {0, 127, 0},},
@@ -9108,7 +9143,7 @@ const blockType blockTypes[19] = {
                                   {1, 1, 1, 1, 1, 1},
                                   {1, 1, 1, 1, 1, 1},},
     },
-    { //stairs
+    {//stairs
         .verticesLength = 12,
         .vertices = {{{10, 10, 0}, {10, 0, 0}, {10, 0, 10}, {0, 10, 0}, {0, 0, 0}, {0, 0, 10}, {10, 10, 5}, {0, 10, 5}, {10, 5, 0}, {0, 5, 10}, {10, 5, 10}, {0, 5, 0}, {10, 5, 5}, {0, 5, 5},},
                      {{0, 10, 0}, {0, 0, 0}, {10, 0, 0}, {0, 10, 10}, {0, 0, 10}, {10, 0, 10}, {5, 10, 0}, {5, 10, 10}, {0, 5, 0}, {10, 5, 10}, {10, 5, 0}, {0, 5, 10}, {5, 5, 0}, {5, 5, 10},},
@@ -9120,7 +9155,7 @@ const blockType blockTypes[19] = {
                      {{10, 0, 0}, {10, 10, 0}, {0, 10, 0}, {10, 0, 10}, {10, 10, 10}, {0, 10, 10}, {5, 0, 0}, {5, 0, 10}, {10, 5, 0}, {0, 5, 10}, {0, 5, 0}, {10, 5, 10}, {5, 5, 0}, {5, 5, 10},},},
 
         .diffrentRotationAmount = 8,
-        
+
         .facesLength = 10,
         .faces = {{13, 7, 3, 11}, {12, 6, 7, 13}, {1, 2, 5, 4}, {8, 0, 6, 12}, {13, 9, 10, 12}, {6, 0, 3, 7}, {1, 8, 10, 2}, {0, 1, 4, 3}, {5, 9, 11, 4}, {2, 10, 9, 5},},
 
@@ -9147,7 +9182,7 @@ const blockType blockTypes[19] = {
                 {{0, 0, -1}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, -1, 0}, {0, -1, 0}, {0, 0, 1}, {-1, 0, 0}, {0, 0, -1}, {1, 0, 0},},
                 {{-1, 0, 0}, {0, 0, -1}, {0, 1, 0}, {1, 0, 0}, {0, -1, 0}, {0, -1, 0}, {1, 0, 0}, {0, 0, 1}, {-1, 0, 0}, {0, 0, -1},},
                 {{0, 0, 1}, {-1, 0, 0}, {0, 1, 0}, {0, 0, -1}, {0, -1, 0}, {0, -1, 0}, {0, 0, -1}, {1, 0, 0}, {0, 0, 1}, {-1, 0, 0},},},
-        
+
         .normal = {{{-127, 0, 0}, {0, 0, 127}, {0, -127, 0}, {127, 0, 0}, {0, 127, 0}, {0, 127, 0}, {127, 0, 0}, {0, 0, -127}, {-127, 0, 0}, {0, 0, 127},},
                    {{0, 0, 127}, {127, 0, 0}, {0, -127, 0}, {0, 0, -127}, {0, 127, 0}, {0, 127, 0}, {0, 0, -127}, {-127, 0, 0}, {0, 0, 127}, {127, 0, 0},},
                    {{127, 0, 0}, {0, 0, -127}, {0, -127, 0}, {-127, 0, 0}, {0, 127, 0}, {0, 127, 0}, {-127, 0, 0}, {0, 0, 127}, {127, 0, 0}, {0, 0, -127},},
@@ -9168,13 +9203,13 @@ const blockType blockTypes[19] = {
                                   {0, 0, 0, 1, 0, 1},
                                   {0, 1, 0, 1, 0, 0},},
     },
-    { //slab
+    {//slab
         .verticesLength = 8,
         .vertices = {{{10, 5, 0}, {10, 0, 0}, {10, 5, 10}, {10, 0, 10}, {0, 5, 0}, {0, 0, 0}, {0, 5, 10}, {0, 0, 10},},
                      {{0, 5, 0}, {0, 10, 0}, {0, 5, 10}, {0, 10, 10}, {10, 5, 0}, {10, 10, 0}, {10, 5, 10}, {10, 10, 10},},},
 
         .diffrentRotationAmount = 2,
-        
+
         .facesLength = 6,
         .faces = {{0, 4, 6, 2}, {3, 2, 6, 7}, {7, 6, 4, 5}, {5, 1, 3, 7}, {1, 0, 2, 3}, {5, 4, 0, 1},},
 
@@ -9195,7 +9230,7 @@ const blockType blockTypes[19] = {
 
         .dir = {{{0, 1, 0}, {0, 0, 1}, {-1, 0, 0}, {0, -1, 0}, {1, 0, 0}, {0, 0, -1},},
                 {{0, -1, 0}, {0, 0, 1}, {1, 0, 0}, {0, 1, 0}, {-1, 0, 0}, {0, 0, -1},},},
-        
+
         .normal = {{{0, 127, 0}, {0, 0, 127}, {-127, 0, 0}, {0, -127, 0}, {127, 0, 0}, {0, 0, -127},},
                    {{0, -127, 0}, {0, 0, 127}, {127, 0, 0}, {0, 127, 0}, {-127, 0, 0}, {0, 0, -127},},},
 
@@ -9204,7 +9239,7 @@ const blockType blockTypes[19] = {
         .otherBlocksRenderFace = {{0, 0, 1, 0, 0, 0,},
                                   {0, 0, 0, 1, 0, 0,},},
     },
-    { //door
+    {//door
         .verticesLength = 8,
         .vertices = {{{10, 10, 0}, {10, 0, 0}, {10, 10, 1}, {10, 0, 1}, {0, 10, 0}, {0, 0, 0}, {0, 10, 1}, {0, 0, 1},},
                      {{0, 10, 0}, {0, 0, 0}, {1, 10, 0}, {1, 0, 0}, {0, 10, 10}, {0, 0, 10}, {1, 10, 10}, {1, 0, 10},},
@@ -9212,7 +9247,7 @@ const blockType blockTypes[19] = {
                      {{10, 10, 10}, {10, 0, 10}, {9, 10, 10}, {9, 0, 10}, {10, 10, 0}, {10, 0, 0}, {9, 10, 0}, {9, 0, 0},},},
 
         .diffrentRotationAmount = 4,
-        
+
         .facesLength = 6,
         .faces = {{0, 4, 6, 2}, {3, 2, 6, 7}, {7, 6, 4, 5}, {5, 1, 3, 7}, {1, 0, 2, 3}, {5, 4, 0, 1},},
 
@@ -9235,7 +9270,7 @@ const blockType blockTypes[19] = {
                 {{0, 1, 0}, {0, 0, 0}, {0, 0, 1}, {0, -1, 0}, {0, 0, -1}, {-1, 0, 0},},
                 {{0, 1, 0}, {0, 0, 0}, {1, 0, 0}, {0, -1, 0}, {-1, 0, 0}, {0, 0, 1},},
                 {{0, 1, 0}, {0, 0, 0}, {0, 0, -1}, {0, -1, 0}, {0, 0, 1}, {1, 0, 0},},},
-        
+
         .normal = {{{0, 127, 0}, {0, 0, 127}, {-127, 0, 0}, {0, -127, 0}, {127, 0, 0}, {0, 0, -127},},
                    {{0, 127, 0}, {127, 0, 0}, {0, 0, 127}, {0, -127, 0}, {0, 0, -127}, {-127, 0, 0},},
                    {{0, 127, 0}, {0, 0, -127}, {127, 0, 0}, {0, -127, 0}, {-127, 0, 0}, {0, 0, 127},},
@@ -9243,7 +9278,7 @@ const blockType blockTypes[19] = {
 
         .doSideCheck = {1, 0, 1, 1, 1, 0},
     },
-    { //bed
+    {//bed
         .verticesLength = 8,
         .vertices = {{{0, 0, 0}, {0, 5, 0}, {0, 0, 10}, {0, 5, 10}, {10, 0, 0}, {10, 5, 0}, {10, 0, 10}, {10, 5, 10},},
                      {{0, 0, 10}, {0, 5, 10}, {10, 0, 10}, {10, 5, 10}, {0, 0, 0}, {0, 5, 0}, {10, 0, 0}, {10, 5, 0},},
@@ -9251,10 +9286,10 @@ const blockType blockTypes[19] = {
                      {{10, 0, 0}, {10, 5, 0}, {0, 0, 0}, {0, 5, 0}, {10, 0, 10}, {10, 5, 10}, {0, 0, 10}, {0, 5, 10},},},
 
         .diffrentRotationAmount = 4,
-        
+
         .facesLength = 4,
         .faces = {{6, 7, 3, 2}, {4, 5, 7, 6}, {5, 1, 3, 7}, {2, 3, 1, 0},},
-               //{{3, 2, 6, 7}, {7, 6, 4, 5}, {5, 1, 3, 7}, {1, 0, 2, 3},},
+              //{{3, 2, 6, 7}, {7, 6, 4, 5}, {5, 1, 3, 7}, {1, 0, 2, 3},},
 
         .isFullBlock = false,
         .isTransprent = false,
@@ -9275,7 +9310,7 @@ const blockType blockTypes[19] = {
                 {{1, 0, 0}, {0, 0, -1}, {0, 1, 0}, {0, 0, 1},},
                 {{0, 0, -1}, {-1, 0, 0}, {0, 1, 0}, {1, 0, 0},},
                 {{-1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, -1},},},
-        
+
         .normal = {{{0, 0, 127}, {127, 0, 0}, {0, 127, 0}, {-127, 0, 0},},
                    {{127, 0, 0}, {0, 0, -127}, {0, 127, 0}, {0, 0, 127},},
                    {{0, 0, -127}, {-127, 0, 0}, {0, 127, 0}, {127, 0, 0},},
@@ -9288,12 +9323,12 @@ const blockType blockTypes[19] = {
                                   {0, 0, 0, 0, 0, 0,},
                                   {0, 0, 0, 0, 0, 0,},},
     },
-    { //redstone
+    {//redstone
         .verticesLength = 4,
         .vertices = {{{0, 1, 0}, {10, 1, 0}, {0, 1, 10}, {10, 1, 10},}},
 
         .diffrentRotationAmount = 1,
-        
+
         .facesLength = 1,
         .faces = {{0, 1, 3, 2},},
 
@@ -9317,7 +9352,7 @@ const blockType blockTypes[19] = {
 
         .otherBlocksRenderFace = {{0},},
     },
-    { //repeater
+    {//repeater
         .verticesLength = 4,
         .vertices = {{{10, 1, 10}, {0, 1, 10}, {0, 1, 0}, {10, 1, 0},},
                      {{10, 1, 0}, {10, 1, 10}, {0, 1, 10}, {0, 1, 0},},
@@ -9325,7 +9360,7 @@ const blockType blockTypes[19] = {
                      {{0, 1, 10}, {0, 1, 0}, {10, 1, 0}, {10, 1, 10},},},
 
         .diffrentRotationAmount = 4,
-        
+
         .facesLength = 1,
         .faces = {{0, 1, 2, 3}},
 
@@ -9339,7 +9374,7 @@ const blockType blockTypes[19] = {
         .hasToBeOnGrass = false,
         .hasToBeOnBlock = true,
 		.canTransferRedstoneSignal = false,
-		.canHoldRedstoneSignal = false, //yes can hold but is directional
+		.canHoldRedstoneSignal = false,//yes can hold but is directional
 		.canHaveGrassBelow = true,
 
         .texureSize = {255,},
@@ -9349,12 +9384,12 @@ const blockType blockTypes[19] = {
 
         .otherBlocksRenderFace = {{0},},
     },
-	{ //full block light
+	{//full block light
         .verticesLength = 8,
         .vertices = {{{10, 10, 10}, {10, 0 , 10}, {10, 10, 0 }, {10, 0 , 0 }, {0 , 10, 10}, {0 , 0 , 10},{0 , 10, 0 }, {0 , 0 , 0 }}},
 
         .diffrentRotationAmount = 1,
-        
+
         .facesLength = 6,
         .faces = {{0, 4, 6, 2}, {3, 2, 6, 7}, {7, 6, 4, 5}, {5, 1, 3, 7}, {1, 0, 2, 3}, {5, 4, 0, 1}, },
 
@@ -9378,7 +9413,7 @@ const blockType blockTypes[19] = {
 
         .otherBlocksRenderFace = {{1, 1, 1, 1, 1, 1},},
     },
-	{ //lever
+	{//lever
         .verticesLength = 16,
         .vertices = {{{0, 2, 6}, {0, 7, 6}, {0, 2, 3}, {0, 7, 3}, {2, 2, 6}, {2, 7, 6}, {2, 2, 3}, {2, 7, 3}, {1, 5, 5}, {3, 8, 5}, {1, 5, 4}, {3, 8, 4}, {2, 4, 5}, {4, 7, 5}, {2, 4, 4}, {4, 7, 4},},//1-off
 					 {{0, 2, 6}, {0, 7, 6}, {0, 2, 3}, {0, 7, 3}, {2, 2, 6}, {2, 7, 6}, {2, 2, 3}, {2, 7, 3}, {2, 5, 5}, {4, 2, 5}, {2, 5, 4}, {4, 2, 4}, {1, 4, 5}, {3, 1, 5}, {1, 4, 4}, {3, 1, 4},},//1-on
@@ -9390,11 +9425,11 @@ const blockType blockTypes[19] = {
 					 {{6, 2, 10}, {6, 7, 10}, {3, 2, 10}, {3, 7, 10}, {6, 2, 8}, {6, 7, 8}, {3, 2, 8}, {3, 7, 8}, {5, 5, 8}, {5, 2, 6}, {4, 5, 8}, {4, 2, 6}, {5, 4, 9}, {5, 1, 7}, {4, 4, 9}, {4, 1, 7},},//4-on
 					 {{6, 0, 2}, {6, 0, 7}, {3, 0, 2}, {3, 0, 7}, {6, 2, 2}, {6, 2, 7}, {3, 2, 2}, {3, 2, 7}, {5, 1, 5}, {5, 3, 8}, {4, 1, 5}, {4, 3, 8}, {5, 2, 4}, {5, 4, 7}, {4, 2, 4}, {4, 4, 7},},//5-off
 					 {{6, 0, 2}, {6, 0, 7}, {3, 0, 2}, {3, 0, 7}, {6, 2, 2}, {6, 2, 7}, {3, 2, 2}, {3, 2, 7}, {5, 2, 5}, {5, 4, 2}, {4, 2, 5}, {4, 4, 2}, {5, 1, 4}, {5, 3, 1}, {4, 1, 4}, {4, 3, 1},},//5-on
-					 {{6, 10, 8}, {6, 10, 3}, {3, 10, 8}, {3, 10, 3}, {6, 8, 8}, {6, 8, 3}, {3, 8, 8}, {3, 8, 3}, {5, 9, 5}, {5, 7, 2}, {4, 9, 5}, {4, 7, 2}, {5, 8, 6}, {5, 6, 3}, {4, 8, 6}, {4, 6, 3},},  //6-off
+					 {{6, 10, 8}, {6, 10, 3}, {3, 10, 8}, {3, 10, 3}, {6, 8, 8}, {6, 8, 3}, {3, 8, 8}, {3, 8, 3}, {5, 9, 5}, {5, 7, 2}, {4, 9, 5}, {4, 7, 2}, {5, 8, 6}, {5, 6, 3}, {4, 8, 6}, {4, 6, 3},}, //6-off
 					 {{6, 10, 8}, {6, 10, 3}, {3, 10, 8}, {3, 10, 3}, {6, 8, 8}, {6, 8, 3}, {3, 8, 8}, {3, 8, 3}, {5, 8, 5}, {5, 6, 8}, {4, 8, 5}, {4, 6, 8}, {5, 9, 6}, {5, 7, 9}, {4, 9, 6}, {4, 7, 9},},},//6-on
 
         .diffrentRotationAmount = 16,
-        
+
         .facesLength = 10,
         .faces = {{2, 3, 7, 6}, {6, 7, 5, 4}, {4, 5, 1, 0}, {2, 6, 4, 0}, {7, 3, 1, 5}, {8, 9, 11, 10}, {10, 11, 15, 14}, {14, 15, 13, 12}, {12, 13, 9, 8}, {15, 11, 9, 13},},
 
@@ -9429,7 +9464,7 @@ const blockType blockTypes[19] = {
 
         .otherBlocksRenderFace = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},},
     },
-	{ //button
+	{//button
         .verticesLength = 8,
         .vertices = {{{2, 6, 3}, {2, 4, 3}, {2, 6, 7}, {2, 4, 7}, {0, 6, 3}, {0, 4, 3}, {0, 6, 7}, {0, 4, 7},},//1-off
 					 {{1, 6, 3}, {1, 4, 3}, {1, 6, 7}, {1, 4, 7}, {0, 6, 3}, {0, 4, 3}, {0, 6, 7}, {0, 4, 7},},//1-on
@@ -9441,11 +9476,11 @@ const blockType blockTypes[19] = {
 					 {{3, 6, 9}, {3, 4, 9}, {7, 6, 9}, {7, 4, 9}, {3, 6, 10}, {3, 4, 10}, {7, 6, 10}, {7, 4, 10},},//4-on
 					 {{3, 2, 6}, {3, 2, 4}, {7, 2, 6}, {7, 2, 4}, {3, 0, 6}, {3, 0, 4}, {7, 0, 6}, {7, 0, 4},},//5-off
 					 {{3, 1, 6}, {3, 1, 4}, {7, 1, 6}, {7, 1, 4}, {3, 0, 6}, {3, 0, 4}, {7, 0, 6}, {7, 0, 4},},//5-on
-					 {{3, 8, 4}, {3, 8, 6}, {7, 8, 4}, {7, 8, 6}, {3, 10, 4}, {3, 10, 6}, {7, 10, 4}, {7, 10, 6},},  //6-off
+					 {{3, 8, 4}, {3, 8, 6}, {7, 8, 4}, {7, 8, 6}, {3, 10, 4}, {3, 10, 6}, {7, 10, 4}, {7, 10, 6},}, //6-off
 					 {{3, 9, 4}, {3, 9, 6}, {7, 9, 4}, {7, 9, 6}, {3, 10, 4}, {3, 10, 6}, {7, 10, 4}, {7, 10, 6},},},//6-on
 
         .diffrentRotationAmount = 16,
-        
+
         .facesLength = 5,
         .faces = {{0, 4, 6, 2}, {3, 2, 6, 7}, {5, 1, 3, 7}, {1, 0, 2, 3}, {5, 4, 0, 1},},
 
@@ -9977,7 +10012,7 @@ const static item allItem[100] = {
 		.damage = 5,
         .iconIndex = 36,
     },
-    
+
     {
         .isBlock = false,
         .blockId = 0,
@@ -11027,7 +11062,7 @@ const static block allBlock[73] = {
         .drops = 20,
         .itemIndex = 20,
         .noTextureColorIndex = {{ 4,  4,  4,  4,  4,  4}, { 5,  5,  5,  5,  5,  5}},
-        .textureIndex = {30, 30, 31, 30, 29, 29,}, //29, 31, 30, 29, 30, 30
+        .textureIndex = {30, 30, 31, 30, 29, 29,},//29, 31, 30, 29, 30, 30
         .toolLevelToGetItem = 1,
         .toolToBeak = 1,
         .brightness = 0,
@@ -11592,7 +11627,7 @@ const static block allBlock[73] = {
         .drops = 93,
         .itemIndex = 93,
         .noTextureColorIndex = {{ 8,  8,  8,  8,  8,  8}, { 9,  9,  9,  9,  9,  9}},
-        .textureIndex = {108, 108, 108, 108, 108, 108},
+        .textureIndex = {180, 180, 180, 180, 180, 180},
         .toolLevelToGetItem = 1,
         .toolToBeak = 1,
         .brightness = 0,
@@ -11638,7 +11673,7 @@ const furnaceRecipe furnaceRecipes[furnaceRecipeAmount] = {
 };
 const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
     {
-        .needsCraftingTable = false, //planks
+        .needsCraftingTable = false,//planks
 
         .diffrentItemAmount = 1,
         .inputItem = {5, 0, 0, 0},
@@ -11648,7 +11683,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 4,
     },
     {
-        .needsCraftingTable = false, //sticks
+        .needsCraftingTable = false,//sticks
 
         .diffrentItemAmount = 1,
         .inputItem = {8, 0, 0, 0},
@@ -11659,7 +11694,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
     },
 
     {
-        .needsCraftingTable = true, //woooden pickaxe
+        .needsCraftingTable = true,//woooden pickaxe
 
         .diffrentItemAmount = 2,
         .inputItem = {21, 8, 0, 0},
@@ -11669,7 +11704,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
     {
-        .needsCraftingTable = true, //stone pickaxe
+        .needsCraftingTable = true,//stone pickaxe
 
         .diffrentItemAmount = 2,
         .inputItem = {21, 10, 0, 0},
@@ -11679,7 +11714,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
     {
-        .needsCraftingTable = true, //iron pickaxe
+        .needsCraftingTable = true,//iron pickaxe
 
         .diffrentItemAmount = 2,
         .inputItem = {21, 48, 0, 0},
@@ -11689,7 +11724,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
     {
-        .needsCraftingTable = true, //gold pickaxe
+        .needsCraftingTable = true,//gold pickaxe
 
         .diffrentItemAmount = 2,
         .inputItem = {21, 49, 0, 0},
@@ -11699,7 +11734,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
     {
-        .needsCraftingTable = true, //diamond pickaxe
+        .needsCraftingTable = true,//diamond pickaxe
 
         .diffrentItemAmount = 2,
         .inputItem = {21, 51, 0, 0},
@@ -11710,7 +11745,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
     },
 
     {
-        .needsCraftingTable = true, //wooden axe
+        .needsCraftingTable = true,//wooden axe
 
         .diffrentItemAmount = 2,
         .inputItem = {21, 8, 0, 0},
@@ -11832,7 +11867,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
     {
-        .needsCraftingTable = true, //
+        .needsCraftingTable = true,//
 
         .diffrentItemAmount = 2,
         .inputItem = {21, 48, 0, 0},
@@ -11914,7 +11949,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
     },
 
     {
-        .needsCraftingTable = false, //crafting table
+        .needsCraftingTable = false,//crafting table
 
         .diffrentItemAmount = 1,
         .inputItem = {8, 0, 0, 0},
@@ -11924,7 +11959,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
     {
-        .needsCraftingTable = true, //furnace
+        .needsCraftingTable = true,//furnace
 
         .diffrentItemAmount = 1,
         .inputItem = {10, 0, 0, 0},
@@ -11934,7 +11969,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
     {
-        .needsCraftingTable = true, //chest
+        .needsCraftingTable = true,//chest
 
         .diffrentItemAmount = 1,
         .inputItem = {8, 0, 0, 0},
@@ -11944,7 +11979,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
     {
-        .needsCraftingTable = false, //bricks
+        .needsCraftingTable = false,//bricks
 
         .diffrentItemAmount = 1,
         .inputItem = {60, 0, 0, 0},
@@ -11954,7 +11989,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
     {
-        .needsCraftingTable = false, //torch
+        .needsCraftingTable = false,//torch
 
         .diffrentItemAmount = 2,
         .inputItem = {47, 21, 0, 0},
@@ -11964,7 +11999,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 4,
     },
     {
-        .needsCraftingTable = true, //bread
+        .needsCraftingTable = true,//bread
 
         .diffrentItemAmount = 1,
         .inputItem = {66, 0, 0, 0},
@@ -11975,7 +12010,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
     },
 
 	{
-        .needsCraftingTable = true, //wooden stairs
+        .needsCraftingTable = true,//wooden stairs
 
         .diffrentItemAmount = 1,
         .inputItem = {8, 0, 0, 0},
@@ -11985,7 +12020,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 4,
     },
 	{
-        .needsCraftingTable = true, //wooden slab
+        .needsCraftingTable = true,//wooden slab
 
         .diffrentItemAmount = 1,
         .inputItem = {8, 0, 0, 0},
@@ -11995,7 +12030,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 6,
     },
 	{
-        .needsCraftingTable = true, //cobblestone stairs
+        .needsCraftingTable = true,//cobblestone stairs
 
         .diffrentItemAmount = 1,
         .inputItem = {10, 0, 0, 0},
@@ -12005,7 +12040,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 4,
     },
 	{
-        .needsCraftingTable = true, //cobblestone slab
+        .needsCraftingTable = true,//cobblestone slab
 
         .diffrentItemAmount = 1,
         .inputItem = {10, 0, 0, 0},
@@ -12015,7 +12050,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 6,
     },
 	{
-        .needsCraftingTable = true, //stone stairs
+        .needsCraftingTable = true,//stone stairs
 
         .diffrentItemAmount = 1,
         .inputItem = {3, 0, 0, 0},
@@ -12025,7 +12060,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 4,
     },
 	{
-        .needsCraftingTable = true, //stone slab
+        .needsCraftingTable = true,//stone slab
 
         .diffrentItemAmount = 1,
         .inputItem = {3, 0, 0, 0},
@@ -12035,7 +12070,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 6,
     },
 	{
-        .needsCraftingTable = true, //brick stairs
+        .needsCraftingTable = true,//brick stairs
 
         .diffrentItemAmount = 1,
         .inputItem = {61, 0, 0, 0},
@@ -12045,7 +12080,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 4,
     },
 	{
-        .needsCraftingTable = true, //brick slab
+        .needsCraftingTable = true,//brick slab
 
         .diffrentItemAmount = 1,
         .inputItem = {61, 0, 0, 0},
@@ -12055,7 +12090,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 6,
     },
 	{
-        .needsCraftingTable = true, //bed
+        .needsCraftingTable = true,//bed
 
         .diffrentItemAmount = 2,
         .inputItem = {8, 95, 0, 0},
@@ -12066,7 +12101,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
     },
 
 	{
-        .needsCraftingTable = true, //wooden door
+        .needsCraftingTable = true,//wooden door
 
         .diffrentItemAmount = 1,
         .inputItem = {8, 0, 0, 0},
@@ -12076,7 +12111,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 3,
     },
 	{
-        .needsCraftingTable = true, //iron door
+        .needsCraftingTable = true,//iron door
 
         .diffrentItemAmount = 1,
         .inputItem = {48, 0, 0, 0},
@@ -12087,7 +12122,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
     },
 
 	{
-        .needsCraftingTable = false, //redstone torch
+        .needsCraftingTable = false,//redstone torch
 
         .diffrentItemAmount = 2,
         .inputItem = {21, 80, 0, 0},
@@ -12097,7 +12132,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
 	{
-        .needsCraftingTable = true, //repeater
+        .needsCraftingTable = true,//repeater
 
         .diffrentItemAmount = 3,
         .inputItem = {81, 80, 3, 0},
@@ -12107,7 +12142,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
 	{
-        .needsCraftingTable = true, //redstone lamp
+        .needsCraftingTable = true,//redstone lamp
 
         .diffrentItemAmount = 2,
         .inputItem = {52, 80, 0, 0},
@@ -12117,7 +12152,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
 	{
-        .needsCraftingTable = false, //lever
+        .needsCraftingTable = false,//lever
 
         .diffrentItemAmount = 2,
         .inputItem = {21, 10, 0, 0},
@@ -12127,7 +12162,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
 	{
-        .needsCraftingTable = false, //wooden button
+        .needsCraftingTable = false,//wooden button
 
         .diffrentItemAmount = 1,
         .inputItem = {8, 0, 0, 0},
@@ -12137,7 +12172,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
 	{
-        .needsCraftingTable = false, //stone button
+        .needsCraftingTable = false,//stone button
 
         .diffrentItemAmount = 1,
         .inputItem = {3, 0, 0, 0},
@@ -12148,7 +12183,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
     },
 
 	{
-        .needsCraftingTable = true, //coal block //iron gold emerald diamond
+        .needsCraftingTable = true,//coal block//iron gold emerald diamond
 
         .diffrentItemAmount = 1,
         .inputItem = {47, 0, 0, 0},
@@ -12158,7 +12193,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
 	{
-        .needsCraftingTable = true, //iron block
+        .needsCraftingTable = true,//iron block
 
         .diffrentItemAmount = 1,
         .inputItem = {48, 0, 0, 0},
@@ -12168,7 +12203,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
 	{
-        .needsCraftingTable = true, //gold block
+        .needsCraftingTable = true,//gold block
 
         .diffrentItemAmount = 1,
         .inputItem = {49, 0, 0, 0},
@@ -12178,7 +12213,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
 	{
-        .needsCraftingTable = true, //diamond block
+        .needsCraftingTable = true,//diamond block
 
         .diffrentItemAmount = 1,
         .inputItem = {51, 0, 0, 0},
@@ -12188,7 +12223,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
 	{
-        .needsCraftingTable = true, //redstone block
+        .needsCraftingTable = true,//redstone block
 
         .diffrentItemAmount = 1,
         .inputItem = {80, 0, 0, 0},
@@ -12198,7 +12233,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
 	{
-        .needsCraftingTable = true, //emerald block
+        .needsCraftingTable = true,//emerald block
 
         .diffrentItemAmount = 1,
         .inputItem = {50, 0, 0, 0},
@@ -12208,7 +12243,7 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
     },
 	{
-		.needsCraftingTable = false, //shears
+		.needsCraftingTable = false,//shears
 
         .diffrentItemAmount = 1,
         .inputItem = {48, 0, 0, 0},
@@ -12240,34 +12275,37 @@ tlsf_t tlsf;
 
 void game_main()
 {
-    tlsf = tlsf_create_with_pool(malloc(1024*1024), 1024*1024);
+    ZBuffer = (unsigned short*)malloc(320 * 528 * 2);
+    lightmap = (char*)malloc(128 * 1024);
+    blockData = (char*)malloc(128 * 1024);
+    textures2 = (color_t*)malloc(256 * 256 * 2);
+    itemIcons2 = (color_t*)malloc(256 * 256 * 2);
+    assetsInputBuffer = (color_t*)malloc(256 * 256 * 2);
+    randomShit = (color_t*)malloc(256 * 256 * 2);
+    tlsf = tlsf_create_with_pool((char*)malloc(1024*1024), 1024*1024);
 
-    ((unsigned short*)LCD_GetVRAMAddress()) = (unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())();
 
-    //ZBuffer = (unsigned short *)((uintptr_t)GetSecondary((unsigned short*)LCD_GetVRAMAddress())() & ~1);
-    ZBuffer = malloc(resXZBuffer * resYZBuffer * 2);
-    lightmap = malloc(8 * 8 * 12 * 12 * 40);
-    blockData = malloc(8 * 8 * 12 * 12 * 40);
-    textures2 = malloc(136 * 256 * 2);
-    itemIcons2 = malloc(100 * 256 * 2);
-    assetsInputBuffer = malloc(1024 * 1024);
-    randomShit = malloc(1024 * 1024);
-    screenColor = malloc(16 * 2);
-	
-	;
-	;
 
-    for (int i = 0; i < 16; i++) screenColor[i] = skyColors[skyBrightness-1];
+    VRAMAddress = (unsigned short*)LCD_GetVRAMAddress();
+
+   //ZBuffer = (unsigned short *)((uintptr_t)GetSecondaryVRAMAddress() & ~1);
+
+
+	Bdisp_EnableColor(1);
+	((void)0);
+
 	for (int i = 0; i < 320 * 180; i++)
-    if (ZBuffer) ZBuffer[i] = 65535;
+    ZBuffer[i] = 65535;
 
-    //int start = 0;
+   //int start = RTC_GetTicks();
 
-    //for (int j = 0; j < 50000; j++)
-    //renderTriangleTexturedNBPX2T((Vector2I){5, 5}, (Vector2I){55, 5}, (Vector2I){55, 55}, (Vector2I){0, 0}, (Vector2I){10, 0}, (Vector2I){10, 10}, 50000-j, 16, 16, &textures[0]);
-    //char txt[50];         
-    //sprintf(txt, "%d", end-start);
-    //renderTextUpdate(5, 60, 1000, txt);
+   //for (int j = 0; j < 50000; j++)
+   //renderTriangleTexturedNBPX2T((Vector2I){5, 5}, (Vector2I){55, 5}, (Vector2I){55, 55}, (Vector2I){0, 0}, (Vector2I){10, 0}, (Vector2I){10, 10}, 50000-j, 16, 16, &textures[0]);
+
+   //int end = RTC_GetTicks();
+   //char txt[50];
+   //sprintf(txt, "%d", end-start);
+   //renderTextUpdate(5, 60, 1000, txt);
 
     renderTextUpdate(10, resY-15, 200, "By 010ello010");
 
@@ -12275,12 +12313,12 @@ void game_main()
     allparticles[i].mode = false;
 
     for (int i = 0; i < resXZBuffer * resYZBuffer; i++)
-    if (ZBuffer) ZBuffer[i] = 65535;
+    ZBuffer[i] = 65535;
 
-    if(LCD_Get((unsigned short*)LCD_GetVRAMAddress())() == 0x8C000000)
+    if(LCD_GetVRAMAddress() == 0xAC000000)
     {
         isOncCG50 = true;
-        
+
         renderObject();
     }
     else
@@ -12288,11 +12326,11 @@ void game_main()
         renderText(10, 10, "You are on fx-cg10/fx-cg20.");
         renderText(10, 25, "CG10/CG20 does not have phython heap and this version uses phython heap.");
         renderText(10, 40, "Please download the verison that was designed for your device");
-        
+
         LCD_Refresh();
-        ((void)0)(2000);
+        OS_InnerWait_ms(2000);
     }
-    //renderObject();
+   //renderObject();
 
     return 0;
 }
@@ -12302,20 +12340,20 @@ float arctan_approx(float y, float x) {
     if (x == 0) {
         return (y > 0) ? 90.0 : (y < 0) ? 270.0 : 0.0;
     }
-    
+
     float abs_y = (y < 0) ? -y : y;
     float abs_x = (x < 0) ? -x : x;
     float angle = 0.0;
-    
+
     if (abs_x > abs_y) {
-        float ratio = abs_y / abs_x;
+        float ratio = abs_y/ abs_x;
         angle = ratio * 45.0;
     } else {
-        float ratio = abs_x / abs_y;
+        float ratio = abs_x/ abs_y;
         angle = 90.0 - (ratio * 45.0);
     }
-    
-    // Adjust quadrant
+
+   // Adjust quadrant
     if (x < 0 && y >= 0) return 180.0 - angle;
     if (x < 0 && y < 0) return 180.0 + angle;
     if (x >= 0 && y < 0) return 360.0 - angle;
@@ -12337,14 +12375,14 @@ int abs_int(int x) {
 }
 double myPow(double base, int exponent) {
     double result = 1.0;
-    
+
     if (exponent > 0) {
         for (int i = 0; i < exponent; i++) {
             result *= base;
         }
     } else if (exponent < 0) {
         for (int i = 0; i > exponent; i--) {
-            result /= base;
+            result/= base;
         }
     }
 
@@ -12362,7 +12400,7 @@ double mysqrt(double x) {
     double guess = 1.0;
 
     while (1) {
-        double new_guess = 0.5 * (guess + x / guess);
+        double new_guess = 0.5 * (guess + x/ guess);
         if (abs_(new_guess - guess) < epsilon) {
             break;
         }
@@ -12372,13 +12410,13 @@ double mysqrt(double x) {
 }
 int integer_sqrt(int x) {
     int result = 0;
-    int bit = 1 << 30; // The highest bit in a 32-bit integer
+    int bit = 1 << 30;// The highest bit in a 32-bit integer
 
-    // Find the highest bit that is set
+   // Find the highest bit that is set
     while (bit > x)
         bit >>= 2;
 
-    // Newton's method for integer square root
+   // Newton's method for integer square root
     while (bit != 0) {
         if (x >= result + bit) {
             x -= result + bit;
@@ -12395,10 +12433,10 @@ int integer_sqrt1000(int n) {
     n *= 1000;
 
     int x = n;
-    int y = (x + 1) / 2;
+    int y = (x + 1)/ 2;
     while (y < x) {
         x = y;
-        y = (x + n / x) / 2;
+        y = (x + n/ x)/ 2;
     }
     return x;
 }
@@ -12413,29 +12451,29 @@ double normalizeAngle(double x) {
     return x;
 }
 double mySine(double x) {
-    x = normalizeAngle(x); // Normalize the angle to [-pi, pi]
+    x = normalizeAngle(x);// Normalize the angle to [-pi, pi]
 
     double result = x;
     int sign = -1;
-    for (int i = 3; i <= 15; i += 2) { // Adjust the range of the Taylor series
-        result += sign * (myPow(x, i) / factorial(i));
+    for (int i = 3; i <= 15; i += 2) {// Adjust the range of the Taylor series
+        result += sign * (myPow(x, i)/ factorial(i));
         sign *= -1;
     }
     return result;
 }
 double myCosine(double x) {
-    x = normalizeAngle(x); // Normalize the angle to [-pi, pi]
+    x = normalizeAngle(x);// Normalize the angle to [-pi, pi]
 
     double result = 1.0;
     int sign = -1;
-    for (int i = 2; i <= 14; i += 2) { // Adjust the range of the Taylor series
-        result += sign * (myPow(x, i) / factorial(i));
+    for (int i = 2; i <= 14; i += 2) {// Adjust the range of the Taylor series
+        result += sign * (myPow(x, i)/ factorial(i));
         sign *= -1;
     }
     return result;
 }
 double mytanges(double x) {
-    x = normalizeAngle(x); // Normalize the angle to [-pi, pi]
+    x = normalizeAngle(x);// Normalize the angle to [-pi, pi]
 
     double result = 0.0;
     double term = x;
@@ -12443,9 +12481,9 @@ double mytanges(double x) {
 
     for (int i = 1; i <= n; i++) {
         if (i % 2 == 0) {
-            result -= term / i;
+            result -= term/ i;
         } else {
-            result += term / i;
+            result += term/ i;
         }
         term *= -x * x;
     }
@@ -12454,7 +12492,7 @@ double mytanges(double x) {
 }
 float ToRadians_game(float val)
 {
-    return (M_PI / 180) * val; //PI / 180
+    return (M_PI/ 180) * val;//PI/ 180
 }
 int clamp(int value, int min, int max) {
     if (value < min) {
@@ -12466,7 +12504,7 @@ int clamp(int value, int min, int max) {
     }
 }
 float fmodf_f(float x, float y) {
-    return (float)(x - y * (int)(x / y));
+    return (float)(x - y * (int)(x/ y));
 }
 color_t combineColors(color_t color1, color_t color2, int strength) {
     int strenthInverted = 100 - strength;
@@ -12474,34 +12512,34 @@ color_t combineColors(color_t color1, color_t color2, int strength) {
     char green1 = (color1 >> 5) & 0x3F;
     char blue1 = color1 & 0x1F;
 
-    red1 = (char)(red1 * strenthInverted / 100);
-    green1 = (char)(green1 * strenthInverted / 100);
-    blue1 = (char)(blue1 * strenthInverted / 100);
+    red1 = (char)(red1 * strenthInverted/ 100);
+    green1 = (char)(green1 * strenthInverted/ 100);
+    blue1 = (char)(blue1 * strenthInverted/ 100);
 
     char red2 = (color2 >> 11) & 0x1F;
     char green2 = (color2 >> 5) & 0x3F;
     char blue2 = color2 & 0x1F;
 
-    red2 = (char)(red2 * strength / 100);
-    green2 = (char)(green2 * strength / 100);
-    blue2 = (char)(blue2 * strength / 100);
+    red2 = (char)(red2 * strength/ 100);
+    green2 = (char)(green2 * strength/ 100);
+    blue2 = (char)(blue2 * strength/ 100);
 
     color_t combinedColor = ((red1 + red2) << 11) | ((green1 + green2) << 5) | (blue1 + blue2);
 
     return combinedColor;
 }
 color_t combineColorsWithBrightness(color_t color, int brightness) {
-    // Extract individual color components for color1
+   // Extract individual color components for color1
     unsigned int r1 = (color >> 11) & 0x1F;
     unsigned int g1 = (color >> 5) & 0x3F;
     unsigned int b1 = color & 0x1F;
 
-    // Interpolate between color1 and color2 using the specified strength
-    unsigned int r = (r1 << 4) * brightness >> 8;  //r1 * 256 / 16 * brightness / 256
+   // Interpolate between color1 and color2 using the specified strength
+    unsigned int r = (r1 << 4) * brightness >> 8; //r1 * 256/ 16 * brightness/ 256
     unsigned int g = (g1 << 4) * brightness >> 8;
     unsigned int b = (b1 << 4) * brightness >> 8;
 
-    // Combine the interpolated color components into a single RGB565 value
+   // Combine the interpolated color components into a single RGB565 value
     return (r << 11) | (g << 5) | b;
 }
 float dotVec3(Vector3 a, Vector3 b)
@@ -12510,7 +12548,7 @@ float dotVec3(Vector3 a, Vector3 b)
 }
 int dotVec3I(Vector3I a, Vector3I b)
 {
-    return a.x * b.x / 1000 + a.y * b.y / 1000 + a.z * b.z / 1000;
+    return a.x * b.x/ 1000 + a.y * b.y/ 1000 + a.z * b.z/ 1000;
 }
 int dotVec3IND(Vector3I a, Vector3I b)
 {
@@ -12518,11 +12556,11 @@ int dotVec3IND(Vector3I a, Vector3I b)
 }
 int crossVec2I(Vector2I a, Vector2I b, int precision)
 {
-    return (a.x * b.y - a.y * b.x) / precision;
+    return (a.x * b.y - a.y * b.x)/ precision;
 }
 int crossVec2S(Vector2S a, Vector2S b, int precision)
 {
-    return (a.x * b.y - a.y * b.x) / precision;
+    return (a.x * b.y - a.y * b.x)/ precision;
 }
 int crossVec2INP(Vector2I a, Vector2I b)
 {
@@ -12546,62 +12584,62 @@ Vector3 crossProduct(Vector3 a, Vector3 b) {
 int calculateDistance(int x1, int y1, int x2, int y2) {
     int dx = x2 - x1;
     int dy = y2 - y1;
-    
-    // Squaring without math.h functions
+
+   // Squaring without math.h functions
     int dxSquared = dx * dx;
     int dySquared = dy * dy;
-    
-    // Sum of squares without math.h functions
+
+   // Sum of squares without math.h functions
     int distanceSquared = dxSquared + dySquared;
-    
-    // Integer square root approximation
+
+   // Integer square root approximation
     int distance = 0;
-    int bit = 1 << 30; // The second-to-top bit is set
-    
+    int bit = 1 << 30;// The second-to-top bit is set
+
     while (bit > distanceSquared)
-        bit >>= 2; // The second-to-top bit is set to 0
-    
+        bit >>= 2;// The second-to-top bit is set to 0
+
     while (bit != 0) {
         if (distanceSquared >= distance + bit) {
             distanceSquared -= distance + bit;
-            distance += bit << 1; // Set the current bit in distance
+            distance += bit << 1;// Set the current bit in distance
         }
-        distance >>= 1; // Drop the last bit
-        bit >>= 2; // The second-to-top bit is set to 0
+        distance >>= 1;// Drop the last bit
+        bit >>= 2;// The second-to-top bit is set to 0
     }
-    
-    return distance; // Return the integer approximation of square root
+
+    return distance;// Return the integer approximation of square root
 }
 int calculateDistance3D(int x1, int y1, int z1, int x2, int y2, int z2) {
     int dx = x2 - x1;
     int dy = y2 - y1;
     int dz = z2 - z1;
-    
-    // Squaring without math.h functions
+
+   // Squaring without math.h functions
     int dxSquared = dx * dx;
     int dySquared = dy * dy;
     int dzSquared = dz * dz;
-    
-    // Sum of squares without math.h functions
+
+   // Sum of squares without math.h functions
     int distanceSquared = dxSquared + dySquared + dzSquared;
-    
-    // Integer square root approximation
+
+   // Integer square root approximation
     int distance = 0;
-    int bit = 1 << 30; // The second-to-top bit is set
-    
+    int bit = 1 << 30;// The second-to-top bit is set
+
     while (bit > distanceSquared)
-        bit >>= 2; // The second-to-top bit is set to 0
-    
+        bit >>= 2;// The second-to-top bit is set to 0
+
     while (bit != 0) {
         if (distanceSquared >= distance + bit) {
             distanceSquared -= distance + bit;
-            distance += bit << 1; // Set the current bit in distance
+            distance += bit << 1;// Set the current bit in distance
         }
-        distance >>= 1; // Drop the last bit
-        bit >>= 2; // The second-to-top bit is set to 0
+        distance >>= 1;// Drop the last bit
+        bit >>= 2;// The second-to-top bit is set to 0
     }
-    
-    return distance; // Return the integer approximation of square root
+
+    return distance;// Return the integer approximation of square root
 }
 int countDigits(int number) {
     int count = 0;
@@ -12615,7 +12653,7 @@ int countDigits(int number) {
     return 1;
 
     while (number != 0) {
-        number /= 10;
+        number/= 10;
         count++;
     }
 
@@ -12634,23 +12672,23 @@ int getTextLength(char *text, int max)
 
 void initializeTables() {
     for (int i = 0; i < TABLE_SIZE; i++) {
-        float angle = (2 * M_PI * i) / TABLE_SIZE;
+        float angle = (2 * M_PI * i)/ TABLE_SIZE;
         cosTable[i] = myCosine(angle);
         sinTable[i] = mySine(angle);
     }
 }
 float fastCosine(float angle) {
-    angle = fmodf_f(angle, 2 * M_PI); // Wrap the angle to [0, 2*pi]
-    if (angle < 0) angle += 2 * M_PI; // Ensure positive angle
+    angle = fmodf_f(angle, 2 * M_PI);// Wrap the angle to [0, 2*pi]
+    if (angle < 0) angle += 2 * M_PI;// Ensure positive angle
 
-    int index = (int)(angle * TABLE_SIZE / (2 * M_PI)) & TABLE_MASK;
+    int index = (int)(angle * TABLE_SIZE/ (2 * M_PI)) & TABLE_MASK;
     return cosTable[index];
 }
 float fastSine(float angle) {
     angle = fmodf_f(angle, 2 * M_PI);
     if (angle < 0) angle += 2 * M_PI;
 
-    int index = (int)(angle * TABLE_SIZE / (2 * M_PI)) & TABLE_MASK;
+    int index = (int)(angle * TABLE_SIZE/ (2 * M_PI)) & TABLE_MASK;
     return sinTable[index];
 }
 
@@ -12690,20 +12728,20 @@ Vector3 CalculateForwardVector(float rotationX_, float rotationY_)
 void clear(color_t color)
 {
     for (int y = 0; y < resY; y++)
-    memset(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + (y * LCD_WIDTH_PX), color, resX*2);
+    memset(VRAMAddress + (y * LCD_WIDTH_PX), color, resX*2);
 }
 void clearAll(color_t color)
 {
-    memset(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()), color, LCD_HEIGHT_PX * LCD_WIDTH_PX * 2);
+    memset(VRAMAddress, color, LCD_HEIGHT_PX * LCD_WIDTH_PX * 2);
 }
 void CopySprite(color_t* sprite, int x, int y, int width, int height, color_t transparentColor) {
-    color_t* VRAM = (color_t*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())();
+    color_t* VRAM = (color_t*)LCD_GetVRAMAddress();
     VRAM += LCD_WIDTH_PX*y + x;
-    for(int j = y; j < y+height; j++) 
+    for(int j = y; j < y+height; j++)
     {
-        for(int i = x; i < x+width; i++) 
+        for(int i = x; i < x+width; i++)
         {
-            
+
             if(*sprite != transparentColor)
             *VRAM = *sprite;
 
@@ -12714,11 +12752,11 @@ void CopySprite(color_t* sprite, int x, int y, int width, int height, color_t tr
     }
 }
 void CopySpriteHeart(color_t* sprite, int x, int y, int width, int height, color_t transparentColor, int maxX) {
-    color_t* VRAM = (color_t*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())();
+    color_t* VRAM = (color_t*)LCD_GetVRAMAddress();
     VRAM += LCD_WIDTH_PX*y + x;
-    for(int j = y; j < y+height; j++) 
+    for(int j = y; j < y+height; j++)
     {
-        for(int i = x; i < x+width; i++) 
+        for(int i = x; i < x+width; i++)
         {
             if(*sprite != transparentColor && i < x+maxX)
             *VRAM = *sprite;
@@ -12729,18 +12767,18 @@ void CopySpriteHeart(color_t* sprite, int x, int y, int width, int height, color
         VRAM += LCD_WIDTH_PX-width;
     }
 }
-void CopySpriteNbitMasked(const unsigned char* data, int x, int y, int width, int height, const color_t* palette, color_t maskColor, unsigned int bitwidth)  
+void CopySpriteNbitMasked(const unsigned char* data, int x, int y, int width, int height, const color_t* palette, color_t maskColor, unsigned int bitwidth)
 {
-    color_t* VRAM = (color_t*) LCD_Get((unsigned short*)LCD_GetVRAMAddress())();
+    color_t* VRAM = (color_t*) LCD_GetVRAMAddress();
     VRAM += (LCD_WIDTH_PX*y + x);
     int offset = 0;
     unsigned char buf;
-    for(int j=y; j<y+height; j++)  
+    for(int j=y; j<y+height; j++)
     {
         int availbits = 0;
-        for(int i=x; i<x+width;  i++)  
+        for(int i=x; i<x+width;  i++)
         {
-            if (!availbits)  
+            if (!availbits)
             {
                 buf = data[offset++];
                 availbits = 8;
@@ -12759,11 +12797,11 @@ void CopySpriteNbitMasked(const unsigned char* data, int x, int y, int width, in
     }
 }
 void CopySpriteIcon(color_t* sprite, int x, int y, int width, int height, color_t transparentColor) {
-    color_t* VRAM = (color_t*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())();
+    color_t* VRAM = (color_t*)LCD_GetVRAMAddress();
     VRAM += LCD_WIDTH_PX*y + x;
-    for(int j = y; j < y+height; j++) 
+    for(int j = y; j < y+height; j++)
     {
-        for(int i = x; i < x+width; i++) 
+        for(int i = x; i < x+width; i++)
         {
             if(*sprite != transparentColor)
             *VRAM = *sprite;
@@ -12775,9 +12813,9 @@ void CopySpriteIcon(color_t* sprite, int x, int y, int width, int height, color_
     }
 }
 
-void makeSkyBox()
+void makeSkyBox()//brokey
 {
-	screenPoint calculatedSPos[21]; //cg50
+	screenPoint calculatedSPos[21];//cg50
 
 	Vector3B        vd[21] = {
 		{10, 10, -10}, {10, -10, -10}, {10, 10, 10}, {10, -10, 10}, {-10, 10, -10}, {-10, -10, -10}, {-10, 10, 10}, {-10, -10, 10},
@@ -12806,19 +12844,19 @@ void makeSkyBox()
     if(cosRotY == 0) cosRotY = 1;
     if(sinRotY == 0) sinRotY = 1;
 
-    //pre-calculating values
-    int cosXSinY = cosRotX * sinRotY / 1000;
-    int cosXcosY = cosRotX * cosRotY / 1000;
-    int sinXsinY = sinRotX * sinRotY / 1000;
-    int cosYSinX = cosRotY * sinRotX / 1000;
+   //pre-calculating values
+    int cosXSinY = cosRotX * sinRotY/ 1000;
+    int cosXcosY = cosRotX * cosRotY/ 1000;
+    int sinXsinY = sinRotX * sinRotY/ 1000;
+    int cosYSinX = cosRotY * sinRotX/ 1000;
 
     if(cosXSinY == 0) cosXSinY = 1;
     if(cosXcosY == 0) cosXcosY = 1;
     if(sinXsinY == 0) sinXsinY = 1;
     if(cosYSinX == 0) cosYSinX = 1;
 
-    int resX_ = (resX - 1) / 2;
-    int resY_ = (resY - 1) / 2;
+    int resX_ = (resX - 1)/ 2;
+    int resY_ = (resY - 1)/ 2;
 
 	for (int allVert = 0; allVert < 21; allVert++)
     {
@@ -12826,7 +12864,7 @@ void makeSkyBox()
         int y3D = (vd[allVert].y * 200);
         int z3D = (vd[allVert].x * 200);
 
-        int z = (x3D * cosXSinY - y3D * sinRotX + z3D * cosXcosY) / 1000;
+        int z = (x3D * cosXSinY - y3D * sinRotX + z3D * cosXcosY)/ 1000;
 
 		if(z < 1)
 		z = 1;
@@ -12841,18 +12879,18 @@ void makeSkyBox()
 
             if(z >= 1000)
             {
-                xOnScreen = ((x / z + 1000) * resX_) / 1000;
-                yOnScreen = (((1000 - y / z) * 2) * resY_) / 1000 - 100;
+                xOnScreen = ((x/ z + 1000) * resX_)/ 1000;
+                yOnScreen = (((1000 - y/ z) * 2) * resY_)/ 1000 - 100;
             }
             else
             {
-                int zNew = 10000 / z;
+                int zNew = 10000/ z;
 
-                x = x / 10000;
-                y = y / 10000;
+                x = x/ 10000;
+                y = y/ 10000;
 
-                xOnScreen = ((x * zNew + 1000) * resX_) / 1000;
-                yOnScreen = (((1000 - y * zNew) * 2) * resY_) / 1000 - 100;
+                xOnScreen = ((x * zNew + 1000) * resX_)/ 1000;
+                yOnScreen = (((1000 - y * zNew) * 2) * resY_)/ 1000 - 100;
             }
 
             if(xOnScreen < 4096 && xOnScreen > -4096 && yOnScreen < 4096 && yOnScreen > -4096)
@@ -12919,7 +12957,7 @@ void renderLine(int x0, int x1, int y0, int y1)
     {
         exit++;
         if(x0 > 0 && x0 < resX && y0 > 0 && y0 < resY)
-        *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + y0 * LCD_WIDTH_PX + x0) = 0x0000;
+        *(VRAMAddress + y0 * LCD_WIDTH_PX + x0) = 0x0000;
 
         int err2 = 2 * err;
 
@@ -12938,10 +12976,10 @@ void renderLine(int x0, int x1, int y0, int y1)
 }
 void renderLinePX2(int x0, int x1, int y0, int y1)
 {
-    x0 /= 2;
-    x1 /= 2;
-    y0 /= 2;
-    y1 /= 2;
+    x0/= 2;
+    x1/= 2;
+    y0/= 2;
+    y1/= 2;
 
     int exit;
     int dx = abs_int(x1 - x0);
@@ -12959,10 +12997,10 @@ void renderLinePX2(int x0, int x1, int y0, int y1)
         exit++;
         if(x0 > 0 && x0 < resXZBuffer && y0 > 0 && y0 < resYZBuffer)
         {
-            *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + y0*2 * LCD_WIDTH_PX + x0*2 + 0) = 0x0000;
-            *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + y0*2 * LCD_WIDTH_PX + x0*2 + 1) = 0x0000;
-            *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + y0*2 * LCD_WIDTH_PX + x0*2 + LCD_WIDTH_PX) = 0x0000;
-            *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + y0*2 * LCD_WIDTH_PX + x0*2 + LCD_WIDTH_PX+1) = 0x0000;
+            *(VRAMAddress + y0*2 * LCD_WIDTH_PX + x0*2 + 0) = 0x0000;
+            *(VRAMAddress + y0*2 * LCD_WIDTH_PX + x0*2 + 1) = 0x0000;
+            *(VRAMAddress + y0*2 * LCD_WIDTH_PX + x0*2 + LCD_WIDTH_PX) = 0x0000;
+            *(VRAMAddress + y0*2 * LCD_WIDTH_PX + x0*2 + LCD_WIDTH_PX+1) = 0x0000;
         }
 
         int err2 = 2 * err;
@@ -12996,10 +13034,10 @@ void renderLineWithWidthZBuffer(int x0, int x1, int y0, int y1, int width, int d
     {
         exit++;
         for (int i = -width/2; i <= width/2; i++) {
-            for (int j = -width/2; j <= width/2; j++) 
+            for (int j = -width/2; j <= width/2; j++)
             {
                 if(depth <= ZBuffer[(x0+i)/2 + (y0+j)/2 * resX] + 500)
-                *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + (y0+j) * LCD_WIDTH_PX + (x0+i)) = 0x0000;
+                *(VRAMAddress + (y0+j) * LCD_WIDTH_PX + (x0+i)) = 0x0000;
             }
         }
 
@@ -13019,11 +13057,11 @@ void renderLineWithWidthZBuffer(int x0, int x1, int y0, int y1, int width, int d
     }
 }
 void renderLineWithWidthZBufferPX2(int x0, int x1, int y0, int y1, int width, int depth) {
-    x0 /= 2;
-    x1 /= 2;
-    y0 /= 2;
-    y1 /= 2;
-    width /= 2;
+    x0/= 2;
+    x1/= 2;
+    y0/= 2;
+    y1/= 2;
+    width/= 2;
 
     int exit;
     int dx = abs_int(x1 - x0);
@@ -13040,14 +13078,14 @@ void renderLineWithWidthZBufferPX2(int x0, int x1, int y0, int y1, int width, in
     {
         exit++;
         for (int i = -width/2; i <= width/2; i++) {
-            for (int j = -width/2; j <= width/2; j++) 
+            for (int j = -width/2; j <= width/2; j++)
             {
                 if(depth <= ZBuffer[(x0+i) + (y0+j) * resXZBuffer] + 500)
                 {
-                    *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + (y0+j)*2 * LCD_WIDTH_PX + (x0+i)*2 ) = 0x0000;
-                    *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + (y0+j)*2 * LCD_WIDTH_PX + (x0+i)*2 + 1) = 0x0000;
-                    *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + (y0+j)*2 * LCD_WIDTH_PX + (x0+i)*2 + LCD_WIDTH_PX) = 0x0000;
-                    *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + (y0+j)*2 * LCD_WIDTH_PX + (x0+i)*2 + LCD_WIDTH_PX+1) = 0x0000;
+                    *(VRAMAddress + (y0+j)*2 * LCD_WIDTH_PX + (x0+i)*2 ) = 0x0000;
+                    *(VRAMAddress + (y0+j)*2 * LCD_WIDTH_PX + (x0+i)*2 + 1) = 0x0000;
+                    *(VRAMAddress + (y0+j)*2 * LCD_WIDTH_PX + (x0+i)*2 + LCD_WIDTH_PX) = 0x0000;
+                    *(VRAMAddress + (y0+j)*2 * LCD_WIDTH_PX + (x0+i)*2 + LCD_WIDTH_PX+1) = 0x0000;
                 }
             }
         }
@@ -13107,9 +13145,9 @@ void renderTriangleFast(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Ve
     int dxBC = (vertexC.x - vertexB.x) << 16;
     int dyBC = (vertexC.y - vertexB.y) << 8;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
 	int dxABTex = (texB.x - texA.x) << 16;
     int dyABTex = (texB.y - texA.y) << 16;
@@ -13118,13 +13156,13 @@ void renderTriangleFast(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Ve
     int dxBCTex = (texC.x - texB.x) << 16;
     int dyBCTex = (texC.y - texB.y) << 16;
 
-    int TexAB_X = (dyAB != 0) ? (dxABTex / dyAB) : 0;
-    int TexAC_X = (dyAC != 0) ? (dxACTex / dyAC) : 0;
-    int TexBC_X = (dyBC != 0) ? (dxBCTex / dyBC) : 0;
+    int TexAB_X = (dyAB != 0) ? (dxABTex/ dyAB) : 0;
+    int TexAC_X = (dyAC != 0) ? (dxACTex/ dyAC) : 0;
+    int TexBC_X = (dyBC != 0) ? (dxBCTex/ dyBC) : 0;
 
-	int TexAB_Y = (dyAB != 0) ? (dyABTex / dyAB) : 0;
-    int TexAC_Y = (dyAC != 0) ? (dyACTex / dyAC) : 0;
-    int TexBC_Y = (dyBC != 0) ? (dyBCTex / dyBC) : 0;
+	int TexAB_Y = (dyAB != 0) ? (dyABTex/ dyAB) : 0;
+    int TexAC_Y = (dyAC != 0) ? (dyACTex/ dyAC) : 0;
+    int TexBC_Y = (dyBC != 0) ? (dyBCTex/ dyBC) : 0;
 
 	int endA = (vertexA.y < 0) ? 0 : ((vertexA.y > resY) ? resY : vertexA.y);
     int endB = (vertexB.y < 0) ? 0 : ((vertexB.y > resY) ? resY : vertexB.y);
@@ -13162,8 +13200,8 @@ void renderTriangleFast(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Ve
 			x1 = (x1 < LCD_WIDTH_PX) ? x1 : LCD_WIDTH_PX;
 
 			unsigned short *ZBufferLocation = &ZBuffer[y*LCD_WIDTH_PX_HALF + x0];
-			unsigned int *VRAMLcation1 = &((unsigned short*)LCD_GetVRAMAddress())[y * LCD_WIDTH_PX + x0];
-			unsigned int *VRAMLcation2 = &((unsigned short*)LCD_GetVRAMAddress())[(y + 1) * LCD_WIDTH_PX + x0];
+			unsigned int *VRAMLcation1 = &VRAMAddress[y * LCD_WIDTH_PX + x0];
+			unsigned int *VRAMLcation2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + x0];
 
 			for (int x = x0; x < x1; x++)
 			{
@@ -13179,7 +13217,7 @@ void renderTriangleFast(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Ve
                     *VRAMLcation2 = colorFinalP2;
                     *ZBufferLocation = depth;
                 }
-                
+
                 ZBufferLocation++;
                 VRAMLcation1++;
                 VRAMLcation2++;
@@ -13193,7 +13231,7 @@ void renderTriangleFast(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Ve
 	if(endB != endC)
 	{
 		int last = vertexB.y + vertexB.y - vertexA.y;
-		
+
 		for (int y = endB; y < endC; y += 2)
 		{
 			int yInTraingle1 = y - vertexB.y;
@@ -13222,8 +13260,8 @@ void renderTriangleFast(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Ve
 			x1 = (x1 < LCD_WIDTH_PX) ? x1 : LCD_WIDTH_PX;
 
 			unsigned short *ZBufferLocation = &ZBuffer[y*LCD_WIDTH_PX_HALF + x0];
-			unsigned int *VRAMLcation1 = &((unsigned short*)LCD_GetVRAMAddress())[y * LCD_WIDTH_PX + (x0 << 1)];
-			unsigned int *VRAMLcation2 = &((unsigned short*)LCD_GetVRAMAddress())[(y + 1) * LCD_WIDTH_PX + (x0 << 1)];
+			unsigned int *VRAMLcation1 = &VRAMAddress[y * LCD_WIDTH_PX + (x0 << 1)];
+			unsigned int *VRAMLcation2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (x0 << 1)];
 
 			for (int x = x0; x < x1; x++)
 			{
@@ -13238,12 +13276,12 @@ void renderTriangleFast(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Ve
                     *VRAMLcation1 = colorFinalP2;
                     *VRAMLcation2 = colorFinalP2;
                     *ZBufferLocation = depth;
-					
+
 					//char txt[50];
 					//sprintf(txt, "succes! x0: %d, x1: %d, x: %d, y: %d", x0, x1, x, y);
 					//renderTextUpdate(5, 85, 100, txt);
                 }
-                
+
                 ZBufferLocation++;
                 VRAMLcation1++;
                 VRAMLcation2++;
@@ -13252,7 +13290,7 @@ void renderTriangleFast(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Ve
                 texX0_y += diffY;
 			}
 		}
-		
+
 	}
 }
 */
@@ -13264,7 +13302,7 @@ void renderTriangle(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, con
     if (vertexA->y > vertexB->y) swap(&vertexA, &vertexB);
     if (vertexA->y > vertexC->y) swap(&vertexA, &vertexC);
     if (vertexB->y > vertexC->y) swap(&vertexB, &vertexC);
-    
+
     int dxAB = (vertexB->x - vertexA->x) << 18;
     int dyAB = (vertexB->y - vertexA->y) << 9;
     int dxAC = (vertexC->x - vertexA->x) << 18;
@@ -13272,11 +13310,11 @@ void renderTriangle(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, con
     int dxBC = (vertexC->x - vertexB->x) << 18;
     int dyBC = (vertexC->y - vertexB->y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA->y < 0) ? 0 : ((vertexA->y > resY) ? resY : vertexA->y);
     int endB = (vertexB->y < 0) ? 0 : ((vertexB->y > resY) ? resY : vertexB->y);
     int endC = (vertexC->y < 0) ? 0 : ((vertexC->y > resY) ? resY : vertexC->y);
@@ -13292,9 +13330,9 @@ void renderTriangle(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, con
             int yInTraingle1 = y - vertexA->y;
             int x0 = ((lineAB * yInTraingle1) >> 9) + vertexA->x;
             int x1 = ((lineAC * yInTraingle1) >> 9) + vertexA->x;
-            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? resX : x0); //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
-            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? resX : x1); //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
-            
+            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? resX : x0);//is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
+            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? resX : x1);//is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
+
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = y * resX;
@@ -13302,10 +13340,10 @@ void renderTriangle(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, con
             for (int x = x0; x < x1; x++)
             {
                 int depthIndex = yIndex + x;
-                if (depth < ZBuffer ? ZBuffer[depthIndex] : 0)
+                if (depth < ZBuffer[depthIndex])
                 {
-                    *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + yOnScreen + x) = final_color;
-                    ZBuffer ? ZBuffer[depthIndex] : 0 = depth;
+                    *(VRAMAddress + yOnScreen + x) = final_color;
+                    ZBuffer[depthIndex] = depth;
                 }
             }
         }
@@ -13318,9 +13356,9 @@ void renderTriangle(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, con
             int yInTraingle2 = y - vertexB->y + last;
             int x0 = ((lineBC * yInTraingle1) >> 9) + vertexB->x;
             int x1 = ((lineAC * yInTraingle2) >> 9) + vertexA->x;
-            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? resX : x0);  //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
-            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? resX : x1);  //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
-            
+            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? resX : x0); //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
+            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? resX : x1); //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
+
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = y * resX;
@@ -13328,10 +13366,10 @@ void renderTriangle(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, con
             for (int x = x0; x < x1; x++)
             {
                 int depthIndex = yIndex + x;
-                if (depth < ZBuffer ? ZBuffer[depthIndex] : 0)
+                if (depth < ZBuffer[depthIndex])
                 {
-                    *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + yOnScreen + x) = final_color;
-                    ZBuffer ? ZBuffer[depthIndex] : 0 = depth;
+                    *(VRAMAddress + yOnScreen + x) = final_color;
+                    ZBuffer[depthIndex] = depth;
                 }
             }
         }
@@ -13342,7 +13380,7 @@ void renderTrianglePX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, 
     if (vertexA->y > vertexB->y) swap(&vertexA, &vertexB);
     if (vertexA->y > vertexC->y) swap(&vertexA, &vertexC);
     if (vertexB->y > vertexC->y) swap(&vertexB, &vertexC);
-    
+
     int dxAB = (vertexB->x - vertexA->x) << 18;
     int dyAB = (vertexB->y - vertexA->y) << 9;
     int dxAC = (vertexC->x - vertexA->x) << 18;
@@ -13350,11 +13388,11 @@ void renderTrianglePX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, 
     int dxBC = (vertexC->x - vertexB->x) << 18;
     int dyBC = (vertexC->y - vertexB->y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA->y < 0) ? 0 : ((vertexA->y > resY) ? resY : vertexA->y);
     int endB = (vertexB->y < 0) ? 0 : ((vertexB->y > resY) ? resY : vertexB->y);
     int endC = (vertexC->y < 0) ? 0 : ((vertexC->y > resY) ? resY : vertexC->y);
@@ -13377,22 +13415,22 @@ void renderTrianglePX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, 
             int yInTraingle1 = y - vertexA->y;
             int x0 = ((lineAB * yInTraingle1) >> 9) + vertexA->x;
             int x1 = ((lineAC * yInTraingle1) >> 9) + vertexA->x;
-            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? (resX >> 1) : (x0 >> 1)); //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
-            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? (resX >> 1) : (x1 >> 1)); //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
-            
+            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? (resX >> 1) : (x0 >> 1));//is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
+            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? (resX >> 1) : (x1 >> 1));//is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
+
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = (y >> 1) * resXZBuffer;
-            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + ((unsigned short*)LCD_GetVRAMAddress());
+            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + VRAMAddress;
             unsigned int *yOnScreen2 = yOnScreen + LCD_WIDTH_PXH;
             for (int x = x0; x < x1; x++)
             {
                 int depthIndex = yIndex + x;
-                if (depth < ZBuffer ? ZBuffer[depthIndex] : 0)
+                if (depth < ZBuffer[depthIndex])
                 {
                     *(yOnScreen  + x) = endColor;
                     *(yOnScreen2 + x) = endColor;
-                    ZBuffer ? ZBuffer[depthIndex] : 0 = depth;
+                    ZBuffer[depthIndex] = depth;
                 }
             }
         }
@@ -13405,22 +13443,22 @@ void renderTrianglePX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, 
             int yInTraingle2 = y - vertexB->y + last;
             int x0 = ((lineBC * yInTraingle1) >> 9) + vertexB->x;
             int x1 = ((lineAC * yInTraingle2) >> 9) + vertexA->x;
-            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? (resX >> 1) : (x0 >> 1));  //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
-            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? (resX >> 1) : (x1 >> 1));  //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
-            
+            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? (resX >> 1) : (x0 >> 1)); //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
+            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? (resX >> 1) : (x1 >> 1)); //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
+
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = (y >> 1) * resXZBuffer;
-            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + ((unsigned short*)LCD_GetVRAMAddress());
+            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + VRAMAddress;
             unsigned int *yOnScreen2 = yOnScreen + LCD_WIDTH_PXH;
             for (int x = x0; x < x1; x++)
             {
                 int depthIndex = yIndex + x;
-                if (depth < ZBuffer ? ZBuffer[depthIndex] : 0)
+                if (depth < ZBuffer[depthIndex])
                 {
                     *(yOnScreen  + x) = endColor;
                     *(yOnScreen2 + x) = endColor;
-                    ZBuffer ? ZBuffer[depthIndex] : 0 = depth;
+                    ZBuffer[depthIndex] = depth;
                 }
             }
         }
@@ -13431,7 +13469,7 @@ void renderTriangleNB(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, c
     if (vertexA->y > vertexB->y) swap(&vertexA, &vertexB);
     if (vertexA->y > vertexC->y) swap(&vertexA, &vertexC);
     if (vertexB->y > vertexC->y) swap(&vertexB, &vertexC);
-    
+
     int dxAB = (vertexB->x - vertexA->x) << 18;
     int dyAB = (vertexB->y - vertexA->y) << 9;
     int dxAC = (vertexC->x - vertexA->x) << 18;
@@ -13439,20 +13477,20 @@ void renderTriangleNB(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, c
     int dxBC = (vertexC->x - vertexB->x) << 18;
     int dyBC = (vertexC->y - vertexB->y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA->y < 0) ? 0 : ((vertexA->y > resY) ? resY : vertexA->y);
     int endB = (vertexB->y < 0) ? 0 : ((vertexB->y > resY) ? resY : vertexB->y);
     int endC = (vertexC->y < 0) ? 0 : ((vertexC->y > resY) ? resY : vertexC->y);
 
     int last = vertexB->y - vertexA->y;
 
-    //endA = (vertexA->y % 2 == 1) ? endA+1 : endA;
-    //endB = (vertexB->y % 2 == 1) ? endB+1 : endB;
-    //endC = (vertexC->y % 2 == 1) ? endC+1 : endC;
+   //endA = (vertexA->y % 2 == 1) ? endA+1 : endA;
+   //endB = (vertexB->y % 2 == 1) ? endB+1 : endB;
+   //endC = (vertexC->y % 2 == 1) ? endC+1 : endC;
 
     if(endA != endB)
     {
@@ -13461,9 +13499,9 @@ void renderTriangleNB(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, c
                 int yInTraingle1 = y - vertexA->y;
                 int x0 = ((lineAB * yInTraingle1) >> 9) + vertexA->x;
                 int x1 = ((lineAC * yInTraingle1) >> 9) + vertexA->x;
-                x0 = (x0 < 0) ? 0 : ((x0 > resX) ? resX : x0); //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
-                x1 = (x1 < 0) ? 0 : ((x1 > resX) ? resX : x1); //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
-                
+                x0 = (x0 < 0) ? 0 : ((x0 > resX) ? resX : x0);//is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
+                x1 = (x1 < 0) ? 0 : ((x1 > resX) ? resX : x1);//is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
+
                 if (x0 > x1) swap(&x0, &x1);
 
                 int yIndex = y * resX;
@@ -13471,10 +13509,10 @@ void renderTriangleNB(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, c
                 for (int x = x0; x < x1; x++)
                 {
                     int depthIndex = yIndex + x;
-                    if (depth < ZBuffer ? ZBuffer[depthIndex] : 0)
+                    if (depth < ZBuffer[depthIndex])
                     {
-                        *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + yOnScreen + x) = color;
-                        ZBuffer ? ZBuffer[depthIndex] : 0 = depth;
+                        *(VRAMAddress + yOnScreen + x) = color;
+                        ZBuffer[depthIndex] = depth;
                     }
                 }
         }
@@ -13487,9 +13525,9 @@ void renderTriangleNB(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, c
                 int yInTraingle2 = y - vertexB->y + last;
                 int x0 = ((lineBC * yInTraingle1) >> 9) + vertexB->x;
                 int x1 = ((lineAC * yInTraingle2) >> 9) + vertexA->x;
-                x0 = (x0 < 0) ? 0 : ((x0 > resX) ? resX : x0);  //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
-                x1 = (x1 < 0) ? 0 : ((x1 > resX) ? resX : x1);  //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
-                
+                x0 = (x0 < 0) ? 0 : ((x0 > resX) ? resX : x0); //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
+                x1 = (x1 < 0) ? 0 : ((x1 > resX) ? resX : x1); //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
+
                 if (x0 > x1) swap(&x0, &x1);
 
                 int yIndex = y * resX;
@@ -13497,10 +13535,10 @@ void renderTriangleNB(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, c
                 for (int x = x0; x < x1; x++)
                 {
                     int depthIndex = yIndex + x;
-                    if (depth < ZBuffer ? ZBuffer[depthIndex] : 0)
+                    if (depth < ZBuffer[depthIndex])
                     {
-                        *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + yOnScreen + x) = color;
-                        ZBuffer ? ZBuffer[depthIndex] : 0 = depth;
+                        *(VRAMAddress + yOnScreen + x) = color;
+                        ZBuffer[depthIndex] = depth;
                     }
                 }
         }
@@ -13511,7 +13549,7 @@ void renderTriangleNBPX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
     if (vertexA->y > vertexB->y) swap(&vertexA, &vertexB);
     if (vertexA->y > vertexC->y) swap(&vertexA, &vertexC);
     if (vertexB->y > vertexC->y) swap(&vertexB, &vertexC);
-    
+
     int dxAB = (vertexB->x - vertexA->x) << 18;
     int dyAB = (vertexB->y - vertexA->y) << 9;
     int dxAC = (vertexC->x - vertexA->x) << 18;
@@ -13519,11 +13557,11 @@ void renderTriangleNBPX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
     int dxBC = (vertexC->x - vertexB->x) << 18;
     int dyBC = (vertexC->y - vertexB->y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA->y < 0) ? 0 : ((vertexA->y > resY) ? resY : vertexA->y);
     int endB = (vertexB->y < 0) ? 0 : ((vertexB->y > resY) ? resY : vertexB->y);
     int endC = (vertexC->y < 0) ? 0 : ((vertexC->y > resY) ? resY : vertexC->y);
@@ -13539,8 +13577,8 @@ void renderTriangleNBPX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
     *endColor = ((int)color << 16) + color;
     int LCD_WIDTH_PXH = LCD_WIDTH_PX >> 1;
 
-    //unsigned int *endColor = 0xE5017000;
-    //*endColor = ((int)color << 16) + color;
+   //unsigned int *endColor = 0xE5017000;
+   //*endColor = ((int)color << 16) + color;
 
     if(endA != endB)
     {
@@ -13549,22 +13587,22 @@ void renderTriangleNBPX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
             int yInTraingle1 = y - vertexA->y;
             int x0 = ((lineAB * yInTraingle1) >> 9) + vertexA->x;
             int x1 = ((lineAC * yInTraingle1) >> 9) + vertexA->x;
-            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? (resX >> 1) : (x0 >> 1)); //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
-            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? (resX >> 1) : (x1 >> 1)); //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
-            
+            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? (resX >> 1) : (x0 >> 1));//is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
+            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? (resX >> 1) : (x1 >> 1));//is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
+
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = (y >> 1) * resXZBuffer;
-            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + ((unsigned short*)LCD_GetVRAMAddress());
+            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + VRAMAddress;
             unsigned int *yOnScreen2 = yOnScreen + LCD_WIDTH_PXH;
             for (int x = x0; x < x1; x++)
             {
                 int depthIndex = yIndex + x;
-                if (depth < ZBuffer ? ZBuffer[depthIndex] : 0)
+                if (depth < ZBuffer[depthIndex])
                 {
                     *(yOnScreen  + x) = *endColor;
                     *(yOnScreen2 + x) = *endColor;
-                    ZBuffer ? ZBuffer[depthIndex] : 0 = depth;
+                    ZBuffer[depthIndex] = depth;
                 }
             }
         }
@@ -13577,22 +13615,22 @@ void renderTriangleNBPX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
             int yInTraingle2 = yInTraingle1 + last;
             int x0 = ((lineBC * yInTraingle1) >> 9) + vertexB->x;
             int x1 = ((lineAC * yInTraingle2) >> 9) + vertexA->x;
-            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? (resX >> 1) : (x0 >> 1));  //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
-            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? (resX >> 1) : (x1 >> 1));  //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
-            
+            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? (resX >> 1) : (x0 >> 1)); //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
+            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? (resX >> 1) : (x1 >> 1)); //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
+
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = (y >> 1) * resXZBuffer;
-            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + ((unsigned short*)LCD_GetVRAMAddress());
+            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + VRAMAddress;
             unsigned int *yOnScreen2 = yOnScreen + LCD_WIDTH_PXH;
             for (int x = x0; x < x1; x++)
             {
                 int depthIndex = yIndex + x;
-                if (depth < ZBuffer ? ZBuffer[depthIndex] : 0)
+                if (depth < ZBuffer[depthIndex])
                 {
                     *(yOnScreen  + x) = *endColor;
                     *(yOnScreen2 + x) = *endColor;
-                    ZBuffer ? ZBuffer[depthIndex] : 0 = depth;
+                    ZBuffer[depthIndex] = depth;
                 }
             }
         }
@@ -13640,11 +13678,11 @@ void renderTriangleTexturedNBT(Vector2S vertexA, Vector2S vertexB, Vector2S vert
     int dxBC = (vertexC.x - vertexB.x) << 18;
     int dyBC = (vertexC.y - vertexB.y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA.y < 0) ? 0 : ((vertexA.y > resY) ? resY : vertexA.y);
     int endB = (vertexB.y < 0) ? 0 : ((vertexB.y > resY) ? resY : vertexB.y);
     int endC = (vertexC.y < 0) ? 0 : ((vertexC.y > resY) ? resY : vertexC.y);
@@ -13672,22 +13710,22 @@ void renderTriangleTexturedNBT(Vector2S vertexA, Vector2S vertexB, Vector2S vert
     int texWidth9 = texWidth << 9;
     int texHeight9 = texHeight << 9;
 
-    Vector2I texCoord = 
+    Vector2I texCoord =
     {
-        (texA.x * b0 / 10 + texB.x * b1 / 10 + texC.x * b2 / 10) * 1000 / d *  (texWidth_) * 512 / 1000,
-        (texA.y * b0 / 10 + texB.y * b1 / 10 + texC.y * b2 / 10) * 1000 / d * (texHeight_) * 512 / 1000,
+        (texA.x * b0/ 10 + texB.x * b1/ 10 + texC.x * b2/ 10) * 1000/ d *  (texWidth_) * 512/ 1000,
+        (texA.y * b0/ 10 + texB.y * b1/ 10 + texC.y * b2/ 10) * 1000/ d * (texHeight_) * 512/ 1000,
     };
 
-    Vector2I texCoord_x = 
+    Vector2I texCoord_x =
     {
-        (texA.x * b0_x / 10 + texB.x * b1_x / 10 + texC.x * b2_x / 10) * 1000 *  (texWidth_) / d * 512 / 1000,
-        (texA.y * b0_x / 10 + texB.y * b1_x / 10 + texC.y * b2_x / 10) * 1000 * (texHeight_) / d * 512 / 1000,
+        (texA.x * b0_x/ 10 + texB.x * b1_x/ 10 + texC.x * b2_x/ 10) * 1000 *  (texWidth_)/ d * 512/ 1000,
+        (texA.y * b0_x/ 10 + texB.y * b1_x/ 10 + texC.y * b2_x/ 10) * 1000 * (texHeight_)/ d * 512/ 1000,
     };
-    
-    Vector2I texCoord_y = 
+
+    Vector2I texCoord_y =
     {
-        (texA.x * b0_y / 10 + texB.x * b1_y / 10 + texC.x * b2_y / 10) * 1000 *  (texWidth_) / d * 512 / 1000,
-        (texA.y * b0_y / 10 + texB.y * b1_y / 10 + texC.y * b2_y / 10) * 1000 * (texHeight_) / d * 512 / 1000,
+        (texA.x * b0_y/ 10 + texB.x * b1_y/ 10 + texC.x * b2_y/ 10) * 1000 *  (texWidth_)/ d * 512/ 1000,
+        (texA.y * b0_y/ 10 + texB.y * b1_y/ 10 + texC.y * b2_y/ 10) * 1000 * (texHeight_)/ d * 512/ 1000,
     };
 
     if(endA != endB)
@@ -13699,22 +13737,22 @@ void renderTriangleTexturedNBT(Vector2S vertexA, Vector2S vertexB, Vector2S vert
                 int yInTraingle1 = y - vertexA.y;
                 int x0 = ((lineAB * yInTraingle1) >> 9) + vertexA.x;
                 int x1 = ((lineAC * yInTraingle1) >> 9) + vertexA.x;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
                 };
 
-                //idk why but having it in this exact order saves 68 ticks per 6k 100x100 triangles so 8% faster
+               //idk why but having it in this exact order saves 68 ticks per 6k 100x100 triangles so 8% faster
                 int yIndex = y * resX;
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
-                unsigned short* yOnScreen = y * LCD_WIDTH_PX + ((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + minXClamp;
+                unsigned short* yOnScreen = y * LCD_WIDTH_PX + VRAMAddress + minXClamp;
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex + minXClamp];
-                
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX)
@@ -13727,7 +13765,7 @@ void renderTriangleTexturedNBT(Vector2S vertexA, Vector2S vertexB, Vector2S vert
                             *yOnScreen = textureAdress[(u >> 9) + (v >> 9) * 16];
                             *yOnZbuffer = depth;
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen++;
                     }
@@ -13750,10 +13788,10 @@ void renderTriangleTexturedNBT(Vector2S vertexA, Vector2S vertexB, Vector2S vert
                 int yInTraingle2 = y - vertexB.y + last;
                 int x0 = ((lineBC * yInTraingle1) >> 9) + vertexB.x;
                 int x1 = ((lineAC * yInTraingle2) >> 9) + vertexA.x;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -13762,9 +13800,9 @@ void renderTriangleTexturedNBT(Vector2S vertexA, Vector2S vertexB, Vector2S vert
                 int yIndex = y * resX;
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
-                unsigned short* yOnScreen = y * LCD_WIDTH_PX + ((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + minXClamp;
+                unsigned short* yOnScreen = y * LCD_WIDTH_PX + VRAMAddress + minXClamp;
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex + minXClamp];
-                
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX)
@@ -13777,7 +13815,7 @@ void renderTriangleTexturedNBT(Vector2S vertexA, Vector2S vertexB, Vector2S vert
                             *yOnScreen = textureAdress[(u >> 9) + (v >> 9) * 16];
                             *yOnZbuffer = depth;
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen++;
                     }
@@ -13832,11 +13870,11 @@ void renderTriangleTexturedT(Vector2S vertexA, Vector2S vertexB, Vector2S vertex
     int dxBC = (vertexC.x - vertexB.x) << 18;
     int dyBC = (vertexC.y - vertexB.y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA.y < 0) ? 0 : ((vertexA.y > resY) ? resY : vertexA.y);
     int endB = (vertexB.y < 0) ? 0 : ((vertexB.y > resY) ? resY : vertexB.y);
     int endC = (vertexC.y < 0) ? 0 : ((vertexC.y > resY) ? resY : vertexC.y);
@@ -13864,22 +13902,22 @@ void renderTriangleTexturedT(Vector2S vertexA, Vector2S vertexB, Vector2S vertex
     int texWidth9 = texWidth << 9;
     int texHeight9 = texHeight << 9;
 
-    Vector2I texCoord = 
+    Vector2I texCoord =
     {
-        (texA.x * b0 / 10 + texB.x * b1 / 10 + texC.x * b2 / 10) * 1000 / d *  (texWidth_) * 512 / 1000,
-        (texA.y * b0 / 10 + texB.y * b1 / 10 + texC.y * b2 / 10) * 1000 / d * (texHeight_) * 512 / 1000,
+        (texA.x * b0/ 10 + texB.x * b1/ 10 + texC.x * b2/ 10) * 1000/ d *  (texWidth_) * 512/ 1000,
+        (texA.y * b0/ 10 + texB.y * b1/ 10 + texC.y * b2/ 10) * 1000/ d * (texHeight_) * 512/ 1000,
     };
 
-    Vector2I texCoord_x = 
+    Vector2I texCoord_x =
     {
-        (texA.x * b0_x / 10 + texB.x * b1_x / 10 + texC.x * b2_x / 10) * 1000 *  (texWidth_) / d * 512 / 1000,
-        (texA.y * b0_x / 10 + texB.y * b1_x / 10 + texC.y * b2_x / 10) * 1000 * (texHeight_) / d * 512 / 1000,
+        (texA.x * b0_x/ 10 + texB.x * b1_x/ 10 + texC.x * b2_x/ 10) * 1000 *  (texWidth_)/ d * 512/ 1000,
+        (texA.y * b0_x/ 10 + texB.y * b1_x/ 10 + texC.y * b2_x/ 10) * 1000 * (texHeight_)/ d * 512/ 1000,
     };
-    
-    Vector2I texCoord_y = 
+
+    Vector2I texCoord_y =
     {
-        (texA.x * b0_y / 10 + texB.x * b1_y / 10 + texC.x * b2_y / 10) * 1000 *  (texWidth_) / d * 512 / 1000,
-        (texA.y * b0_y / 10 + texB.y * b1_y / 10 + texC.y * b2_y / 10) * 1000 * (texHeight_) / d * 512 / 1000,
+        (texA.x * b0_y/ 10 + texB.x * b1_y/ 10 + texC.x * b2_y/ 10) * 1000 *  (texWidth_)/ d * 512/ 1000,
+        (texA.y * b0_y/ 10 + texB.y * b1_y/ 10 + texC.y * b2_y/ 10) * 1000 * (texHeight_)/ d * 512/ 1000,
     };
 
     if(endA != endB)
@@ -13891,22 +13929,22 @@ void renderTriangleTexturedT(Vector2S vertexA, Vector2S vertexB, Vector2S vertex
                 int yInTraingle1 = y - vertexA.y;
                 int x0 = ((lineAB * yInTraingle1) >> 9) + vertexA.x;
                 int x1 = ((lineAC * yInTraingle1) >> 9) + vertexA.x;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
                 };
 
-                //idk why but having it in this exact order saves 68 ticks per 6k 100x100 triangles so 8% faster
+               //idk why but having it in this exact order saves 68 ticks per 6k 100x100 triangles so 8% faster
                 int yIndex = y * resX;
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
-                unsigned short* yOnScreen = y * LCD_WIDTH_PX + ((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + minXClamp;
+                unsigned short* yOnScreen = y * LCD_WIDTH_PX + VRAMAddress + minXClamp;
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex + minXClamp];
-                
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX)
@@ -13919,7 +13957,7 @@ void renderTriangleTexturedT(Vector2S vertexA, Vector2S vertexB, Vector2S vertex
                             *yOnScreen = combineColorsWithBrightness(textureAdress[(u >> 9) + (v >> 9) * 16], brightness);
                             *yOnZbuffer = depth;
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen++;
                     }
@@ -13942,10 +13980,10 @@ void renderTriangleTexturedT(Vector2S vertexA, Vector2S vertexB, Vector2S vertex
                 int yInTraingle2 = y - vertexB.y + last;
                 int x0 = ((lineBC * yInTraingle1) >> 9) + vertexB.x;
                 int x1 = ((lineAC * yInTraingle2) >> 9) + vertexA.x;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -13954,9 +13992,9 @@ void renderTriangleTexturedT(Vector2S vertexA, Vector2S vertexB, Vector2S vertex
                 int yIndex = y * resX;
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
-                unsigned short* yOnScreen = y * LCD_WIDTH_PX + ((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + minXClamp;
+                unsigned short* yOnScreen = y * LCD_WIDTH_PX + VRAMAddress + minXClamp;
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex + minXClamp];
-                
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX)
@@ -13969,7 +14007,7 @@ void renderTriangleTexturedT(Vector2S vertexA, Vector2S vertexB, Vector2S vertex
                             *yOnScreen = combineColorsWithBrightness(textureAdress[(u >> 9) + (v >> 9) * 16], brightness);
                             *yOnZbuffer = depth;
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen++;
                     }
@@ -14024,11 +14062,11 @@ void renderTriangleTexturedNBPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S v
     int dxBC = (vertexC.x - vertexB.x) << 18;
     int dyBC = (vertexC.y - vertexB.y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA.y < 0) ? 0 : ((vertexA.y > resY) ? resY : vertexA.y);
     int endB = (vertexB.y < 0) ? 0 : ((vertexB.y > resY) ? resY : vertexB.y);
     int endC = (vertexC.y < 0) ? 0 : ((vertexC.y > resY) ? resY : vertexC.y);
@@ -14060,22 +14098,22 @@ void renderTriangleTexturedNBPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S v
     int texWidth9 = texWidth << 9;
     int texHeight9 = texHeight << 9;
 
-    Vector2I texCoord = 
+    Vector2I texCoord =
     {
-        (texA.x * b0 / 10 + texB.x * b1 / 10 + texC.x * b2 / 10) * 1000 / d *  texWidth_ * 512 / 1000,
-        (texA.y * b0 / 10 + texB.y * b1 / 10 + texC.y * b2 / 10) * 1000 / d * texHeight_ * 512 / 1000,
+        (texA.x * b0/ 10 + texB.x * b1/ 10 + texC.x * b2/ 10) * 1000/ d *  texWidth_ * 512/ 1000,
+        (texA.y * b0/ 10 + texB.y * b1/ 10 + texC.y * b2/ 10) * 1000/ d * texHeight_ * 512/ 1000,
     };
 
-    Vector2I texCoord_x = 
+    Vector2I texCoord_x =
     {
-        (texA.x * b0_x / 10 + texB.x * b1_x / 10 + texC.x * b2_x / 10) * 1000 *  texWidth_ / d * 512 / 500,
-        (texA.y * b0_x / 10 + texB.y * b1_x / 10 + texC.y * b2_x / 10) * 1000 * texHeight_ / d * 512 / 500,
+        (texA.x * b0_x/ 10 + texB.x * b1_x/ 10 + texC.x * b2_x/ 10) * 1000 *  texWidth_/ d * 512/ 500,
+        (texA.y * b0_x/ 10 + texB.y * b1_x/ 10 + texC.y * b2_x/ 10) * 1000 * texHeight_/ d * 512/ 500,
     };
-    
-    Vector2I texCoord_y = 
+
+    Vector2I texCoord_y =
     {
-        (texA.x * b0_y / 10 + texB.x * b1_y / 10 + texC.x * b2_y / 10) * 1000 *  texWidth_ / d * 512 / 500,
-        (texA.y * b0_y / 10 + texB.y * b1_y / 10 + texC.y * b2_y / 10) * 1000 * texHeight_ / d * 512 / 500,
+        (texA.x * b0_y/ 10 + texB.x * b1_y/ 10 + texC.x * b2_y/ 10) * 1000 *  texWidth_/ d * 512/ 500,
+        (texA.y * b0_y/ 10 + texB.y * b1_y/ 10 + texC.y * b2_y/ 10) * 1000 * texHeight_/ d * 512/ 500,
     };
 
     if(endA != endB)
@@ -14087,10 +14125,10 @@ void renderTriangleTexturedNBPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S v
                 int yInTraingle1 = y - vertexA.y;
                 int x0 = (((lineAB * yInTraingle1) >> 9) + vertexA.x) >> 1;
                 int x1 = (((lineAC * yInTraingle1) >> 9) + vertexA.x) >> 1;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -14100,9 +14138,9 @@ void renderTriangleTexturedNBPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S v
                 int yIndex = (y >> 1) * LCD_WIDTH_PX_HALF;
 
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex + minXClamp];
-                unsigned int *yOnScreen1 = &((unsigned short*)LCD_GetVRAMAddress())[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &((unsigned short*)LCD_GetVRAMAddress())[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
-                
+                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX_HALF)
@@ -14119,7 +14157,7 @@ void renderTriangleTexturedNBPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S v
                             *yOnScreen2 = colorFinalP2;
                             *yOnZbuffer = depth;
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen1++;
                         yOnScreen2++;
@@ -14143,10 +14181,10 @@ void renderTriangleTexturedNBPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S v
                 int yInTraingle2 = y - vertexB.y + last;
                 int x0 = (((lineBC * yInTraingle1) >> 9) + vertexB.x) >> 1;
                 int x1 = (((lineAC * yInTraingle2) >> 9) + vertexA.x) >> 1;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -14156,9 +14194,9 @@ void renderTriangleTexturedNBPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S v
                 int yIndex = (y >> 1) * LCD_WIDTH_PX_HALF;
 
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex + minXClamp];
-                unsigned int *yOnScreen1 = &((unsigned short*)LCD_GetVRAMAddress())[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &((unsigned short*)LCD_GetVRAMAddress())[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
-                
+                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX_HALF)
@@ -14175,7 +14213,7 @@ void renderTriangleTexturedNBPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S v
                             *yOnScreen2 = colorFinalP2;
                             *yOnZbuffer = depth;
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen1++;
                         yOnScreen2++;
@@ -14231,11 +14269,11 @@ void renderTriangleTexturedPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S ver
     int dxBC = (vertexC.x - vertexB.x) << 18;
     int dyBC = (vertexC.y - vertexB.y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA.y < 0) ? 0 : ((vertexA.y > resY) ? resY : vertexA.y);
     int endB = (vertexB.y < 0) ? 0 : ((vertexB.y > resY) ? resY : vertexB.y);
     int endC = (vertexC.y < 0) ? 0 : ((vertexC.y > resY) ? resY : vertexC.y);
@@ -14268,22 +14306,22 @@ void renderTriangleTexturedPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S ver
     int texWidth9 = texWidth << 9;
     int texHeight9 = texHeight << 9;
 
-    Vector2I texCoord = 
+    Vector2I texCoord =
     {
-        (texA.x * b0 / 10 + texB.x * b1 / 10 + texC.x * b2 / 10) * 1000 / d *  (texWidth_) * 512 / 1000,
-        (texA.y * b0 / 10 + texB.y * b1 / 10 + texC.y * b2 / 10) * 1000 / d * (texHeight_) * 512 / 1000,
+        (texA.x * b0/ 10 + texB.x * b1/ 10 + texC.x * b2/ 10) * 1000/ d *  (texWidth_) * 512/ 1000,
+        (texA.y * b0/ 10 + texB.y * b1/ 10 + texC.y * b2/ 10) * 1000/ d * (texHeight_) * 512/ 1000,
     };
 
-    Vector2I texCoord_x = 
+    Vector2I texCoord_x =
     {
-        (texA.x * b0_x / 10 + texB.x * b1_x / 10 + texC.x * b2_x / 10) * 1000 *  (texWidth_) / d * 512 / 500,
-        (texA.y * b0_x / 10 + texB.y * b1_x / 10 + texC.y * b2_x / 10) * 1000 * (texHeight_) / d * 512 / 500,
+        (texA.x * b0_x/ 10 + texB.x * b1_x/ 10 + texC.x * b2_x/ 10) * 1000 *  (texWidth_)/ d * 512/ 500,
+        (texA.y * b0_x/ 10 + texB.y * b1_x/ 10 + texC.y * b2_x/ 10) * 1000 * (texHeight_)/ d * 512/ 500,
     };
-    
-    Vector2I texCoord_y = 
+
+    Vector2I texCoord_y =
     {
-        (texA.x * b0_y / 10 + texB.x * b1_y / 10 + texC.x * b2_y / 10) * 1000 *  (texWidth_) / d * 512 / 500,
-        (texA.y * b0_y / 10 + texB.y * b1_y / 10 + texC.y * b2_y / 10) * 1000 * (texHeight_) / d * 512 / 500,
+        (texA.x * b0_y/ 10 + texB.x * b1_y/ 10 + texC.x * b2_y/ 10) * 1000 *  (texWidth_)/ d * 512/ 500,
+        (texA.y * b0_y/ 10 + texB.y * b1_y/ 10 + texC.y * b2_y/ 10) * 1000 * (texHeight_)/ d * 512/ 500,
     };
 
     if(endA != endB)
@@ -14295,10 +14333,10 @@ void renderTriangleTexturedPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S ver
                 int yInTraingle1 = y - vertexA.y;
                 int x0 = (((lineAB * yInTraingle1) >> 9) + vertexA.x) >> 1;
                 int x1 = (((lineAC * yInTraingle1) >> 9) + vertexA.x) >> 1;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -14307,9 +14345,9 @@ void renderTriangleTexturedPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S ver
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
                 unsigned short* yOnZbuffer = &ZBuffer[(y >> 1) * LCD_WIDTH_PX_HALF + minXClamp];
-                unsigned int *yOnScreen1 = &((unsigned short*)LCD_GetVRAMAddress())[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &((unsigned short*)LCD_GetVRAMAddress())[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
-                
+                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX_HALF)
@@ -14328,7 +14366,7 @@ void renderTriangleTexturedPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S ver
                             *yOnScreen2 = colorFinalP3;
                             *yOnZbuffer = depth;
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen1++;
                         yOnScreen2++;
@@ -14352,10 +14390,10 @@ void renderTriangleTexturedPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S ver
                 int yInTraingle2 = y - vertexB.y + last;
                 int x0 = (((lineBC * yInTraingle1) >> 9) + vertexB.x) >> 1;
                 int x1 = (((lineAC * yInTraingle2) >> 9) + vertexA.x) >> 1;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -14364,9 +14402,9 @@ void renderTriangleTexturedPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S ver
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
                 unsigned short* yOnZbuffer = &ZBuffer[(y >> 1) * LCD_WIDTH_PX_HALF + minXClamp];
-                unsigned int *yOnScreen1 = &((unsigned short*)LCD_GetVRAMAddress())[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &((unsigned short*)LCD_GetVRAMAddress())[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
-                
+                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX_HALF)
@@ -14385,7 +14423,7 @@ void renderTriangleTexturedPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S ver
                             *yOnScreen2 = colorFinalP3;
                             *yOnZbuffer = depth;
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen1++;
                         yOnScreen2++;
@@ -14442,11 +14480,11 @@ void renderTriangleTexturedBlackTransNBT(Vector2S vertexA, Vector2S vertexB, Vec
     int dxBC = (vertexC.x - vertexB.x) << 18;
     int dyBC = (vertexC.y - vertexB.y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA.y < 0) ? 0 : ((vertexA.y > resY) ? resY : vertexA.y);
     int endB = (vertexB.y < 0) ? 0 : ((vertexB.y > resY) ? resY : vertexB.y);
     int endC = (vertexC.y < 0) ? 0 : ((vertexC.y > resY) ? resY : vertexC.y);
@@ -14474,22 +14512,22 @@ void renderTriangleTexturedBlackTransNBT(Vector2S vertexA, Vector2S vertexB, Vec
     int texWidth9 = texWidth << 9;
     int texHeight9 = texHeight << 9;
 
-    Vector2I texCoord = 
+    Vector2I texCoord =
     {
-        (texA.x * b0 / 10 + texB.x * b1 / 10 + texC.x * b2 / 10) * 1000 / d *  (texWidth_) * 512 / 1000,
-        (texA.y * b0 / 10 + texB.y * b1 / 10 + texC.y * b2 / 10) * 1000 / d * (texHeight_) * 512 / 1000,
+        (texA.x * b0/ 10 + texB.x * b1/ 10 + texC.x * b2/ 10) * 1000/ d *  (texWidth_) * 512/ 1000,
+        (texA.y * b0/ 10 + texB.y * b1/ 10 + texC.y * b2/ 10) * 1000/ d * (texHeight_) * 512/ 1000,
     };
 
-    Vector2I texCoord_x = 
+    Vector2I texCoord_x =
     {
-        (texA.x * b0_x / 10 + texB.x * b1_x / 10 + texC.x * b2_x / 10) * 1000 *  (texWidth_) / d * 512 / 1000,
-        (texA.y * b0_x / 10 + texB.y * b1_x / 10 + texC.y * b2_x / 10) * 1000 * (texHeight_) / d * 512 / 1000,
+        (texA.x * b0_x/ 10 + texB.x * b1_x/ 10 + texC.x * b2_x/ 10) * 1000 *  (texWidth_)/ d * 512/ 1000,
+        (texA.y * b0_x/ 10 + texB.y * b1_x/ 10 + texC.y * b2_x/ 10) * 1000 * (texHeight_)/ d * 512/ 1000,
     };
-    
-    Vector2I texCoord_y = 
+
+    Vector2I texCoord_y =
     {
-        (texA.x * b0_y / 10 + texB.x * b1_y / 10 + texC.x * b2_y / 10) * 1000 *  (texWidth_) / d * 512 / 1000,
-        (texA.y * b0_y / 10 + texB.y * b1_y / 10 + texC.y * b2_y / 10) * 1000 * (texHeight_) / d * 512 / 1000,
+        (texA.x * b0_y/ 10 + texB.x * b1_y/ 10 + texC.x * b2_y/ 10) * 1000 *  (texWidth_)/ d * 512/ 1000,
+        (texA.y * b0_y/ 10 + texB.y * b1_y/ 10 + texC.y * b2_y/ 10) * 1000 * (texHeight_)/ d * 512/ 1000,
     };
 
     if(endA != endB)
@@ -14501,10 +14539,10 @@ void renderTriangleTexturedBlackTransNBT(Vector2S vertexA, Vector2S vertexB, Vec
                 int yInTraingle1 = y - vertexA.y;
                 int x0 = ((lineAB * yInTraingle1) >> 9) + vertexA.x;
                 int x1 = ((lineAC * yInTraingle1) >> 9) + vertexA.x;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -14512,9 +14550,9 @@ void renderTriangleTexturedBlackTransNBT(Vector2S vertexA, Vector2S vertexB, Vec
 
                 int yIndex = y * resX;
 
-                unsigned short* yOnScreen = y * LCD_WIDTH_PX + ((unsigned short*)LCD_GetVRAMAddress());
+                unsigned short* yOnScreen = y * LCD_WIDTH_PX + VRAMAddress;
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex];
-                
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX)
@@ -14552,10 +14590,10 @@ void renderTriangleTexturedBlackTransNBT(Vector2S vertexA, Vector2S vertexB, Vec
                 int yInTraingle2 = y - vertexB.y + last;
                 int x0 = ((lineBC * yInTraingle1) >> 9) + vertexB.x;
                 int x1 = ((lineAC * yInTraingle2) >> 9) + vertexA.x;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -14563,9 +14601,9 @@ void renderTriangleTexturedBlackTransNBT(Vector2S vertexA, Vector2S vertexB, Vec
 
                 int yIndex = y * resX;
 
-                unsigned short* yOnScreen = y * LCD_WIDTH_PX + ((unsigned short*)LCD_GetVRAMAddress());
+                unsigned short* yOnScreen = y * LCD_WIDTH_PX + VRAMAddress;
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex];
-                
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX)
@@ -14635,11 +14673,11 @@ void renderTriangleTexturedBlackTransT(Vector2S vertexA, Vector2S vertexB, Vecto
     int dxBC = (vertexC.x - vertexB.x) << 18;
     int dyBC = (vertexC.y - vertexB.y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA.y < 0) ? 0 : ((vertexA.y > resY) ? resY : vertexA.y);
     int endB = (vertexB.y < 0) ? 0 : ((vertexB.y > resY) ? resY : vertexB.y);
     int endC = (vertexC.y < 0) ? 0 : ((vertexC.y > resY) ? resY : vertexC.y);
@@ -14667,22 +14705,22 @@ void renderTriangleTexturedBlackTransT(Vector2S vertexA, Vector2S vertexB, Vecto
     int texWidth9 = texWidth << 9;
     int texHeight9 = texHeight << 9;
 
-    Vector2I texCoord = 
+    Vector2I texCoord =
     {
-        (texA.x * b0 / 10 + texB.x * b1 / 10 + texC.x * b2 / 10) * 1000 / d *  (texWidth_) * 512 / 1000,
-        (texA.y * b0 / 10 + texB.y * b1 / 10 + texC.y * b2 / 10) * 1000 / d * (texHeight_) * 512 / 1000,
+        (texA.x * b0/ 10 + texB.x * b1/ 10 + texC.x * b2/ 10) * 1000/ d *  (texWidth_) * 512/ 1000,
+        (texA.y * b0/ 10 + texB.y * b1/ 10 + texC.y * b2/ 10) * 1000/ d * (texHeight_) * 512/ 1000,
     };
 
-    Vector2I texCoord_x = 
+    Vector2I texCoord_x =
     {
-        (texA.x * b0_x / 10 + texB.x * b1_x / 10 + texC.x * b2_x / 10) * 1000 *  (texWidth_) / d * 512 / 1000,
-        (texA.y * b0_x / 10 + texB.y * b1_x / 10 + texC.y * b2_x / 10) * 1000 * (texHeight_) / d * 512 / 1000,
+        (texA.x * b0_x/ 10 + texB.x * b1_x/ 10 + texC.x * b2_x/ 10) * 1000 *  (texWidth_)/ d * 512/ 1000,
+        (texA.y * b0_x/ 10 + texB.y * b1_x/ 10 + texC.y * b2_x/ 10) * 1000 * (texHeight_)/ d * 512/ 1000,
     };
-    
-    Vector2I texCoord_y = 
+
+    Vector2I texCoord_y =
     {
-        (texA.x * b0_y / 10 + texB.x * b1_y / 10 + texC.x * b2_y / 10) * 1000 *  (texWidth_) / d * 512 / 1000,
-        (texA.y * b0_y / 10 + texB.y * b1_y / 10 + texC.y * b2_y / 10) * 1000 * (texHeight_) / d * 512 / 1000,
+        (texA.x * b0_y/ 10 + texB.x * b1_y/ 10 + texC.x * b2_y/ 10) * 1000 *  (texWidth_)/ d * 512/ 1000,
+        (texA.y * b0_y/ 10 + texB.y * b1_y/ 10 + texC.y * b2_y/ 10) * 1000 * (texHeight_)/ d * 512/ 1000,
     };
 
     if(endA != endB)
@@ -14694,10 +14732,10 @@ void renderTriangleTexturedBlackTransT(Vector2S vertexA, Vector2S vertexB, Vecto
                 int yInTraingle1 = y - vertexA.y;
                 int x0 = ((lineAB * yInTraingle1) >> 9) + vertexA.x;
                 int x1 = ((lineAC * yInTraingle1) >> 9) + vertexA.x;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -14705,9 +14743,9 @@ void renderTriangleTexturedBlackTransT(Vector2S vertexA, Vector2S vertexB, Vecto
 
                 int yIndex = y * resX;
 
-                unsigned short* yOnScreen = y * LCD_WIDTH_PX + ((unsigned short*)LCD_GetVRAMAddress());
+                unsigned short* yOnScreen = y * LCD_WIDTH_PX + VRAMAddress;
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex];
-                
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX)
@@ -14745,10 +14783,10 @@ void renderTriangleTexturedBlackTransT(Vector2S vertexA, Vector2S vertexB, Vecto
                 int yInTraingle2 = y - vertexB.y + last;
                 int x0 = ((lineBC * yInTraingle1) >> 9) + vertexB.x;
                 int x1 = ((lineAC * yInTraingle2) >> 9) + vertexA.x;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -14756,9 +14794,9 @@ void renderTriangleTexturedBlackTransT(Vector2S vertexA, Vector2S vertexB, Vecto
 
                 int yIndex = y * resX;
 
-                unsigned short* yOnScreen = y * LCD_WIDTH_PX + ((unsigned short*)LCD_GetVRAMAddress());
+                unsigned short* yOnScreen = y * LCD_WIDTH_PX + VRAMAddress;
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex];
-                
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX)
@@ -14828,11 +14866,11 @@ void renderTriangleTexturedBlackTransNBPX2T(Vector2S vertexA, Vector2S vertexB, 
     int dxBC = (vertexC.x - vertexB.x) << 18;
     int dyBC = (vertexC.y - vertexB.y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA.y < 0) ? 0 : ((vertexA.y > resY) ? resY : vertexA.y);
     int endB = (vertexB.y < 0) ? 0 : ((vertexB.y > resY) ? resY : vertexB.y);
     int endC = (vertexC.y < 0) ? 0 : ((vertexC.y > resY) ? resY : vertexC.y);
@@ -14865,22 +14903,22 @@ void renderTriangleTexturedBlackTransNBPX2T(Vector2S vertexA, Vector2S vertexB, 
     int texWidth9 = texWidth << 9;
     int texHeight9 = texHeight << 9;
 
-    Vector2I texCoord = 
+    Vector2I texCoord =
     {
-        (texA.x * b0 / 10 + texB.x * b1 / 10 + texC.x * b2 / 10) * 1000 / d *  (texWidth_) * 512 / 1000,
-        (texA.y * b0 / 10 + texB.y * b1 / 10 + texC.y * b2 / 10) * 1000 / d * (texHeight_) * 512 / 1000,
+        (texA.x * b0/ 10 + texB.x * b1/ 10 + texC.x * b2/ 10) * 1000/ d *  (texWidth_) * 512/ 1000,
+        (texA.y * b0/ 10 + texB.y * b1/ 10 + texC.y * b2/ 10) * 1000/ d * (texHeight_) * 512/ 1000,
     };
 
-    Vector2I texCoord_x = 
+    Vector2I texCoord_x =
     {
-        (texA.x * b0_x / 10 + texB.x * b1_x / 10 + texC.x * b2_x / 10) * 1000 *  (texWidth_) / d * 512 / 500,
-        (texA.y * b0_x / 10 + texB.y * b1_x / 10 + texC.y * b2_x / 10) * 1000 * (texHeight_) / d * 512 / 500,
+        (texA.x * b0_x/ 10 + texB.x * b1_x/ 10 + texC.x * b2_x/ 10) * 1000 *  (texWidth_)/ d * 512/ 500,
+        (texA.y * b0_x/ 10 + texB.y * b1_x/ 10 + texC.y * b2_x/ 10) * 1000 * (texHeight_)/ d * 512/ 500,
     };
-    
-    Vector2I texCoord_y = 
+
+    Vector2I texCoord_y =
     {
-        (texA.x * b0_y / 10 + texB.x * b1_y / 10 + texC.x * b2_y / 10) * 1000 *  (texWidth_) / d * 512 / 500,
-        (texA.y * b0_y / 10 + texB.y * b1_y / 10 + texC.y * b2_y / 10) * 1000 * (texHeight_) / d * 512 / 500,
+        (texA.x * b0_y/ 10 + texB.x * b1_y/ 10 + texC.x * b2_y/ 10) * 1000 *  (texWidth_)/ d * 512/ 500,
+        (texA.y * b0_y/ 10 + texB.y * b1_y/ 10 + texC.y * b2_y/ 10) * 1000 * (texHeight_)/ d * 512/ 500,
     };
 
     if(endA != endB)
@@ -14892,10 +14930,10 @@ void renderTriangleTexturedBlackTransNBPX2T(Vector2S vertexA, Vector2S vertexB, 
                 int yInTraingle1 = y - vertexA.y;
                 int x0 = (((lineAB * yInTraingle1) >> 9) + vertexA.x) >> 1;
                 int x1 = (((lineAC * yInTraingle1) >> 9) + vertexA.x) >> 1;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -14904,9 +14942,9 @@ void renderTriangleTexturedBlackTransNBPX2T(Vector2S vertexA, Vector2S vertexB, 
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
                 unsigned short* yOnZbuffer = &ZBuffer[(y >> 1) * LCD_WIDTH_PX_HALF + minXClamp];
-                unsigned int *yOnScreen1 = &((unsigned short*)LCD_GetVRAMAddress())[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &((unsigned short*)LCD_GetVRAMAddress())[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
-                
+                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX_HALF)
@@ -14927,7 +14965,7 @@ void renderTriangleTexturedBlackTransNBPX2T(Vector2S vertexA, Vector2S vertexB, 
                                 *yOnZbuffer = depth;
                             }
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen1++;
                         yOnScreen2++;
@@ -14951,10 +14989,10 @@ void renderTriangleTexturedBlackTransNBPX2T(Vector2S vertexA, Vector2S vertexB, 
                 int yInTraingle2 = y - vertexB.y + last;
                 int x0 = (((lineBC * yInTraingle1) >> 9) + vertexB.x) >> 1;
                 int x1 = (((lineAC * yInTraingle2) >> 9) + vertexA.x) >> 1;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -14963,9 +15001,9 @@ void renderTriangleTexturedBlackTransNBPX2T(Vector2S vertexA, Vector2S vertexB, 
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
                 unsigned short* yOnZbuffer = &ZBuffer[(y >> 1) * LCD_WIDTH_PX_HALF + minXClamp];
-                unsigned int *yOnScreen1 = &((unsigned short*)LCD_GetVRAMAddress())[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &((unsigned short*)LCD_GetVRAMAddress())[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
-                
+                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX_HALF)
@@ -14986,7 +15024,7 @@ void renderTriangleTexturedBlackTransNBPX2T(Vector2S vertexA, Vector2S vertexB, 
                                 *yOnZbuffer = depth;
                             }
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen1++;
                         yOnScreen2++;
@@ -15042,11 +15080,11 @@ void renderTriangleTexturedBlackTransPX2T(Vector2S vertexA, Vector2S vertexB, Ve
     int dxBC = (vertexC.x - vertexB.x) << 18;
     int dyBC = (vertexC.y - vertexB.y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA.y < 0) ? 0 : ((vertexA.y > resY) ? resY : vertexA.y);
     int endB = (vertexB.y < 0) ? 0 : ((vertexB.y > resY) ? resY : vertexB.y);
     int endC = (vertexC.y < 0) ? 0 : ((vertexC.y > resY) ? resY : vertexC.y);
@@ -15079,22 +15117,22 @@ void renderTriangleTexturedBlackTransPX2T(Vector2S vertexA, Vector2S vertexB, Ve
     int texWidth9 = texWidth << 9;
     int texHeight9 = texHeight << 9;
 
-    Vector2I texCoord = 
+    Vector2I texCoord =
     {
-        (texA.x * b0 / 10 + texB.x * b1 / 10 + texC.x * b2 / 10) * 1000 / d *  (texWidth_) * 512 / 1000,
-        (texA.y * b0 / 10 + texB.y * b1 / 10 + texC.y * b2 / 10) * 1000 / d * (texHeight_) * 512 / 1000,
+        (texA.x * b0/ 10 + texB.x * b1/ 10 + texC.x * b2/ 10) * 1000/ d *  (texWidth_) * 512/ 1000,
+        (texA.y * b0/ 10 + texB.y * b1/ 10 + texC.y * b2/ 10) * 1000/ d * (texHeight_) * 512/ 1000,
     };
 
-    Vector2I texCoord_x = 
+    Vector2I texCoord_x =
     {
-        (texA.x * b0_x / 10 + texB.x * b1_x / 10 + texC.x * b2_x / 10) * 1000 *  (texWidth_) / d * 512 / 500,
-        (texA.y * b0_x / 10 + texB.y * b1_x / 10 + texC.y * b2_x / 10) * 1000 * (texHeight_) / d * 512 / 500,
+        (texA.x * b0_x/ 10 + texB.x * b1_x/ 10 + texC.x * b2_x/ 10) * 1000 *  (texWidth_)/ d * 512/ 500,
+        (texA.y * b0_x/ 10 + texB.y * b1_x/ 10 + texC.y * b2_x/ 10) * 1000 * (texHeight_)/ d * 512/ 500,
     };
-    
-    Vector2I texCoord_y = 
+
+    Vector2I texCoord_y =
     {
-        (texA.x * b0_y / 10 + texB.x * b1_y / 10 + texC.x * b2_y / 10) * 1000 *  (texWidth_) / d * 512 / 500,
-        (texA.y * b0_y / 10 + texB.y * b1_y / 10 + texC.y * b2_y / 10) * 1000 * (texHeight_) / d * 512 / 500,
+        (texA.x * b0_y/ 10 + texB.x * b1_y/ 10 + texC.x * b2_y/ 10) * 1000 *  (texWidth_)/ d * 512/ 500,
+        (texA.y * b0_y/ 10 + texB.y * b1_y/ 10 + texC.y * b2_y/ 10) * 1000 * (texHeight_)/ d * 512/ 500,
     };
 
     if(endA != endB)
@@ -15106,10 +15144,10 @@ void renderTriangleTexturedBlackTransPX2T(Vector2S vertexA, Vector2S vertexB, Ve
                 int yInTraingle1 = y - vertexA.y;
                 int x0 = (((lineAB * yInTraingle1) >> 9) + vertexA.x) >> 1;
                 int x1 = (((lineAC * yInTraingle1) >> 9) + vertexA.x) >> 1;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -15118,9 +15156,9 @@ void renderTriangleTexturedBlackTransPX2T(Vector2S vertexA, Vector2S vertexB, Ve
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
                 unsigned short* yOnZbuffer = &ZBuffer[(y >> 1) * LCD_WIDTH_PX_HALF + minXClamp];
-                unsigned int *yOnScreen1 = &((unsigned short*)LCD_GetVRAMAddress())[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &((unsigned short*)LCD_GetVRAMAddress())[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
-                
+                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX_HALF)
@@ -15142,7 +15180,7 @@ void renderTriangleTexturedBlackTransPX2T(Vector2S vertexA, Vector2S vertexB, Ve
                                 *yOnZbuffer = depth;
                             }
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen1++;
                         yOnScreen2++;
@@ -15166,10 +15204,10 @@ void renderTriangleTexturedBlackTransPX2T(Vector2S vertexA, Vector2S vertexB, Ve
                 int yInTraingle2 = y - vertexB.y + last;
                 int x0 = (((lineBC * yInTraingle1) >> 9) + vertexB.x) >> 1;
                 int x1 = (((lineAC * yInTraingle2) >> 9) + vertexA.x) >> 1;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -15178,9 +15216,9 @@ void renderTriangleTexturedBlackTransPX2T(Vector2S vertexA, Vector2S vertexB, Ve
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
                 unsigned short* yOnZbuffer = &ZBuffer[(y >> 1) * LCD_WIDTH_PX_HALF + minXClamp];
-                unsigned int *yOnScreen1 = &((unsigned short*)LCD_GetVRAMAddress())[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &((unsigned short*)LCD_GetVRAMAddress())[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
-                
+                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX_HALF)
@@ -15202,7 +15240,7 @@ void renderTriangleTexturedBlackTransPX2T(Vector2S vertexA, Vector2S vertexB, Ve
                                 *yOnZbuffer = depth;
                             }
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen1++;
                         yOnScreen2++;
@@ -15259,11 +15297,11 @@ void renderTriangleTexturedNBTransT(Vector2S vertexA, Vector2S vertexB, Vector2S
     int dxBC = (vertexC.x - vertexB.x) << 18;
     int dyBC = (vertexC.y - vertexB.y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA.y < 0) ? 0 : ((vertexA.y > resY) ? resY : vertexA.y);
     int endB = (vertexB.y < 0) ? 0 : ((vertexB.y > resY) ? resY : vertexB.y);
     int endC = (vertexC.y < 0) ? 0 : ((vertexC.y > resY) ? resY : vertexC.y);
@@ -15291,22 +15329,22 @@ void renderTriangleTexturedNBTransT(Vector2S vertexA, Vector2S vertexB, Vector2S
     int texWidth9 = texWidth << 9;
     int texHeight9 = texHeight << 9;
 
-    Vector2I texCoord = 
+    Vector2I texCoord =
     {
-        (texA.x * b0 / 10 + texB.x * b1 / 10 + texC.x * b2 / 10) * 1000 / d *  (texWidth_) * 512 / 1000,
-        (texA.y * b0 / 10 + texB.y * b1 / 10 + texC.y * b2 / 10) * 1000 / d * (texHeight_) * 512 / 1000,
+        (texA.x * b0/ 10 + texB.x * b1/ 10 + texC.x * b2/ 10) * 1000/ d *  (texWidth_) * 512/ 1000,
+        (texA.y * b0/ 10 + texB.y * b1/ 10 + texC.y * b2/ 10) * 1000/ d * (texHeight_) * 512/ 1000,
     };
 
-    Vector2I texCoord_x = 
+    Vector2I texCoord_x =
     {
-        (texA.x * b0_x / 10 + texB.x * b1_x / 10 + texC.x * b2_x / 10) * 1000 *  (texWidth_) / d * 512 / 1000,
-        (texA.y * b0_x / 10 + texB.y * b1_x / 10 + texC.y * b2_x / 10) * 1000 * (texHeight_) / d * 512 / 1000,
+        (texA.x * b0_x/ 10 + texB.x * b1_x/ 10 + texC.x * b2_x/ 10) * 1000 *  (texWidth_)/ d * 512/ 1000,
+        (texA.y * b0_x/ 10 + texB.y * b1_x/ 10 + texC.y * b2_x/ 10) * 1000 * (texHeight_)/ d * 512/ 1000,
     };
-    
-    Vector2I texCoord_y = 
+
+    Vector2I texCoord_y =
     {
-        (texA.x * b0_y / 10 + texB.x * b1_y / 10 + texC.x * b2_y / 10) * 1000 *  (texWidth_) / d * 512 / 1000,
-        (texA.y * b0_y / 10 + texB.y * b1_y / 10 + texC.y * b2_y / 10) * 1000 * (texHeight_) / d * 512 / 1000,
+        (texA.x * b0_y/ 10 + texB.x * b1_y/ 10 + texC.x * b2_y/ 10) * 1000 *  (texWidth_)/ d * 512/ 1000,
+        (texA.y * b0_y/ 10 + texB.y * b1_y/ 10 + texC.y * b2_y/ 10) * 1000 * (texHeight_)/ d * 512/ 1000,
     };
 
     if(endA != endB)
@@ -15318,22 +15356,22 @@ void renderTriangleTexturedNBTransT(Vector2S vertexA, Vector2S vertexB, Vector2S
                 int yInTraingle1 = y - vertexA.y;
                 int x0 = ((lineAB * yInTraingle1) >> 9) + vertexA.x;
                 int x1 = ((lineAC * yInTraingle1) >> 9) + vertexA.x;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
                 };
 
-                //idk why but having it in this exact order saves 68 ticks per 6k 100x100 triangles so 8% faster
+               //idk why but having it in this exact order saves 68 ticks per 6k 100x100 triangles so 8% faster
                 int yIndex = y * resX;
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
-                unsigned short* yOnScreen = y * LCD_WIDTH_PX + ((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + minXClamp;
+                unsigned short* yOnScreen = y * LCD_WIDTH_PX + VRAMAddress + minXClamp;
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex + minXClamp];
-                
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX)
@@ -15348,7 +15386,7 @@ void renderTriangleTexturedNBTransT(Vector2S vertexA, Vector2S vertexB, Vector2S
 
                             *yOnScreen = colorFinalP2;
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen++;
                     }
@@ -15371,10 +15409,10 @@ void renderTriangleTexturedNBTransT(Vector2S vertexA, Vector2S vertexB, Vector2S
                 int yInTraingle2 = y - vertexB.y + last;
                 int x0 = ((lineBC * yInTraingle1) >> 9) + vertexB.x;
                 int x1 = ((lineAC * yInTraingle2) >> 9) + vertexA.x;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -15383,9 +15421,9 @@ void renderTriangleTexturedNBTransT(Vector2S vertexA, Vector2S vertexB, Vector2S
                 int yIndex = y * resX;
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
-                unsigned short* yOnScreen = y * LCD_WIDTH_PX + ((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + minXClamp;
+                unsigned short* yOnScreen = y * LCD_WIDTH_PX + VRAMAddress + minXClamp;
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex + minXClamp];
-                
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX)
@@ -15400,7 +15438,7 @@ void renderTriangleTexturedNBTransT(Vector2S vertexA, Vector2S vertexB, Vector2S
 
                             *yOnScreen = colorFinalP2;
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen++;
                     }
@@ -15455,11 +15493,11 @@ void renderTriangleTexturedNBPX2TransT(Vector2S vertexA, Vector2S vertexB, Vecto
     int dxBC = (vertexC.x - vertexB.x) << 18;
     int dyBC = (vertexC.y - vertexB.y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA.y < 0) ? 0 : ((vertexA.y > resY) ? resY : vertexA.y);
     int endB = (vertexB.y < 0) ? 0 : ((vertexB.y > resY) ? resY : vertexB.y);
     int endC = (vertexC.y < 0) ? 0 : ((vertexC.y > resY) ? resY : vertexC.y);
@@ -15492,22 +15530,22 @@ void renderTriangleTexturedNBPX2TransT(Vector2S vertexA, Vector2S vertexB, Vecto
     int texWidth9 = texWidth << 9;
     int texHeight9 = texHeight << 9;
 
-    Vector2I texCoord = 
+    Vector2I texCoord =
     {
-        (texA.x * b0 / 10 + texB.x * b1 / 10 + texC.x * b2 / 10) * 1000 / d *  (texWidth_) * 512 / 1000,
-        (texA.y * b0 / 10 + texB.y * b1 / 10 + texC.y * b2 / 10) * 1000 / d * (texHeight_) * 512 / 1000,
+        (texA.x * b0/ 10 + texB.x * b1/ 10 + texC.x * b2/ 10) * 1000/ d *  (texWidth_) * 512/ 1000,
+        (texA.y * b0/ 10 + texB.y * b1/ 10 + texC.y * b2/ 10) * 1000/ d * (texHeight_) * 512/ 1000,
     };
 
-    Vector2I texCoord_x = 
+    Vector2I texCoord_x =
     {
-        (texA.x * b0_x / 10 + texB.x * b1_x / 10 + texC.x * b2_x / 10) * 1000 *  (texWidth_) / d * 512 / 500,
-        (texA.y * b0_x / 10 + texB.y * b1_x / 10 + texC.y * b2_x / 10) * 1000 * (texHeight_) / d * 512 / 500,
+        (texA.x * b0_x/ 10 + texB.x * b1_x/ 10 + texC.x * b2_x/ 10) * 1000 *  (texWidth_)/ d * 512/ 500,
+        (texA.y * b0_x/ 10 + texB.y * b1_x/ 10 + texC.y * b2_x/ 10) * 1000 * (texHeight_)/ d * 512/ 500,
     };
-    
-    Vector2I texCoord_y = 
+
+    Vector2I texCoord_y =
     {
-        (texA.x * b0_y / 10 + texB.x * b1_y / 10 + texC.x * b2_y / 10) * 1000 *  (texWidth_) / d * 512 / 500,
-        (texA.y * b0_y / 10 + texB.y * b1_y / 10 + texC.y * b2_y / 10) * 1000 * (texHeight_) / d * 512 / 500,
+        (texA.x * b0_y/ 10 + texB.x * b1_y/ 10 + texC.x * b2_y/ 10) * 1000 *  (texWidth_)/ d * 512/ 500,
+        (texA.y * b0_y/ 10 + texB.y * b1_y/ 10 + texC.y * b2_y/ 10) * 1000 * (texHeight_)/ d * 512/ 500,
     };
 
     if(endA != endB)
@@ -15519,10 +15557,10 @@ void renderTriangleTexturedNBPX2TransT(Vector2S vertexA, Vector2S vertexB, Vecto
                 int yInTraingle1 = y - vertexA.y;
                 int x0 = (((lineAB * yInTraingle1) >> 9) + vertexA.x) >> 1;
                 int x1 = (((lineAC * yInTraingle1) >> 9) + vertexA.x) >> 1;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -15532,9 +15570,9 @@ void renderTriangleTexturedNBPX2TransT(Vector2S vertexA, Vector2S vertexB, Vecto
                 int yIndex = (y >> 1) * LCD_WIDTH_PX_HALF;
 
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex + minXClamp];
-                unsigned int *yOnScreen1 = &((unsigned short*)LCD_GetVRAMAddress())[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &((unsigned short*)LCD_GetVRAMAddress())[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
-                
+                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX_HALF)
@@ -15551,7 +15589,7 @@ void renderTriangleTexturedNBPX2TransT(Vector2S vertexA, Vector2S vertexB, Vecto
                             *yOnScreen1 = colorFinalP3;
                             *yOnScreen2 = colorFinalP3;
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen1++;
                         yOnScreen2++;
@@ -15575,10 +15613,10 @@ void renderTriangleTexturedNBPX2TransT(Vector2S vertexA, Vector2S vertexB, Vecto
                 int yInTraingle2 = y - vertexB.y + last;
                 int x0 = (((lineBC * yInTraingle1) >> 9) + vertexB.x) >> 1;
                 int x1 = (((lineAC * yInTraingle2) >> 9) + vertexA.x) >> 1;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -15588,9 +15626,9 @@ void renderTriangleTexturedNBPX2TransT(Vector2S vertexA, Vector2S vertexB, Vecto
                 int yIndex = (y >> 1) * LCD_WIDTH_PX_HALF;
 
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex + minXClamp];
-                unsigned int *yOnScreen1 = &((unsigned short*)LCD_GetVRAMAddress())[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &((unsigned short*)LCD_GetVRAMAddress())[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
-                
+                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX_HALF)
@@ -15607,7 +15645,7 @@ void renderTriangleTexturedNBPX2TransT(Vector2S vertexA, Vector2S vertexB, Vecto
                             *yOnScreen1 = colorFinalP3;
                             *yOnScreen2 = colorFinalP3;
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen1++;
                         yOnScreen2++;
@@ -15663,11 +15701,11 @@ void renderTriangleTexturedPX2TransT(Vector2S vertexA, Vector2S vertexB, Vector2
     int dxBC = (vertexC.x - vertexB.x) << 18;
     int dyBC = (vertexC.y - vertexB.y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA.y < 0) ? 0 : ((vertexA.y > resY) ? resY : vertexA.y);
     int endB = (vertexB.y < 0) ? 0 : ((vertexB.y > resY) ? resY : vertexB.y);
     int endC = (vertexC.y < 0) ? 0 : ((vertexC.y > resY) ? resY : vertexC.y);
@@ -15700,22 +15738,22 @@ void renderTriangleTexturedPX2TransT(Vector2S vertexA, Vector2S vertexB, Vector2
     int texWidth9 = texWidth << 9;
     int texHeight9 = texHeight << 9;
 
-    Vector2I texCoord = 
+    Vector2I texCoord =
     {
-        (texA.x * b0 / 10 + texB.x * b1 / 10 + texC.x * b2 / 10) * 1000 / d *  (texWidth_) * 512 / 1000,
-        (texA.y * b0 / 10 + texB.y * b1 / 10 + texC.y * b2 / 10) * 1000 / d * (texHeight_) * 512 / 1000,
+        (texA.x * b0/ 10 + texB.x * b1/ 10 + texC.x * b2/ 10) * 1000/ d *  (texWidth_) * 512/ 1000,
+        (texA.y * b0/ 10 + texB.y * b1/ 10 + texC.y * b2/ 10) * 1000/ d * (texHeight_) * 512/ 1000,
     };
 
-    Vector2I texCoord_x = 
+    Vector2I texCoord_x =
     {
-        (texA.x * b0_x / 10 + texB.x * b1_x / 10 + texC.x * b2_x / 10) * 1000 *  (texWidth_) / d * 512 / 500,
-        (texA.y * b0_x / 10 + texB.y * b1_x / 10 + texC.y * b2_x / 10) * 1000 * (texHeight_) / d * 512 / 500,
+        (texA.x * b0_x/ 10 + texB.x * b1_x/ 10 + texC.x * b2_x/ 10) * 1000 *  (texWidth_)/ d * 512/ 500,
+        (texA.y * b0_x/ 10 + texB.y * b1_x/ 10 + texC.y * b2_x/ 10) * 1000 * (texHeight_)/ d * 512/ 500,
     };
-    
-    Vector2I texCoord_y = 
+
+    Vector2I texCoord_y =
     {
-        (texA.x * b0_y / 10 + texB.x * b1_y / 10 + texC.x * b2_y / 10) * 1000 *  (texWidth_) / d * 512 / 500,
-        (texA.y * b0_y / 10 + texB.y * b1_y / 10 + texC.y * b2_y / 10) * 1000 * (texHeight_) / d * 512 / 500,
+        (texA.x * b0_y/ 10 + texB.x * b1_y/ 10 + texC.x * b2_y/ 10) * 1000 *  (texWidth_)/ d * 512/ 500,
+        (texA.y * b0_y/ 10 + texB.y * b1_y/ 10 + texC.y * b2_y/ 10) * 1000 * (texHeight_)/ d * 512/ 500,
     };
 
     if(endA != endB)
@@ -15727,10 +15765,10 @@ void renderTriangleTexturedPX2TransT(Vector2S vertexA, Vector2S vertexB, Vector2
                 int yInTraingle1 = y - vertexA.y;
                 int x0 = (((lineAB * yInTraingle1) >> 9) + vertexA.x) >> 1;
                 int x1 = (((lineAC * yInTraingle1) >> 9) + vertexA.x) >> 1;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -15739,9 +15777,9 @@ void renderTriangleTexturedPX2TransT(Vector2S vertexA, Vector2S vertexB, Vector2
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
                 unsigned short* yOnZbuffer = &ZBuffer[(y >> 1) * LCD_WIDTH_PX_HALF + minXClamp];
-                unsigned int *yOnScreen1 = &((unsigned short*)LCD_GetVRAMAddress())[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &((unsigned short*)LCD_GetVRAMAddress())[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
-                
+                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX_HALF)
@@ -15758,7 +15796,7 @@ void renderTriangleTexturedPX2TransT(Vector2S vertexA, Vector2S vertexB, Vector2
                             *yOnScreen1 = colorFinalP3;
                             *yOnScreen2 = colorFinalP3;
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen1++;
                         yOnScreen2++;
@@ -15782,10 +15820,10 @@ void renderTriangleTexturedPX2TransT(Vector2S vertexA, Vector2S vertexB, Vector2
                 int yInTraingle2 = y - vertexB.y + last;
                 int x0 = (((lineBC * yInTraingle1) >> 9) + vertexB.x) >> 1;
                 int x1 = (((lineAC * yInTraingle2) >> 9) + vertexA.x) >> 1;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
-                Vector2I texCoord_i = 
+                Vector2I texCoord_i =
                 {
                     texCoord.x + texCoord_x.x * x0,
                     texCoord.y + texCoord_x.y * x0,
@@ -15794,9 +15832,9 @@ void renderTriangleTexturedPX2TransT(Vector2S vertexA, Vector2S vertexB, Vector2
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
                 unsigned short* yOnZbuffer = &ZBuffer[(y >> 1) * LCD_WIDTH_PX_HALF + minXClamp];
-                unsigned int *yOnScreen1 = &((unsigned short*)LCD_GetVRAMAddress())[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &((unsigned short*)LCD_GetVRAMAddress())[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
-                
+                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < LCD_WIDTH_PX_HALF)
@@ -15813,7 +15851,7 @@ void renderTriangleTexturedPX2TransT(Vector2S vertexA, Vector2S vertexB, Vector2
                             *yOnScreen1 = colorFinalP3;
                             *yOnScreen2 = colorFinalP3;
                         }
-                        
+
                         yOnZbuffer++;
                         yOnScreen1++;
                         yOnScreen2++;
@@ -15872,11 +15910,11 @@ void renderSkybox(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Vector2S
     int dxBC = (vertexC.x - vertexB.x) << 18;
     int dyBC = (vertexC.y - vertexB.y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA.y < 0) ? 0 : ((vertexA.y > resY) ? resY : vertexA.y);
     int endB = (vertexB.y < 0) ? 0 : ((vertexB.y > resY) ? resY : vertexB.y);
     int endC = (vertexC.y < 0) ? 0 : ((vertexC.y > resY) ? resY : vertexC.y);
@@ -15907,9 +15945,9 @@ void renderSkybox(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Vector2S
 
     int texHeight9 = texHeight << 9;
 
-	int texCoord_y = (texA.y * b0 / 10 + texB.y * b1 / 10 + texC.y * b2 / 10) * 1000 / d * texHeight_ * 512 / 1000;
-	int texCoord_x_y = (texA.y * b0_x / 10 + texB.y * b1_x / 10 + texC.y * b2_x / 10) * 1000 * texHeight_ / d * 512 / 500;
-	int texCoord_y_y = (texA.y * b0_y / 10 + texB.y * b1_y / 10 + texC.y * b2_y / 10) * 1000 * texHeight_ / d * 512 / 500;
+	int texCoord_y = (texA.y * b0/ 10 + texB.y * b1/ 10 + texC.y * b2/ 10) * 1000/ d * texHeight_ * 512/ 1000;
+	int texCoord_x_y = (texA.y * b0_x/ 10 + texB.y * b1_x/ 10 + texC.y * b2_x/ 10) * 1000 * texHeight_/ d * 512/ 500;
+	int texCoord_y_y = (texA.y * b0_y/ 10 + texB.y * b1_y/ 10 + texC.y * b2_y/ 10) * 1000 * texHeight_/ d * 512/ 500;
 
     if(endA != endB)
     {
@@ -15918,13 +15956,13 @@ void renderSkybox(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Vector2S
             int yInTraingle1 = y - vertexA.y;
             int x0 = (((lineAB * yInTraingle1) >> 9) + vertexA.x) >> 1;
             int x1 = (((lineAC * yInTraingle1) >> 9) + vertexA.x) >> 1;
-            
+
             if (x0 > x1) swap(&x0, &x1);
 
 			int texCoord_i_y = texCoord_y + texCoord_x_y * x0;
             int minXClamp = (x0 > 1) ? x0 : 1;
-            unsigned int *yOnScreen1 = &((unsigned short*)LCD_GetVRAMAddress())[y * LCD_WIDTH_PX + (minXClamp << 1)];
-            
+            unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+
             for (int x = x0; x < x1; x++)
             {
                 if(x > 0 && x < LCD_WIDTH_PX_HALF)
@@ -15934,7 +15972,7 @@ void renderSkybox(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Vector2S
 
                     *yOnScreen1 = colorFinal;
                     *(yOnScreen1 + LCD_WIDTH_PX_HALF) = colorFinal;
-						
+
                     yOnScreen1++;
 
 					texCoord_i_y += texCoord_x_y;
@@ -15952,13 +15990,13 @@ void renderSkybox(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Vector2S
             int yInTraingle2 = y - vertexB.y + last;
             int x0 = (((lineBC * yInTraingle1) >> 9) + vertexB.x) >> 1;
             int x1 = (((lineAC * yInTraingle2) >> 9) + vertexA.x) >> 1;
-            
+
             if (x0 > x1) swap(&x0, &x1);
 
             int texCoord_i_y = texCoord_y + texCoord_x_y * x0;
             int minXClamp = (x0 > 1) ? x0 : 1;
-            unsigned int *yOnScreen1 = &((unsigned short*)LCD_GetVRAMAddress())[y * LCD_WIDTH_PX + (minXClamp << 1)];
-            
+            unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+
             for (int x = x0; x < x1; x++)
             {
                 if(x > 0 && x < LCD_WIDTH_PX_HALF)
@@ -15968,7 +16006,7 @@ void renderSkybox(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Vector2S
 
                     *yOnScreen1 = colorFinal;
                     *(yOnScreen1 + LCD_WIDTH_PX_HALF) = colorFinal;
-						
+
                     yOnScreen1++;
 
 					texCoord_i_y += texCoord_x_y;
@@ -15986,7 +16024,7 @@ void renderTrianglePX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vert
     if (vertexA->y > vertexB->y) swap(&vertexA, &vertexB);
     if (vertexA->y > vertexC->y) swap(&vertexA, &vertexC);
     if (vertexB->y > vertexC->y) swap(&vertexB, &vertexC);
-    
+
     int dxAB = (vertexB->x - vertexA->x) << 18;
     int dyAB = (vertexB->y - vertexA->y) << 9;
     int dxAC = (vertexC->x - vertexA->x) << 18;
@@ -15994,11 +16032,11 @@ void renderTrianglePX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vert
     int dxBC = (vertexC->x - vertexB->x) << 18;
     int dyBC = (vertexC->y - vertexB->y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA->y < 0) ? 0 : ((vertexA->y > resY) ? resY : vertexA->y);
     int endB = (vertexB->y < 0) ? 0 : ((vertexB->y > resY) ? resY : vertexB->y);
     int endC = (vertexC->y < 0) ? 0 : ((vertexC->y > resY) ? resY : vertexC->y);
@@ -16020,23 +16058,23 @@ void renderTrianglePX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vert
             int yInTraingle1 = y - vertexA->y;
             int x0 = ((lineAB * yInTraingle1) >> 9) + vertexA->x;
             int x1 = ((lineAC * yInTraingle1) >> 9) + vertexA->x;
-            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? (resX >> 1) : (x0 >> 1)); //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
-            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? (resX >> 1) : (x1 >> 1)); //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
-            
+            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? (resX >> 1) : (x0 >> 1));//is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
+            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? (resX >> 1) : (x1 >> 1));//is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
+
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = (y >> 1) * resXZBuffer;
-            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + ((unsigned short*)LCD_GetVRAMAddress());
+            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + VRAMAddress;
             unsigned int *yOnScreen2 = yOnScreen + LCD_WIDTH_PXH;
             for (int x = x0; x < x1; x++)
             {
                 int depthIndex = yIndex + x;
-                if (depth < ZBuffer ? ZBuffer[depthIndex] : 0)
+                if (depth < ZBuffer[depthIndex])
                 {
-                    //int waterDepthP1 = (ZBuffer ? ZBuffer[depthIndex] : 0 - depth) / 500;
-                    //if(waterDepthP1 > 40)
-                    //waterDepthP1 = 40;
-                    //int waterDepth = 40 + waterDepthP1;
+                   //int waterDepthP1 = (ZBuffer[depthIndex] - depth)/ 500;
+                   //if(waterDepthP1 > 40)
+                   //waterDepthP1 = 40;
+                   //int waterDepth = 40 + waterDepthP1;
 
                     color_t startColor = *(yOnScreen  + x);
                     color_t endColor16 = combineColors(startColor, endBrightnessColor, 50);
@@ -16044,7 +16082,7 @@ void renderTrianglePX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vert
 
                     *(yOnScreen  + x) = endColor32;
                     *(yOnScreen2 + x) = endColor32;
-                    //ZBuffer ? ZBuffer[depthIndex] : 0 = depth;
+                   //ZBuffer[depthIndex] = depth;
                 }
             }
         }
@@ -16057,23 +16095,23 @@ void renderTrianglePX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vert
             int yInTraingle2 = y - vertexB->y + last;
             int x0 = ((lineBC * yInTraingle1) >> 9) + vertexB->x;
             int x1 = ((lineAC * yInTraingle2) >> 9) + vertexA->x;
-            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? (resX >> 1) : (x0 >> 1));  //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
-            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? (resX >> 1) : (x1 >> 1));  //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
-            
+            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? (resX >> 1) : (x0 >> 1)); //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
+            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? (resX >> 1) : (x1 >> 1)); //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
+
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = (y >> 1) * resXZBuffer;
-            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + ((unsigned short*)LCD_GetVRAMAddress());
+            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + VRAMAddress;
             unsigned int *yOnScreen2 = yOnScreen + LCD_WIDTH_PXH;
             for (int x = x0; x < x1; x++)
             {
                 int depthIndex = yIndex + x;
-                if (depth < ZBuffer ? ZBuffer[depthIndex] : 0)
+                if (depth < ZBuffer[depthIndex])
                 {
-                    //int waterDepthP1 = (ZBuffer ? ZBuffer[depthIndex] : 0 - depth) / 500;
-                    //if(waterDepthP1 > 40)
-                    //waterDepthP1 = 40;
-                    //int waterDepth = 40 + waterDepthP1;
+                   //int waterDepthP1 = (ZBuffer[depthIndex] - depth)/ 500;
+                   //if(waterDepthP1 > 40)
+                   //waterDepthP1 = 40;
+                   //int waterDepth = 40 + waterDepthP1;
 
                     color_t startColor = *(yOnScreen  + x);
                     color_t endColor16 = combineColors(startColor, endBrightnessColor, 50);
@@ -16081,7 +16119,7 @@ void renderTrianglePX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vert
 
                     *(yOnScreen  + x) = endColor32;
                     *(yOnScreen2 + x) = endColor32;
-                    //ZBuffer ? ZBuffer[depthIndex] : 0 = depth;
+                   //ZBuffer[depthIndex] = depth;
                 }
             }
         }
@@ -16092,7 +16130,7 @@ void renderTriangleNBPX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* ve
     if (vertexA->y > vertexB->y) swap(&vertexA, &vertexB);
     if (vertexA->y > vertexC->y) swap(&vertexA, &vertexC);
     if (vertexB->y > vertexC->y) swap(&vertexB, &vertexC);
-    
+
     int dxAB = (vertexB->x - vertexA->x) << 18;
     int dyAB = (vertexB->y - vertexA->y) << 9;
     int dxAC = (vertexC->x - vertexA->x) << 18;
@@ -16100,11 +16138,11 @@ void renderTriangleNBPX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* ve
     int dxBC = (vertexC->x - vertexB->x) << 18;
     int dyBC = (vertexC->y - vertexB->y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA->y < 0) ? 0 : ((vertexA->y > resY) ? resY : vertexA->y);
     int endB = (vertexB->y < 0) ? 0 : ((vertexB->y > resY) ? resY : vertexB->y);
     int endC = (vertexC->y < 0) ? 0 : ((vertexC->y > resY) ? resY : vertexC->y);
@@ -16114,7 +16152,7 @@ void renderTriangleNBPX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* ve
     endA = (vertexA->y % 2 == 1) ? endA+1 : endA;
     endB = (vertexB->y % 2 == 1) ? endB+1 : endB;
     endC = (vertexC->y % 2 == 1) ? endC+1 : endC;
-    
+
     int LCD_WIDTH_PXH = LCD_WIDTH_PX >> 1;
 
     if(endA != endB)
@@ -16124,23 +16162,23 @@ void renderTriangleNBPX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* ve
             int yInTraingle1 = y - vertexA->y;
             int x0 = ((lineAB * yInTraingle1) >> 9) + vertexA->x;
             int x1 = ((lineAC * yInTraingle1) >> 9) + vertexA->x;
-            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? (resX >> 1) : (x0 >> 1)); //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
-            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? (resX >> 1) : (x1 >> 1)); //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
-            
+            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? (resX >> 1) : (x0 >> 1));//is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
+            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? (resX >> 1) : (x1 >> 1));//is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
+
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = (y >> 1) * resXZBuffer;
-            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + ((unsigned short*)LCD_GetVRAMAddress());
+            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + VRAMAddress;
             unsigned int *yOnScreen2 = yOnScreen + LCD_WIDTH_PXH;
             for (int x = x0; x < x1; x++)
             {
                 int depthIndex = yIndex + x;
-                if (depth < ZBuffer ? ZBuffer[depthIndex] : 0)
+                if (depth < ZBuffer[depthIndex])
                 {
-                    //int waterDepthP1 = (ZBuffer ? ZBuffer[depthIndex] : 0 - depth) / 500;
-                    //if(waterDepthP1 > 40)
-                    //waterDepthP1 = 40;
-                    //int waterDepth = 40 + waterDepthP1;
+                   //int waterDepthP1 = (ZBuffer[depthIndex] - depth)/ 500;
+                   //if(waterDepthP1 > 40)
+                   //waterDepthP1 = 40;
+                   //int waterDepth = 40 + waterDepthP1;
 
                     color_t startColor = *(yOnScreen  + x);
                     color_t endColor16 = combineColors(startColor, color, 50);
@@ -16148,7 +16186,7 @@ void renderTriangleNBPX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* ve
 
                     *(yOnScreen  + x) = endColor32;
                     *(yOnScreen2 + x) = endColor32;
-                    //ZBuffer ? ZBuffer[depthIndex] : 0 = depth;
+                   //ZBuffer[depthIndex] = depth;
                 }
             }
         }
@@ -16161,23 +16199,23 @@ void renderTriangleNBPX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* ve
             int yInTraingle2 = y - vertexB->y + last;
             int x0 = ((lineBC * yInTraingle1) >> 9) + vertexB->x;
             int x1 = ((lineAC * yInTraingle2) >> 9) + vertexA->x;
-            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? (resX >> 1) : (x0 >> 1));  //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
-            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? (resX >> 1) : (x1 >> 1));  //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
-            
+            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? (resX >> 1) : (x0 >> 1)); //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
+            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? (resX >> 1) : (x1 >> 1)); //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
+
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = (y >> 1) * resXZBuffer;
-            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + ((unsigned short*)LCD_GetVRAMAddress());
+            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + VRAMAddress;
             unsigned int *yOnScreen2 = yOnScreen + LCD_WIDTH_PXH;
             for (int x = x0; x < x1; x++)
             {
                 int depthIndex = yIndex + x;
-                if (depth < ZBuffer ? ZBuffer[depthIndex] : 0)
+                if (depth < ZBuffer[depthIndex])
                 {
-                    //int waterDepthP1 = (ZBuffer ? ZBuffer[depthIndex] : 0 - depth) / 500;
-                    //if(waterDepthP1 > 40)
-                    //waterDepthP1 = 40;
-                    //int waterDepth = 40 + waterDepthP1;
+                   //int waterDepthP1 = (ZBuffer[depthIndex] - depth)/ 500;
+                   //if(waterDepthP1 > 40)
+                   //waterDepthP1 = 40;
+                   //int waterDepth = 40 + waterDepthP1;
 
                     color_t startColor = *(yOnScreen  + x);
                     color_t endColor16 = combineColors(startColor, color, 50);
@@ -16185,7 +16223,7 @@ void renderTriangleNBPX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* ve
 
                     *(yOnScreen  + x) = endColor32;
                     *(yOnScreen2 + x) = endColor32;
-                    //ZBuffer ? ZBuffer[depthIndex] : 0 = depth;
+                   //ZBuffer[depthIndex] = depth;
                 }
             }
         }
@@ -16197,7 +16235,7 @@ void renderTriangleTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
     if (vertexA->y > vertexB->y) swap(&vertexA, &vertexB);
     if (vertexA->y > vertexC->y) swap(&vertexA, &vertexC);
     if (vertexB->y > vertexC->y) swap(&vertexB, &vertexC);
-    
+
     int dxAB = (vertexB->x - vertexA->x) << 18;
     int dyAB = (vertexB->y - vertexA->y) << 9;
     int dxAC = (vertexC->x - vertexA->x) << 18;
@@ -16205,20 +16243,20 @@ void renderTriangleTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
     int dxBC = (vertexC->x - vertexB->x) << 18;
     int dyBC = (vertexC->y - vertexB->y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA->y < 0) ? 0 : ((vertexA->y > resY) ? resY : vertexA->y);
     int endB = (vertexB->y < 0) ? 0 : ((vertexB->y > resY) ? resY : vertexB->y);
     int endC = (vertexC->y < 0) ? 0 : ((vertexC->y > resY) ? resY : vertexC->y);
 
     int last = vertexB->y - vertexA->y;
 
-    //endA = (vertexA->y % 2 == 1) ? endA+1 : endA;
-    //endB = (vertexB->y % 2 == 1) ? endB+1 : endB;
-    //endC = (vertexC->y % 2 == 1) ? endC+1 : endC;
+   //endA = (vertexA->y % 2 == 1) ? endA+1 : endA;
+   //endB = (vertexB->y % 2 == 1) ? endB+1 : endB;
+   //endC = (vertexC->y % 2 == 1) ? endC+1 : endC;
     color_t final_color = combineColorsWithBrightness(color, brightness);
 
     if(endA != endB)
@@ -16228,9 +16266,9 @@ void renderTriangleTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
             int yInTraingle1 = y - vertexA->y;
             int x0 = ((lineAB * yInTraingle1) >> 9) + vertexA->x;
             int x1 = ((lineAC * yInTraingle1) >> 9) + vertexA->x;
-            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? resX : x0); //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
-            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? resX : x1); //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
-            
+            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? resX : x0);//is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
+            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? resX : x1);//is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
+
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = y * resX;
@@ -16238,13 +16276,13 @@ void renderTriangleTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
             for (int x = x0; x < x1; x++)
             {
                 int depthIndex = yIndex + x;
-                if (depth < ZBuffer ? ZBuffer[depthIndex] : 0)
+                if (depth < ZBuffer[depthIndex])
                 {
-                    color_t startColor = *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + yOnScreen + x);
+                    color_t startColor = *(VRAMAddress + yOnScreen + x);
                     color_t endColor16 = combineColors(startColor, final_color, 50);
 
-                    *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + yOnScreen + x) = endColor16;
-                    //ZBuffer ? ZBuffer[depthIndex] : 0 = depth;
+                    *(VRAMAddress + yOnScreen + x) = endColor16;
+                   //ZBuffer[depthIndex] = depth;
                 }
             }
         }
@@ -16257,9 +16295,9 @@ void renderTriangleTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
             int yInTraingle2 = y - vertexB->y + last;
             int x0 = ((lineBC * yInTraingle1) >> 9) + vertexB->x;
             int x1 = ((lineAC * yInTraingle2) >> 9) + vertexA->x;
-            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? resX : x0);  //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
-            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? resX : x1);  //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
-            
+            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? resX : x0); //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
+            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? resX : x1); //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
+
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = y * resX;
@@ -16267,13 +16305,13 @@ void renderTriangleTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
             for (int x = x0; x < x1; x++)
             {
                 int depthIndex = yIndex + x;
-                if (depth < ZBuffer ? ZBuffer[depthIndex] : 0)
+                if (depth < ZBuffer[depthIndex])
                 {
-                    color_t startColor = *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + yOnScreen + x);
+                    color_t startColor = *(VRAMAddress + yOnScreen + x);
                     color_t endColor16 = combineColors(startColor, final_color, 50);
 
-                    *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + yOnScreen + x) = endColor16;
-                    //ZBuffer ? ZBuffer[depthIndex] : 0 = depth;
+                    *(VRAMAddress + yOnScreen + x) = endColor16;
+                   //ZBuffer[depthIndex] = depth;
                 }
             }
         }
@@ -16284,7 +16322,7 @@ void renderTriangleNBTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* verte
     if (vertexA->y > vertexB->y) swap(&vertexA, &vertexB);
     if (vertexA->y > vertexC->y) swap(&vertexA, &vertexC);
     if (vertexB->y > vertexC->y) swap(&vertexB, &vertexC);
-    
+
     int dxAB = (vertexB->x - vertexA->x) << 18;
     int dyAB = (vertexB->y - vertexA->y) << 9;
     int dxAC = (vertexC->x - vertexA->x) << 18;
@@ -16292,20 +16330,20 @@ void renderTriangleNBTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* verte
     int dxBC = (vertexC->x - vertexB->x) << 18;
     int dyBC = (vertexC->y - vertexB->y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA->y < 0) ? 0 : ((vertexA->y > resY) ? resY : vertexA->y);
     int endB = (vertexB->y < 0) ? 0 : ((vertexB->y > resY) ? resY : vertexB->y);
     int endC = (vertexC->y < 0) ? 0 : ((vertexC->y > resY) ? resY : vertexC->y);
 
     int last = vertexB->y - vertexA->y;
 
-    //endA = (vertexA->y % 2 == 1) ? endA+1 : endA;
-    //endB = (vertexB->y % 2 == 1) ? endB+1 : endB;
-    //endC = (vertexC->y % 2 == 1) ? endC+1 : endC;
+   //endA = (vertexA->y % 2 == 1) ? endA+1 : endA;
+   //endB = (vertexB->y % 2 == 1) ? endB+1 : endB;
+   //endC = (vertexC->y % 2 == 1) ? endC+1 : endC;
 
     if(endA != endB)
     {
@@ -16314,9 +16352,9 @@ void renderTriangleNBTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* verte
             int yInTraingle1 = y - vertexA->y;
             int x0 = ((lineAB * yInTraingle1) >> 9) + vertexA->x;
             int x1 = ((lineAC * yInTraingle1) >> 9) + vertexA->x;
-            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? resX : x0); //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
-            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? resX : x1); //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
-            
+            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? resX : x0);//is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
+            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? resX : x1);//is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
+
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = y * resX;
@@ -16324,13 +16362,13 @@ void renderTriangleNBTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* verte
             for (int x = x0; x < x1; x++)
             {
                 int depthIndex = yIndex + x;
-                if (depth < ZBuffer ? ZBuffer[depthIndex] : 0)
+                if (depth < ZBuffer[depthIndex])
                 {
-                    color_t startColor = *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + yOnScreen + x);
+                    color_t startColor = *(VRAMAddress + yOnScreen + x);
                     color_t endColor16 = combineColors(startColor, color, 50);
 
-                    *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + yOnScreen + x) = endColor16;
-                    //ZBuffer ? ZBuffer[depthIndex] : 0 = depth;
+                    *(VRAMAddress + yOnScreen + x) = endColor16;
+                   //ZBuffer[depthIndex] = depth;
                 }
             }
         }
@@ -16343,9 +16381,9 @@ void renderTriangleNBTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* verte
             int yInTraingle2 = y - vertexB->y + last;
             int x0 = ((lineBC * yInTraingle1) >> 9) + vertexB->x;
             int x1 = ((lineAC * yInTraingle2) >> 9) + vertexA->x;
-            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? resX : x0);  //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
-            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? resX : x1);  //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
-            
+            x0 = (x0 < 0) ? 0 : ((x0 > resX) ? resX : x0); //is faster then if(x0 > resX) x0 = resX;    else if(x0 < 0) x0 = 0;
+            x1 = (x1 < 0) ? 0 : ((x1 > resX) ? resX : x1); //is faster then if(x1 > resX) x1 = resX;    else if(x1 < 0) x1 = 0;
+
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = y * resX;
@@ -16353,13 +16391,13 @@ void renderTriangleNBTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* verte
             for (int x = x0; x < x1; x++)
             {
                 int depthIndex = yIndex + x;
-                if (depth < ZBuffer ? ZBuffer[depthIndex] : 0)
+                if (depth < ZBuffer[depthIndex])
                 {
-                    color_t startColor = *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + yOnScreen + x);
+                    color_t startColor = *(VRAMAddress + yOnScreen + x);
                     color_t endColor16 = combineColors(startColor, color, 50);
 
-                    *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + yOnScreen + x) = endColor16;
-                    //ZBuffer ? ZBuffer[depthIndex] : 0 = depth;
+                    *(VRAMAddress + yOnScreen + x) = endColor16;
+                   //ZBuffer[depthIndex] = depth;
                 }
             }
         }
@@ -16379,7 +16417,7 @@ void renderTriangleTexturedTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S*
         swap(&vertexB, &vertexC);
         swap(&texB, &texC);
     }
-    
+
     int dxAB = (vertexB->x - vertexA->x) << 18;
     int dyAB = (vertexB->y - vertexA->y) << 9;
     int dxAC = (vertexC->x - vertexA->x) << 18;
@@ -16387,11 +16425,11 @@ void renderTriangleTexturedTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S*
     int dxBC = (vertexC->x - vertexB->x) << 18;
     int dyBC = (vertexC->y - vertexB->y) << 9;
 
-    int lineAB = (dyAB != 0) ? (dxAB / dyAB) : 0;
-    int lineAC = (dyAC != 0) ? (dxAC / dyAC) : 0;
-    int lineBC = (dyBC != 0) ? (dxBC / dyBC) : 0;
+    int lineAB = (dyAB != 0) ? (dxAB/ dyAB) : 0;
+    int lineAC = (dyAC != 0) ? (dxAC/ dyAC) : 0;
+    int lineBC = (dyBC != 0) ? (dxBC/ dyBC) : 0;
 
-    // Calculate start and end points
+   // Calculate start and end points
     int endA = (vertexA->y < 0) ? 0 : ((vertexA->y > resY) ? resY : vertexA->y);
     int endB = (vertexB->y < 0) ? 0 : ((vertexB->y > resY) ? resY : vertexB->y);
     int endC = (vertexC->y < 0) ? 0 : ((vertexC->y > resY) ? resY : vertexC->y);
@@ -16418,16 +16456,16 @@ void renderTriangleTexturedTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S*
     int b0 = d - b1 - b2;
 
     Vector2I texCoord = {
-        (texA->x * b0 / 10 + texB->x * b1 / 10 + texC->x * b2 / 10) * 1000 / d *  (texWidth) * 512 / 1000,
-        (texA->y * b0 / 10 + texB->y * b1 / 10 + texC->y * b2 / 10) * 1000 / d * (texHeight) * 512 / 1000,
+        (texA->x * b0/ 10 + texB->x * b1/ 10 + texC->x * b2/ 10) * 1000/ d *  (texWidth) * 512/ 1000,
+        (texA->y * b0/ 10 + texB->y * b1/ 10 + texC->y * b2/ 10) * 1000/ d * (texHeight) * 512/ 1000,
     };
     Vector2I texCoord_x = {
-        (texA->x * b0_x / 10 + texB->x * b1_x / 10 + texC->x * b2_x / 10) * 1000 *  (texWidth) / d * 512 / 1000,
-        (texA->y * b0_x / 10 + texB->y * b1_x / 10 + texC->y * b2_x / 10) * 1000 * (texHeight) / d * 512 / 1000,
+        (texA->x * b0_x/ 10 + texB->x * b1_x/ 10 + texC->x * b2_x/ 10) * 1000 *  (texWidth)/ d * 512/ 1000,
+        (texA->y * b0_x/ 10 + texB->y * b1_x/ 10 + texC->y * b2_x/ 10) * 1000 * (texHeight)/ d * 512/ 1000,
     };
     Vector2I texCoord_y = {
-        (texA->x * b0_y / 10 + texB->x * b1_y / 10 + texC->x * b2_y / 10) * 1000 *  (texWidth) / d * 512 / 1000,
-        (texA->y * b0_y / 10 + texB->y * b1_y / 10 + texC->y * b2_y / 10) * 1000 * (texHeight) / d * 512 / 1000,
+        (texA->x * b0_y/ 10 + texB->x * b1_y/ 10 + texC->x * b2_y/ 10) * 1000 *  (texWidth)/ d * 512/ 1000,
+        (texA->y * b0_y/ 10 + texB->y * b1_y/ 10 + texC->y * b2_y/ 10) * 1000 * (texHeight)/ d * 512/ 1000,
     };
 
     if(endA != endB)
@@ -16439,7 +16477,7 @@ void renderTriangleTexturedTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S*
                 int yInTraingle1 = y - vertexA->y;
                 int x0 = ((lineAB * yInTraingle1) >> 9) + vertexA->x;
                 int x1 = ((lineAC * yInTraingle1) >> 9) + vertexA->x;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
                 Vector2I texCoord_i = {
@@ -16448,7 +16486,7 @@ void renderTriangleTexturedTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S*
                 };
 
                 int yIndex = y * resX;
-                unsigned short* yOnScreen = y * LCD_WIDTH_PX + ((unsigned short*)LCD_GetVRAMAddress());
+                unsigned short* yOnScreen = y * LCD_WIDTH_PX + VRAMAddress;
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < resX)
@@ -16463,7 +16501,7 @@ void renderTriangleTexturedTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S*
 
                             *(yOnScreen + x) = endColor16;
 
-                            //ZBuffer[yIndex + x] = depth;
+                           //ZBuffer[yIndex + x] = depth;
                         }
                     }
                     texCoord_i.x += texCoord_x.x;
@@ -16484,7 +16522,7 @@ void renderTriangleTexturedTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S*
                 int yInTraingle2 = y - vertexB->y + last;
                 int x0 = ((lineBC * yInTraingle1) >> 9) + vertexB->x;
                 int x1 = ((lineAC * yInTraingle2) >> 9) + vertexA->x;
-                
+
                 if (x0 > x1) swap(&x0, &x1);
 
                 Vector2I texCoord_i = {
@@ -16493,7 +16531,7 @@ void renderTriangleTexturedTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S*
                 };
 
                 int yIndex = y * resX;
-                unsigned short* yOnScreen = y * LCD_WIDTH_PX + ((unsigned short*)LCD_GetVRAMAddress());
+                unsigned short* yOnScreen = y * LCD_WIDTH_PX + VRAMAddress;
                 for (int x = x0; x < x1; x++)
                 {
                     if(x > 0 && x < resX)
@@ -16505,10 +16543,10 @@ void renderTriangleTexturedTrans(Vector2S* vertexA, Vector2S* vertexB, Vector2S*
 
                             color_t startColor = *(yOnScreen  + x);
                             color_t endColor16 = combineColors(startColor, combineColorsWithBrightness(textureAdress[(u >> 9) + (v >> 9) * 16], brightness), 50);
-                            
+
                             *(yOnScreen + x) = endColor16;
-                            
-                            //ZBuffer[yIndex + x] = depth;
+
+                           //ZBuffer[yIndex + x] = depth;
                         }
                     }
                     texCoord_i.x += texCoord_x.x;
@@ -16527,28 +16565,28 @@ void renderText(int x, int y, const char *text)
 {
     int x2 = x;
     int y2 = y;
-    ((void)0)(&x2, &y2, text, (1 << 6) | (1 << 1), 0x0000, 0);
+    PrintMiniMini(&x2, &y2, text, (1 << 6) | (1 << 1), 0x0000, 0);
 }
 void renderTextColord(int x, int y, const char *text, color_t color)
 {
     int x2 = x;
     int y2 = y;
-    ((void)0)(&x2, &y2, text, (1 << 6) | (1 << 1), color, 0);
+    PrintMiniMini(&x2, &y2, text, (1 << 6) | (1 << 1), color, 0);
 }
 void renderTextLargeColord(int x, int y, const char *text, color_t color, color_t backGroundColor)
 {
     int x2 = x;
     int y2 = y;
-    ((void)0)(&x2, &y2, text, 0x40, 0xFFFFFFFF, 0, 0, color, backGroundColor, 1, 0);
+    PrintMini(&x2, &y2, text, 0x40, 0xFFFFFFFF, 0, 0, color, backGroundColor, 1, 0);
 }
 void renderTextUpdate(int x, int y, int stop, const char *text)
 {
 	int x2 = x;
     int y2 = y;
-    ((void)0)(&x2, &y2, text, (1 << 6) | (1 << 1), 0x0000, 0);
+    PrintMiniMini(&x2, &y2, text, (1 << 6) | (1 << 1), 0x0000, 0);
 	LCD_Refresh();
 	if(stop != 0)
-	((void)0)(stop);
+	OS_InnerWait_ms(stop);
 }
 
 //particle rendering
@@ -16556,11 +16594,11 @@ void renderParticle(float size, int mode, color_t color, screenPoint screenPixel
 {
     int sizeOfLoopP1 = size;
 
-    int zChanged = screenPixel.z / fallof;
+    int zChanged = screenPixel.z/ fallof;
     if(zChanged == 0)
     zChanged = 1;
-    
-    int sizeOfLoopP2 = sizeOfLoopP1 * 1000000 / zChanged / 1000;
+
+    int sizeOfLoopP2 = sizeOfLoopP1 * 1000000/ zChanged/ 1000;
 
     for (int y = screenPixel.y-sizeOfLoopP2/2; y < screenPixel.y+sizeOfLoopP2/2; y += 2)
     {
@@ -16569,31 +16607,31 @@ void renderParticle(float size, int mode, color_t color, screenPoint screenPixel
             if(x > 0 && x < resX && y > 0 && y < resY)
             {
                 int distanceFromCenter;
-                //switch (parti.mode)
-                //{
-                //    case 0:
-                //    distanceFromCenter = calculateDistance(parti.position.x, parti.position.y, x, y);
-                //    break;
-                //    case 1:
-                //    distanceFromCenter = abs_int(parti.position.x-x)+abs_int(parti.position.y-y);
-                //    break;
-                //    case 2:
+               //switch (parti.mode)
+               //{
+               //    case 0:
+               //    distanceFromCenter = calculateDistance(parti.position.x, parti.position.y, x, y);
+               //    break;
+               //    case 1:
+               //    distanceFromCenter = abs_int(parti.position.x-x)+abs_int(parti.position.y-y);
+               //    break;
+               //    case 2:
                     distanceFromCenter = 1;
-                //    break;
-                //}
+               //    break;
+               //}
 
-                //if(distanceFromCenter < parti.size)
-                //{
-                //    if (screenPixel.z < ZBuffer[y*resX+x])
-                //    {
-                        *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + (y + 0) * LCD_WIDTH_PX + (x + 0)) = color;
-                        *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + (y + 1) * LCD_WIDTH_PX + (x + 0)) = color;
-                        *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + (y + 0) * LCD_WIDTH_PX + (x + 1)) = color;
-                        *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + (y + 1) * LCD_WIDTH_PX + (x + 1)) = color;
+               //if(distanceFromCenter < parti.size)
+               //{
+               //    if (screenPixel.z < ZBuffer[y*resX+x])
+               //    {
+                        *(VRAMAddress + (y + 0) * LCD_WIDTH_PX + (x + 0)) = color;
+                        *(VRAMAddress + (y + 1) * LCD_WIDTH_PX + (x + 0)) = color;
+                        *(VRAMAddress + (y + 0) * LCD_WIDTH_PX + (x + 1)) = color;
+                        *(VRAMAddress + (y + 1) * LCD_WIDTH_PX + (x + 1)) = color;
 
-                //        ZBuffer[y*resX+x] = screenPixel.z;
-                //    }
-                //}
+               //        ZBuffer[y*resX+x] = screenPixel.z;
+               //    }
+               //}
             }
         }
     }
@@ -16615,19 +16653,19 @@ screenPoint pointToScreenCorrdinates(int xIn, int yIn, int zIn)
     if(cosRotY == 0) cosRotY = 1;
     if(sinRotY == 0) sinRotY = 1;
 
-    //pre-calculating values
-    int cosXSinY = cosRotX * sinRotY / 1000;
-    int cosXcosY = cosRotX * cosRotY / 1000;
-    int sinXsinY = sinRotX * sinRotY / 1000;
-    int cosYSinX = cosRotY * sinRotX / 1000;
+   //pre-calculating values
+    int cosXSinY = cosRotX * sinRotY/ 1000;
+    int cosXcosY = cosRotX * cosRotY/ 1000;
+    int sinXsinY = sinRotX * sinRotY/ 1000;
+    int cosYSinX = cosRotY * sinRotX/ 1000;
 
     if(cosXSinY == 0) cosXSinY = 1;
     if(cosXcosY == 0) cosXcosY = 1;
     if(sinXsinY == 0) sinXsinY = 1;
     if(cosYSinX == 0) cosYSinX = 1;
 
-    int resX_ = (resX - 1) / 2;
-    int resY_ = (resY - 1) / 2;
+    int resX_ = (resX - 1)/ 2;
+    int resY_ = (resY - 1)/ 2;
 
     int PPosXI = PPosX * 1000;
     int PPosYI = PPosY * 1000;
@@ -16636,12 +16674,12 @@ screenPoint pointToScreenCorrdinates(int xIn, int yIn, int zIn)
     if(PPosXI == 0) PPosXI = 1;
     if(PPosYI == 0) PPosYI = 1;
     if(PPosZI == 0) PPosZI = 1;
-    
+
     int x3D = (xIn - PPosXI);
     int y3D = (yIn - PPosYI);
     int z3D = (PPosZI - zIn);
 
-    int z = (x3D * cosXSinY - y3D * sinRotX + z3D * cosXcosY) / 1000;
+    int z = (x3D * cosXSinY - y3D * sinRotX + z3D * cosXcosY)/ 1000;
 
     if(z > 10)
     {
@@ -16653,18 +16691,18 @@ screenPoint pointToScreenCorrdinates(int xIn, int yIn, int zIn)
 
         if(z >= 1000)
         {
-            xOnScreen = ((x / z + 1000) * resX_) / 1000;
-            yOnScreen = (((1000 - y / z) * 2) * resY_) / 1000 - 100;
+            xOnScreen = ((x/ z + 1000) * resX_)/ 1000;
+            yOnScreen = (((1000 - y/ z) * 2) * resY_)/ 1000 - 100;
         }
         if(z < 1000)
         {
-            int zNew = 10000 / z;
+            int zNew = 10000/ z;
 
-            x = x / 10000;
-            y = y / 10000;
+            x = x/ 10000;
+            y = y/ 10000;
 
-            xOnScreen = ((x * zNew + 1000) * resX_) / 1000;
-            yOnScreen = (((1000 - y * zNew) * 2) * resY_) / 1000 - 100;
+            xOnScreen = ((x * zNew + 1000) * resX_)/ 1000;
+            yOnScreen = (((1000 - y * zNew) * 2) * resY_)/ 1000 - 100;
         }
 
         output.x = xOnScreen;
@@ -16756,7 +16794,7 @@ void addRotateObjectNS(int indexGet, int indexSet, Vector3I center, float pitch,
     }
 }
 void setRotateObject(int indexGet, int indexSet, Vector3I center, float pitch, float yaw)
-{   
+{
     float yaw_y = yaw - allObj[indexGet].rotation.y;
     while(yaw_y < 0)
     yaw_y += 360;
@@ -16826,9 +16864,9 @@ Vector3I getCenter(int index)
         center.y += allObj[index].verticesIPC[i].y;
         center.z += allObj[index].verticesIPC[i].z;
     }
-    center.x /= allObj[index].sizeV;
-    center.y /= allObj[index].sizeV;
-    center.z /= allObj[index].sizeV;
+    center.x/= allObj[index].sizeV;
+    center.y/= allObj[index].sizeV;
+    center.z/= allObj[index].sizeV;
 
     return center;
 }
@@ -16847,15 +16885,15 @@ unsigned char maxChunkHight[totalChunkWidth*totalChunkWidth];
 
 const unsigned char hash[256] = { 208,34,231,213,32,248,233,56,161,78,24,140,71,48,140,254,245,255,247,247,40,
                         185,248,251,245,28,124,204,204,76,36,1,107,28,234,163,202,224,245,128,167,204,
-                        9,92,217,54,239,174,173,102,193,189,190,121,100,108,167,44,43,77,180,204,8,81,
+                        9,92,217,54,239,174,173,102,193,189,190,121,100,180,167,44,43,77,180,204,8,81,
                         70,223,11,38,24,254,210,210,177,32,81,195,243,125,8,169,112,32,97,53,195,13,
                         203,9,47,104,125,117,114,124,165,203,181,235,193,206,70,180,174,0,167,181,41,
                         164,30,116,127,198,245,146,87,224,149,206,57,4,160,210,65,210,129,240,178,105,
-                        228,108,245,148,140,40,35,195,38,58,65,207,179,253,65,85,208,76,62,3,237,55,89,
+                        228,180,245,148,140,40,35,195,38,58,65,207,215,253,65,85,208,76,62,3,237,55,89,
                         232,50,217,64,244,157,199,121,252,90,17,212,203,149,152,140,187,234,177,73,174,
                         193,100,160,143,97,53,145,135,19,103,13,90,135,151,199,91,239,247,33,39,145,
                         101,120,99,3,186,86,99,41,237,203,111,79,220,135,158,42,30,154,120,67,87,167,
-                        135,176,183,159,253,115,184,21,233,58,129,233,142,39,128,211,118,137,139,255,
+                        135,176,183,191,253,115,184,21,233,58,129,233,142,39,128,211,118,137,139,255,
                         114,20,218,113,154,27,127,246,250,1,8,198,250,209,92,222,173,21,88,102,219};
 
 int noise2(int x, int y)
@@ -16898,7 +16936,7 @@ float perlin2d(float x, float y, float freq, int depth)
     {
         div += 256 * amp;
         fin += noise2d(xa, ya) * amp;
-        amp /= 2;
+        amp/= 2;
         xa *= 2;
         ya *= 2;
     }
@@ -16913,11 +16951,11 @@ int noise2I(int x, int y)
 }
 int lin_interI(int x, int y, int s)
 {
-    return x + s * (y-x) / 1000;
+    return x + s * (y-x)/ 1000;
 }
 int smooth_interI(int x, int y, int s)
 {
-    return lin_interI(x, y, s * s * (3000-2000*s/1000) / 1000000);
+    return lin_interI(x, y, s * s * (3000-2000*s/1000)/ 1000000);
 }
 int noise2dI(int x, int y)
 {
@@ -16965,21 +17003,21 @@ int GetPerlin(int x, int z)
     int Y2 = perlin2d(x * 2, z * 2, 0.014, 1) * 70;
     int Y3 = perlin2d(x * 2, z * 2, 0.006, 1) * 48;
 
-    return ((Y1 + Y2 + Y3) / 3) + terrainHeight;
+    return ((Y1 + Y2 + Y3)/ 3) + terrainHeight;
 }
-int Perlin3D(int x, int y, int z) 
+int Perlin3D(int x, int y, int z)
 {
-    int ab = noise2dI(x, y) / 256;
-    int bc = noise2dI(y, z) / 256;
-    int ac = noise2dI(x, z) / 256;
+    int ab = noise2dI(x, y)/ 256;
+    int bc = noise2dI(y, z)/ 256;
+    int ac = noise2dI(x, z)/ 256;
 
-    int ba = noise2dI(y, x) / 256;
-    int cb = noise2dI(z, y) / 256;
-    int ca = noise2dI(z, x) / 256;
+    int ba = noise2dI(y, x)/ 256;
+    int cb = noise2dI(z, y)/ 256;
+    int ca = noise2dI(z, x)/ 256;
 
     int abc = ab + bc + ac + ba + cb + ca;
 
-    return abc / 6;
+    return abc/ 6;
 }
 
 // Function to generate a random number based on current seed
@@ -16992,12 +17030,12 @@ int Perlin3D(int x, int y, int z)
 unsigned int generate_random(unsigned int seed, int range) {
     unsigned int a = 1103515245;
     unsigned int c = 12345;
-    unsigned int m = 1U << 31;  // Modulus, typically a large prime or power of 2
+    unsigned int m = 1U << 31; // Modulus, typically a large prime or power of 2
 
-    // Calculate the next pseudo-random number using LCG
+   // Calculate the next pseudo-random number using LCG
     seed = (a * seed + c) % m;
 
-    // Map the generated number to the specified range
+   // Map the generated number to the specified range
     return seed % (unsigned int)range;
 }
 unsigned int generate_random1D(unsigned int seed, int range, int x) {
@@ -17030,7 +17068,7 @@ unsigned int rotl(unsigned int value, int shift) {
     return (value << shift) | (value >> (32 - shift));
 }
 unsigned int trulyRandom2D(unsigned int seed, int range, int x, int y) {
-    // XOR-shift scrambling
+   // XOR-shift scrambling
 	seed = seed ^ (x * 2654435761u) ^ (y * 805306457u);
     x = x ^ 362437;
     y = y ^ 521288629;
@@ -17041,13 +17079,13 @@ unsigned int trulyRandom2D(unsigned int seed, int range, int x, int y) {
 
     x ^= rotl(seed, 7);
     y ^= rotl(x, 11);
-    
+
     unsigned int random_number = (x * 1664525u + y * 1013904223u) ^ seed;
-    
+
     return random_number % range;
 }
 
-void Quick_SortInt(int *arr, int left, int right) 
+void Quick_SortInt(int *arr, int left, int right)
 {
     if (left < right)
     {
@@ -17064,7 +17102,7 @@ int PartitionInt(int *arr, int left, int right)
 {
     int pivot = arr[left];
 
-    while (true) 
+    while (true)
     {
         while (arr[left] < pivot)
         left++;
@@ -17074,14 +17112,14 @@ int PartitionInt(int *arr, int left, int right)
 
         if (left < right)
         {
-            if (arr[left] == arr[right]) 
+            if (arr[left] == arr[right])
 			return right;
 
             int temp = arr[left];
             arr[left] = arr[right];
             arr[right] = temp;
         }
-        else 
+        else
         return right;
     }
 }
@@ -17092,16 +17130,16 @@ void deltaTimeCalculate()
     int deltaTimeOld = deltaTime;
 
     const int time2 = time1;
-    time1 = 0;
+    time1 = RTC_GetTicks();
     deltaTime = time1 - time2;
-    deltaTime /= 128;
+    deltaTime/= 128;
 
     if(deltaTime > 1)
     deltaTime = deltaTimeOld;
 
     deltaTimeNoSlow = deltaTime;
     if(slow == true)
-    deltaTime /= 10;
+    deltaTime/= 10;
 }
 
 int renderDistance = 0;
@@ -17133,26 +17171,26 @@ void replaceOldWater()
 //file operations
 void makeStartFolder()
 {
-    char dirLocation1[50] = "\\\\fls0\\fxcraft";
+    char dirLocation1[50] = "fls0/fxcraft";
 
-    unsigned short pDir1[sizeof(dirLocation1)*2]; // Make buffer
-    Bfile_StrToName_ncpy(pDir1, (unsigned char*)dirLocation1, sizeof(dirLocation1)); 
-    Bfile_CreateEntry_OS(pDir1, 5, NULL);
+    unsigned short pDir1[sizeof(dirLocation1)*2];// Make buffer
+    Bfile_StrToName_ncpy(pDir1, (unsigned char*)dirLocation1, sizeof(dirLocation1));
+    File_Create(pDir1, 5, NULL);
 }
 void saveWorldData(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\worldData", world);
+    sprintf(fileLocation, "fls0/fxcraft/world%d/worldData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
     int size = 16;
     char worlData[size];
 
     for (int j = 0; j < 4; j++)
     worlData[j] = (SEED >> (j*8)) & 0xFF;
-    
+
     worlData[4] = advancedTerrain;
     worlData[5] = survival;
     worlData[6] = caves;
@@ -17166,38 +17204,38 @@ void saveWorldData(int world)
     worlData[14] = dayTimeChange;
     worlData[15] = skyBrightness;
 
-    Bfile_CreateEntry_OS(pFile, 1, &size);
+    File_Create(pFile, 1, &size);
 
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL);
-    Bfile_WriteFile_OS(hFile, worlData, size); 
-    Bfile_CloseFile_OS(hFile);
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    File_Write(hFile, worlData, size);
+    File_Close(hFile);
 
     if(hFile < 0)
     {
         clearAll(0xf800);
         char buffer1[40] = "gameData failure.";
         renderTextColord(5, 5, buffer1, 0xffff);
-        ((void)0)(200);
+        OS_InnerWait_ms(200);
     }
 }
 void loadWorldData(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\worldData", world);
+    sprintf(fileLocation, "fls0/fxcraft/world%d/worldData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
     int size = 16;
     char worlData[16] = {0};
-    
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
-        int length = Bfile_GetFileSize_OS(hFile);
+        int length = File_GetSize(hFile);
 
-        Bfile_ReadFile_OS(hFile, worlData, length, 0); 
-        Bfile_CloseFile_OS(hFile);
+        File_Read(hFile, worlData, length, 0);
+        File_Close(hFile);
 
         SEED = 0;
         for (int j = 0; j < 4; j++)
@@ -17209,7 +17247,7 @@ void loadWorldData(int world)
         dayNightCycle = worlData[7];
         isinfinite = worlData[8];
         mobs = worlData[9];
-        
+
         dayTime = 0;
         for (int j = 0; j < 4; j++)
         dayTime |= ((worlData[10+j] & 0xff) << j*8);
@@ -17223,12 +17261,12 @@ void loadWorldData(int world)
 void saveChestData(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chestData", world);
+    sprintf(fileLocation, "fls0/fxcraft/world%d/chestData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int size = 175*chestAmount; //used=1, position=12, type=54, amount=54
+    int size = 175*chestAmount;//used=1, position=12, type=54, amount=54
     char chestData_[size];
 
     for (int chestI = 0; chestI < chestAmount; chestI++)
@@ -17261,37 +17299,37 @@ void saveChestData(int world)
         }
     }
 
-    Bfile_CreateEntry_OS(pFile, 1, &size);
+    File_Create(pFile, 1, &size);
 
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL);
-    Bfile_WriteFile_OS(hFile, chestData_, size); 
-    Bfile_CloseFile_OS(hFile);
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    File_Write(hFile, chestData_, size);
+    File_Close(hFile);
 
     if(hFile < 0)
     {
         clearAll(0xf800);
         char buffer1[40] = "chestData failure.";
         renderTextColord(5, 5, buffer1, 0xffff);
-        ((void)0)(200);
+        OS_InnerWait_ms(200);
     }
 }
 void loadChestData(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chestData", world);
+    sprintf(fileLocation, "fls0/fxcraft/world%d/chestData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
-        int length = Bfile_GetFileSize_OS(hFile);
+        int length = File_GetSize(hFile);
 
         char chestData_[length];
 
-        Bfile_ReadFile_OS(hFile, chestData_, length, 0); 
-        Bfile_CloseFile_OS(hFile);
+        File_Read(hFile, chestData_, length, 0);
+        File_Close(hFile);
 
         for (int chestI = 0; chestI < chestAmount; chestI++)
         {
@@ -17340,20 +17378,20 @@ void loadChestData(int world)
 void loadChestDataV4(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chestData", world);
+    sprintf(fileLocation, "fls0/fxcraft/world%d/chestData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
-        int length = Bfile_GetFileSize_OS(hFile);
+        int length = File_GetSize(hFile);
 
         char chestData_[length];
 
-        Bfile_ReadFile_OS(hFile, chestData_, length, 0); 
-        Bfile_CloseFile_OS(hFile);
+        File_Read(hFile, chestData_, length, 0);
+        File_Close(hFile);
 
         for (int chestI = 0; chestI < chestAmount; chestI++)
         {
@@ -17394,10 +17432,10 @@ void loadChestDataV4(int world)
 }
 void savegameData()
 {
-    char fileLocation[50] = "\\\\fls0\\fxcraft\\gameData";
+    char fileLocation[50] = "fls0/fxcraft/gameData";
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
     int size = 25;
     char playerData[size];
@@ -17407,41 +17445,41 @@ void savegameData()
         for (int j = 0; j < 4; j++)
         playerData[i*4+j] = (worldVersion[i] >> (j*8)) & 0xFF;
     }
-    
+
     for (int i = 0; i < 5; i++)
     playerData[20+i] = worldExists[i];
 
-    Bfile_CreateEntry_OS(pFile, 1, &size);
+    File_Create(pFile, 1, &size);
 
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL);
-    Bfile_WriteFile_OS(hFile, playerData, size); 
-    Bfile_CloseFile_OS(hFile);
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    File_Write(hFile, playerData, size);
+    File_Close(hFile);
 
     if(hFile < 0)
     {
         clearAll(0xf800);
         char buffer1[40] = "gameData failure.";
         renderTextColord(5, 5, buffer1, 0xffff);
-        ((void)0)(200);
+        OS_InnerWait_ms(200);
     }
 }
 void loadgameData()
 {
-    char fileLocation[50] = "\\\\fls0\\fxcraft\\gameData";
+    char fileLocation[50] = "fls0/fxcraft/gameData";
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
     int size = 25;
     char playerData[25] = {0};
-    
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
-        int length = Bfile_GetFileSize_OS(hFile);
+        int length = File_GetSize(hFile);
 
-        Bfile_ReadFile_OS(hFile, playerData, length, 0); 
-        Bfile_CloseFile_OS(hFile);
+        File_Read(hFile, playerData, length, 0);
+        File_Close(hFile);
 
         for (int i = 0; i < 5; i++)
         {
@@ -17457,10 +17495,10 @@ void loadgameData()
 }
 void saveSettings()
 {
-    char fileLocation[50] = "\\\\fls0\\fxcraft\\settings";
+    char fileLocation[50] = "fls0/fxcraft/settings";
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
     int size = 64;
     char settingData[size];
@@ -17481,54 +17519,54 @@ void saveSettings()
 	settingData[10] = (char)beautifulSky;
     settingData[11] = (char)currentTexturePackIndex;
 
-    Bfile_CreateEntry_OS(pFile, 1, &size);
+    File_Create(pFile, 1, &size);
 
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL);
-    Bfile_WriteFile_OS(hFile, settingData, size); 
-    Bfile_CloseFile_OS(hFile);
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    File_Write(hFile, settingData, size);
+    File_Close(hFile);
 
     if(hFile < 0)
     {
         clearAll(0xf800);
         char buffer1[40] = "settings failure.";
         renderTextColord(5, 5, buffer1, 0xffff);
-        ((void)0)(200);
+        OS_InnerWait_ms(200);
     }
 }
 void loadSettings()
 {
-    char fileLocation[50] = "\\\\fls0\\fxcraft\\settings";
+    char fileLocation[50] = "fls0/fxcraft/settings";
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
     char settingData[64] = {0};
-    
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
-        int length = Bfile_GetFileSize_OS(hFile);
+        int length = File_GetSize(hFile);
 
-		if(length == 10) //if old settings update to new
+		if(length == 10)//if old settings update to new
 		{
-			Bfile_CloseFile_OS(hFile);
-			
+			File_Close(hFile);
+
 			loadSettingsO();
 			Bfile_DeleteEntry(pFile);
 			saveSettings();
 		}
 		else
 		{
-    		Bfile_ReadFile_OS(hFile, settingData, length, 0); 
-    		Bfile_CloseFile_OS(hFile);
-			
+		File_Read(hFile, settingData, length, 0);
+		File_Close(hFile);
+
 			renderDistance = 		    settingData[0];
 			compressVertices = 		    settingData[1];
 			renderUnderwater = 		    settingData[2];
 			pixelSize = 			    settingData[3];
 			renderTextured = 		    settingData[4];
 			lighting = 				    settingData[5];
-            //6=free
+           //6=free
 			stopChunkLoading = 		    settingData[7];
 			renderingMode = 		    settingData[8];
 			redstoneRenderDistance =    settingData[9];
@@ -17541,22 +17579,22 @@ void loadSettings()
 }
 void loadSettingsO()
 {
-    char fileLocation[50] = "\\\\fls0\\fxcraft\\settings";
+    char fileLocation[50] = "fls0/fxcraft/settings";
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
     int size = 10;
     char settingData[10] = {0};
-    
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
-        int length = Bfile_GetFileSize_OS(hFile);
+        int length = File_GetSize(hFile);
 
-        Bfile_ReadFile_OS(hFile, settingData, length, 0); 
-        Bfile_CloseFile_OS(hFile);
-		
+        File_Read(hFile, settingData, length, 0);
+        File_Close(hFile);
+
 		renderDistance = 		 settingData[0];
 		compressVertices = 		 settingData[1];
 		renderUnderwater = 		 settingData[2];
@@ -17574,20 +17612,20 @@ void loadSettingsO()
 void saveChunk(int index, int world, bool exists)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chunk%d", world, index);
+    sprintf(fileLocation, "fls0/fxcraft/world%d/chunk%d", world, index);
 
-    //getting entry for chunkFile
-    unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+   //getting entry for chunkFile
+    unsigned short pFile[sizeof(fileLocation)*2];// Make buffer
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    //make file
+   //make file
     if(exists == false)
-    Bfile_CreateEntry_OS(pFile, 1, sizeof(blocks[index]));
+    File_Create(pFile, 1, sizeof(blocks[index]));
 
-    //writing data to file 
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
-    Bfile_WriteFile_OS(hFile, blocks[index], sizeof(blocks[index])); 
-    Bfile_CloseFile_OS(hFile);
+   //writing data to file
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    File_Write(hFile, blocks[index], sizeof(blocks[index]));
+    File_Close(hFile);
 
     if(hFile < 0)
     {
@@ -17597,7 +17635,7 @@ void saveChunk(int index, int world, bool exists)
         sprintf(buffer2, "%d", index);
         strcat(buffer1, buffer2);
         renderTextColord(5, 5, buffer1, 0xffff);
-        ((void)0)(200);
+        OS_InnerWait_ms(200);
     }
 }
 void loadChunk(int index, int world)
@@ -17605,41 +17643,41 @@ void loadChunk(int index, int world)
     char worldString[5];
     sprintf(worldString, "%d", world);
 
-    char fileLocation[50] = "\\\\fls0\\fxcraft\\world";
-    char dirLocation[50] = "\\\\fls0\\fxcraft\\world";
+    char fileLocation[50] = "fls0/fxcraft/world";
+    char dirLocation[50] = "fls0/fxcraft/world";
 
     strcat(dirLocation, worldString);
     strcat(fileLocation, worldString);
 
-    strcat(fileLocation, "\\chunk");
+    strcat(fileLocation, "/chunk");
 
     char numberBuffer[7];
     sprintf(numberBuffer, "%d", index);
     strcat(fileLocation, numberBuffer);
 
-    unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
-    
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
-    int length = Bfile_GetFileSize_OS(hFile);
+    unsigned short pFile[sizeof(fileLocation)*2];// Make buffer
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    Bfile_ReadFile_OS(hFile, blocks[index], length, 0); 
-    Bfile_CloseFile_OS(hFile);
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int length = File_GetSize(hFile);
 
-    //for (int x = 0; x < width; x++)
-    //{
-    //    for (int z = 0; z < width; z++)
-    //    {
-    //        for (int y = 0; y < height; y++)
-    //        {
-    //            if(y == 0)
-    //            blocks[index][x+z*width+y*width*width] = 9;
-    //            else if(y < 8)
-    //            blocks[index][x+z*width+y*width*width] = 3;
-    //        }
-    //    }
-    //}
-    
+    File_Read(hFile, blocks[index], length, 0);
+    File_Close(hFile);
+
+   //for (int x = 0; x < width; x++)
+   //{
+   //    for (int z = 0; z < width; z++)
+   //    {
+   //        for (int y = 0; y < height; y++)
+   //        {
+   //            if(y == 0)
+   //            blocks[index][x+z*width+y*width*width] = 9;
+   //            else if(y < 8)
+   //            blocks[index][x+z*width+y*width*width] = 3;
+   //        }
+   //    }
+   //}
+
 
     if(hFile < 0)
     {
@@ -17649,28 +17687,28 @@ void loadChunk(int index, int world)
         sprintf(buffer2, "%d", index);
         strcat(buffer1, buffer2);
         renderTextColord(5, 5, buffer1, 0xffff);
-        ((void)0)(200);
+        OS_InnerWait_ms(200);
     }
 }
 void saveChunkExtraData(int index, int world, bool exists)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chunkED%d", world, index);
+    sprintf(fileLocation, "fls0/fxcraft/world%d/chunkED%d", world, index);
 
-    //getting entry for chunkFile
-    unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+   //getting entry for chunkFile
+    unsigned short pFile[sizeof(fileLocation)*2];// Make buffer
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
     int sizeOfFile = width*width*height;
 
-    //make file
+   //make file
     if(exists == false)
-    Bfile_CreateEntry_OS(pFile, 1, &sizeOfFile);
+    File_Create(pFile, 1, &sizeOfFile);
 
-    //writing data to file 
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
-    Bfile_WriteFile_OS(hFile, &blockData[index*width*width*height], sizeOfFile); 
-    Bfile_CloseFile_OS(hFile);
+   //writing data to file
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    File_Write(hFile, &blockData[index*width*width*height], sizeOfFile);
+    File_Close(hFile);
 
     if(hFile < 0)
     {
@@ -17680,7 +17718,7 @@ void saveChunkExtraData(int index, int world, bool exists)
         sprintf(buffer2, "%d", index);
         strcat(buffer1, buffer2);
         renderTextColord(5, 5, buffer1, 0xffff);
-        ((void)0)(200);
+        OS_InnerWait_ms(200);
     }
 }
 void loadChunkExtraData(int index, int world)
@@ -17688,28 +17726,28 @@ void loadChunkExtraData(int index, int world)
     char worldString[5];
     sprintf(worldString, "%d", world);
 
-    char fileLocation[50] = "\\\\fls0\\fxcraft\\world";
-    char dirLocation[50] = "\\\\fls0\\fxcraft\\world";
+    char fileLocation[50] = "fls0/fxcraft/world";
+    char dirLocation[50] = "fls0/fxcraft/world";
 
     strcat(dirLocation, worldString);
     strcat(fileLocation, worldString);
 
-    strcat(fileLocation, "\\chunkED");
+    strcat(fileLocation, "/chunkED");
 
     char numberBuffer[7];
     sprintf(numberBuffer, "%d", index);
     strcat(fileLocation, numberBuffer);
 
-    unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
-    
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
-    int length = Bfile_GetFileSize_OS(hFile);
+    unsigned short pFile[sizeof(fileLocation)*2];// Make buffer
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    //unsigned char buffer[length];
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int length = File_GetSize(hFile);
 
-    Bfile_ReadFile_OS(hFile, &blockData[index*width*width*height], length, 0); 
-    Bfile_CloseFile_OS(hFile);
+   //unsigned char buffer[length];
+
+    File_Read(hFile, &blockData[index*width*width*height], length, 0);
+    File_Close(hFile);
 
     if(hFile < 0)
     {
@@ -17719,17 +17757,17 @@ void loadChunkExtraData(int index, int world)
         sprintf(buffer2, "%d", index);
         strcat(buffer1, buffer2);
         renderTextColord(5, 5, buffer1, 0xffff);
-        ((void)0)(200);
+        OS_InnerWait_ms(200);
     }
 }
 void saveCompressedChunk(int index, int world, bool exists)
 {
 	char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chunk%d", world, index);
+    sprintf(fileLocation, "fls0/fxcraft/world%d/chunk%d", world, index);
 
-    //getting entry for chunkFile
-    unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+   //getting entry for chunkFile
+    unsigned short pFile[sizeof(fileLocation)*2];// Make buffer
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
     int sizeOfFile = width*width*height*2;
 	char data[sizeOfFile];
@@ -17739,27 +17777,27 @@ void saveCompressedChunk(int index, int world, bool exists)
 	char compressedData[sizeOfFile];
 	int compressedSize = lz77_compress(data, sizeOfFile, compressedData, 8);
 
-    //make file
+   //make file
     if(exists == false)
-    Bfile_CreateEntry_OS(pFile, 1, &compressedSize);
+    File_Create(pFile, 1, &compressedSize);
 
-    //writing data to file 
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+   //writing data to file
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
 
     if(exists == true)
     {
-        int length = Bfile_GetFileSize_OS(hFile);
+        int length = File_GetSize(hFile);
         if(length != compressedSize)
         {
-            Bfile_CloseFile_OS(hFile);
+            File_Close(hFile);
             Bfile_DeleteEntry(pFile);
-            Bfile_CreateEntry_OS(pFile, 1, &compressedSize);
-            hFile = Bfile_OpenFile_OS(pFile, 3, NULL);
+            File_Create(pFile, 1, &compressedSize);
+            hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
         }
     }
 
-    Bfile_WriteFile_OS(hFile, compressedData, compressedSize);
-    Bfile_CloseFile_OS(hFile);
+    File_Write(hFile, compressedData, compressedSize);
+    File_Close(hFile);
 
     if(hFile < 0)
     {
@@ -17769,24 +17807,24 @@ void saveCompressedChunk(int index, int world, bool exists)
         sprintf(buffer2, "%d", index);
         strcat(buffer1, buffer2);
         renderTextColord(5, 5, buffer1, 0xffff);
-        ((void)0)(200);
+        OS_InnerWait_ms(200);
     }
 }
 void loadCompressedChunk(int index, int world)
 {
 	char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chunk%d", world, index);
+    sprintf(fileLocation, "fls0/fxcraft/world%d/chunk%d", world, index);
 
-    unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
-    
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
-    int length = Bfile_GetFileSize_OS(hFile);
+    unsigned short pFile[sizeof(fileLocation)*2];// Make buffer
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
+
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int length = File_GetSize(hFile);
 
 	char data[length];
 
-    Bfile_ReadFile_OS(hFile, data, length, 0); 
-    Bfile_CloseFile_OS(hFile);
+    File_Read(hFile, data, length, 0);
+    File_Close(hFile);
 
 	char decompressedData[width*width*height*3];
 	int decompressedSize = lz77_decompress(data, decompressedData);
@@ -17808,12 +17846,12 @@ void loadCompressedChunk(int index, int world)
 void saveChestDataCompressed(int world, int exists)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chestData", world);
+    sprintf(fileLocation, "fls0/fxcraft/world%d/chestData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int size = 121*chestAmount; //used=1, position=12, type=54, amount=54
+    int size = 121*chestAmount;//used=1, position=12, type=54, amount=54
     char chestData_[size];
 
     for (int chestI = 0; chestI < chestAmount; chestI++)
@@ -17845,50 +17883,50 @@ void saveChestDataCompressed(int world, int exists)
     int compressedSize = lz77_compress(chestData_, size, compressedData, 8);
 
     if(exists == false)
-    Bfile_CreateEntry_OS(pFile, 1, &compressedSize);
+    File_Create(pFile, 1, &compressedSize);
 
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL);
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
 
     if(exists == true)
     {
-        int length = Bfile_GetFileSize_OS(hFile);
+        int length = File_GetSize(hFile);
         if(length != compressedSize)
         {
-            Bfile_CloseFile_OS(hFile);
+            File_Close(hFile);
             Bfile_DeleteEntry(pFile);
-            Bfile_CreateEntry_OS(pFile, 1, &compressedSize);
-            hFile = Bfile_OpenFile_OS(pFile, 3, NULL);
+            File_Create(pFile, 1, &compressedSize);
+            hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
         }
     }
 
-    Bfile_WriteFile_OS(hFile, compressedData, compressedSize); 
-    Bfile_CloseFile_OS(hFile);
+    File_Write(hFile, compressedData, compressedSize);
+    File_Close(hFile);
 
     if(hFile < 0)
     {
         clearAll(0xf800);
         char buffer1[40] = "chestData failure.";
         renderTextColord(5, 5, buffer1, 0xffff);
-        ((void)0)(200);
+        OS_InnerWait_ms(200);
     }
 }
 void loadChestDataCompressed(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chestData", world);
+    sprintf(fileLocation, "fls0/fxcraft/world%d/chestData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
-        int length = Bfile_GetFileSize_OS(hFile);
+        int length = File_GetSize(hFile);
 
         char chestData_[length];
 
-        Bfile_ReadFile_OS(hFile, chestData_, length, 0); 
-        Bfile_CloseFile_OS(hFile);
+        File_Read(hFile, chestData_, length, 0);
+        File_Close(hFile);
 
         char decompressedData[121*chestAmount];
         int decompressedSize = lz77_decompress(chestData_, decompressedData);
@@ -17933,12 +17971,12 @@ void loadChestDataCompressed(int world)
 void saveEntityData(int world, int exists)
 {
 	char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\entityData", world);
+    sprintf(fileLocation, "fls0/fxcraft/world%d/entityData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int size = entityLength*16; //12(pos)+1(active)+1(type)+1(state)+1(hasfur)
+    int size = entityLength*16;//12(pos)+1(active)+1(type)+1(state)+1(hasfur)
     char entityData_[size];
 
 	for (int i = 0; i < entityLength; i++)
@@ -17961,7 +17999,7 @@ void saveEntityData(int world, int exists)
 
             for (int j = 0; j < 4; j++)
             entityData_[currentIndex+j+5] = (posY >> (j*8)) & 0xFF;
-            
+
             for (int j = 0; j < 4; j++)
             entityData_[currentIndex+j+9] = (posZ >> (j*8)) & 0xFF;
 
@@ -17976,38 +18014,38 @@ void saveEntityData(int world, int exists)
 	}
 
     if(exists == false)
-    Bfile_CreateEntry_OS(pFile, 1, &size);
+    File_Create(pFile, 1, &size);
 
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL);
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
 
-    Bfile_WriteFile_OS(hFile, entityData_, size); 
-    Bfile_CloseFile_OS(hFile);
+    File_Write(hFile, entityData_, size);
+    File_Close(hFile);
 
     if(hFile < 0)
     {
         clearAll(0xf800);
         char buffer1[40] = "chestData failure.";
         renderTextColord(5, 5, buffer1, 0xffff);
-        ((void)0)(200);
+        OS_InnerWait_ms(200);
     }
 }
 void loadEntityData(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\entityData", world);
+    sprintf(fileLocation, "fls0/fxcraft/world%d/entityData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
-        int length = Bfile_GetFileSize_OS(hFile);
+        int length = File_GetSize(hFile);
 
         char entityData_[length];
 
-        Bfile_ReadFile_OS(hFile, entityData_, length, 0); 
-        Bfile_CloseFile_OS(hFile);
+        File_Read(hFile, entityData_, length, 0);
+        File_Close(hFile);
 
 		for (int i = 0; i < entityLength; i++)
 		{
@@ -18045,11 +18083,11 @@ void deleteOldWorld(int world)
 	for (int i = 0; i < totalChunkWidth*totalChunkWidth; i++)
 	{
 		char fileLocation[50];
-   		sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chunk%d", world, i);
+		sprintf(fileLocation, "fls0/fxcraft/world%d/chunk%d", world, i);
 
-   		//getting entry for chunkFile
-   		unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
-   		Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+		//getting entry for chunkFile
+		unsigned short pFile[sizeof(fileLocation)*2];// Make buffer
+		Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 		Bfile_DeleteEntry(pFile);
 
 		loadingScreen(i + 1, 129, "converting...", 13);
@@ -18058,37 +18096,37 @@ void deleteOldWorld(int world)
 	for (int i = 0; i < totalChunkWidth*totalChunkWidth; i++)
 	{
 		char fileLocation[50];
-   		sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chunkED%d", world, i);
+		sprintf(fileLocation, "fls0/fxcraft/world%d/chunkED%d", world, i);
 
-   		//getting entry for chunkFile"\\\\fls0\\fxcraft\\world%d\\chunkED%d", world, i
-   		unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
-   		Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+		//getting entry for chunkFile"fls0/fxcraft/world%d/chunkED%d", world, i
+		unsigned short pFile[sizeof(fileLocation)*2];// Make buffer
+		Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 		Bfile_DeleteEntry(pFile);
 
 		loadingScreen(i + 65, 129, "converting...", 13);
 	}
 
-    //for (int i = 0; i < 1; i++)
-    //{
-    //    char fileLocation[50];
-   	//	sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chestData", world);
+   //for (int i = 0; i < 1; i++)
+   //{
+   //    char fileLocation[50];
+	//	sprintf(fileLocation, "fls0/fxcraft/world%d/chestData", world);
 
-   	//	//getting entry for chunkFile
-   	//	unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
-   	//	Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+	//	//getting entry for chunkFile
+	//	unsigned short pFile[sizeof(fileLocation)*2];// Make buffer
+	//	Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 	//	Bfile_DeleteEntry(pFile);
 
 	//	loadingScreen(i + 128, 129, "converting...", 13);
-    //}
-	
+   //}
+
 }
 void savePlayerData(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\playerData", world);
+    sprintf(fileLocation, "fls0/fxcraft/world%d/playerData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
     int size = 12 + 8 + (18 + 18 + 18) + (54 + 54 + 54);
     char playerData[size];
@@ -18125,42 +18163,42 @@ void savePlayerData(int world)
 		for (int j = 4; j < 6; j++)
         playerData[74+i*6+j] = (inventoryBlockHp[i] >> (j-4)*8) & 0xFF;
     }
-    
 
-    Bfile_CreateEntry_OS(pFile, 1, &size);
 
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL);
-    Bfile_WriteFile_OS(hFile, playerData, size); 
-    Bfile_CloseFile_OS(hFile);
+    File_Create(pFile, 1, &size);
+
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    File_Write(hFile, playerData, size);
+    File_Close(hFile);
 
     if(hFile < 0)
     {
         clearAll(0xf800);
         char buffer1[40] = "playerData failure.";
         renderTextColord(5, 5, buffer1, 0xffff);
-        ((void)0)(200);
+        OS_InnerWait_ms(200);
     }
 }
 void loadPlayerData(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\playerData", world);
+    sprintf(fileLocation, "fls0/fxcraft/world%d/playerData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
     int size = 236;
     char playerData[236] = {0};
-    
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
-        int length = Bfile_GetFileSize_OS(hFile);
+        int length = File_GetSize(hFile);
 
-        //unsigned char buffer[length];
+       //unsigned char buffer[length];
 
-        Bfile_ReadFile_OS(hFile, playerData, length, 0); 
-        Bfile_CloseFile_OS(hFile);
+        File_Read(hFile, playerData, length, 0);
+        File_Close(hFile);
 
         int pPosI[5] = {0};
 
@@ -18170,15 +18208,15 @@ void loadPlayerData(int world)
             pPosI[i] |= ((playerData[i*4+j] & 0xff) << j*8);
         }
         if(pPosI[0] != 0)
-        PPosX = (float)pPosI[0] / 100;
+        PPosX = (float)pPosI[0]/ 100;
         if(pPosI[1] != 0)
-        PPosY = (float)pPosI[1] / 100;
+        PPosY = (float)pPosI[1]/ 100;
         if(pPosI[2] != 0)
-        PPosZ = (float)pPosI[2] / 100;
+        PPosZ = (float)pPosI[2]/ 100;
         if(pPosI[3] != 0)
-        rotationX = (float)pPosI[3] / 100;
+        rotationX = (float)pPosI[3]/ 100;
         if(pPosI[4] != 0)
-        rotationY = (float)pPosI[4] / 100;
+        rotationY = (float)pPosI[4]/ 100;
 
         for (int i = 0; i < 9; i++)
         {
@@ -18212,23 +18250,23 @@ void loadPlayerData(int world)
 void loadPlayerDataV4(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\playerData", world);
+    sprintf(fileLocation, "fls0/fxcraft/world%d/playerData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
     int size = 164;
     char playerData[164] = {0};
-    
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
-        int length = Bfile_GetFileSize_OS(hFile);
+        int length = File_GetSize(hFile);
 
-        //unsigned char buffer[length];
+       //unsigned char buffer[length];
 
-        Bfile_ReadFile_OS(hFile, playerData, length, 0); 
-        Bfile_CloseFile_OS(hFile);
+        File_Read(hFile, playerData, length, 0);
+        File_Close(hFile);
 
         int pPosI[5] = {0};
 
@@ -18238,15 +18276,15 @@ void loadPlayerDataV4(int world)
             pPosI[i] |= ((playerData[i*4+j] & 0xff) << j*8);
         }
         if(pPosI[0] != 0)
-        PPosX = (float)pPosI[0] / 100;
+        PPosX = (float)pPosI[0]/ 100;
         if(pPosI[1] != 0)
-        PPosY = (float)pPosI[1] / 100;
+        PPosY = (float)pPosI[1]/ 100;
         if(pPosI[2] != 0)
-        PPosZ = (float)pPosI[2] / 100;
+        PPosZ = (float)pPosI[2]/ 100;
         if(pPosI[3] != 0)
-        rotationX = (float)pPosI[3] / 100;
+        rotationX = (float)pPosI[3]/ 100;
         if(pPosI[4] != 0)
-        rotationY = (float)pPosI[4] / 100;
+        rotationY = (float)pPosI[4]/ 100;
 
         for (int i = 0; i < 9; i++)
         {
@@ -18273,30 +18311,30 @@ void loadPlayerDataV4(int world)
 }
 void saveAllChunk(int world, bool exists)
 {
-    ((void)0);
+    DmaWaitNext();
 
-    if(exists == false) //cleating dir
+    if(exists == false)//cleating dir
     {
-        char dirLocation1[50] = "\\\\fls0\\fxcraft";
+        char dirLocation1[50] = "fls0/fxcraft";
 
-        unsigned short pDir1[sizeof(dirLocation1)*2]; // Make buffer
-        Bfile_StrToName_ncpy(pDir1, (unsigned char*)dirLocation1, sizeof(dirLocation1)); 
-        Bfile_CreateEntry_OS(pDir1, 5, NULL);
+        unsigned short pDir1[sizeof(dirLocation1)*2];// Make buffer
+        Bfile_StrToName_ncpy(pDir1, (unsigned char*)dirLocation1, sizeof(dirLocation1));
+        File_Create(pDir1, 5, NULL);
 
         char worldString[5];
         sprintf(worldString, "%d", world);
 
-        char dirLocation2[50] = "\\\\fls0\\fxcraft\\world";
+        char dirLocation2[50] = "fls0/fxcraft/world";
         strcat(dirLocation2, worldString);
 
-        unsigned short pDir[sizeof(dirLocation2)*2]; // Make buffer
-        Bfile_StrToName_ncpy(pDir, (unsigned char*)dirLocation2, sizeof(dirLocation2)); 
-        Bfile_CreateEntry_OS(pDir, 5, NULL);
+        unsigned short pDir[sizeof(dirLocation2)*2];// Make buffer
+        Bfile_StrToName_ncpy(pDir, (unsigned char*)dirLocation2, sizeof(dirLocation2));
+        File_Create(pDir, 5, NULL);
     }
 
     savePlayerData(world);
     saveWorldData(world);
-    //saveChestDataCompressed(world, exists);
+   //saveChestDataCompressed(world, exists);
 	saveChestData(world);
 	saveEntityData(world, exists);
 
@@ -18304,23 +18342,23 @@ void saveAllChunk(int world, bool exists)
     {
 		if(worldVersion[world-1] < 4)
 		{
-        	saveChunk(i, world, exists);
-        	if(worldVersion[world-1] < 2)
-        	saveChunkExtraData(i, world, false);
-        	else
-        	saveChunkExtraData(i, world, exists);
+		saveChunk(i, world, exists);
+		if(worldVersion[world-1] < 2)
+		saveChunkExtraData(i, world, false);
+		else
+		saveChunkExtraData(i, world, exists);
 		}
 		else
 		saveCompressedChunk(i, world, exists);
 
         loadingScreen(i + 1, 64, "Saving...", 9);
     }
-	
+
 }
 void loadAllChunk(int world)
 {
-    ((void)0);
-    
+    DmaWaitNext();
+
     if (worldVersion[world-1] <= currentVersion)
     {
         loadWorldData(world);
@@ -18344,15 +18382,15 @@ void loadAllChunk(int world)
 
         for (int i = 0; i < totalChunkWidth*totalChunkWidth; i++)
         {
-        	if(worldVersion[world-1] < 4)
-        	{
-            	loadChunk(i, world);
+		if(worldVersion[world-1] < 4)
+		{
+		loadChunk(i, world);
 
-            	if(worldVersion[world-1] >= 2) //only load if its added as a new version
-            	loadChunkExtraData(i, world);
-        	}
-        	else
-        	loadCompressedChunk(i, world);
+		if(worldVersion[world-1] >= 2)//only load if its added as a new version
+		loadChunkExtraData(i, world);
+		}
+		else
+		loadCompressedChunk(i, world);
 
             loadingScreen(i + 1, 64, "Loading...", 10);
         }
@@ -18365,30 +18403,30 @@ void loadAllChunk(int world)
 
         updateItemSlected();
 
-        if(worldVersion[world-1] < 4) //convert world to compressed version
+        if(worldVersion[world-1] < 4)//convert world to compressed version
         {
-        	deleteOldWorld(world);
-        	worldVersion[world-1] = 4; //old 2min new 
-        	saveAllChunk(world, false);
-            //saveChestDataCompressed(world, false);
-        	savegameData();
+		deleteOldWorld(world);
+		worldVersion[world-1] = 4;//old 2min new
+		saveAllChunk(world, false);
+           //saveChestDataCompressed(world, false);
+		savegameData();
 			saveEntityData(world, false);
         }
 
-		if(worldVersion[world-1] < 5) //save the health of tools
+		if(worldVersion[world-1] < 5)//save the health of tools
         {
-        	char fileLocation1[50];
-			sprintf(fileLocation1, "\\\\fls0\\fxcraft\\world%d\\playerData", world);
+		char fileLocation1[50];
+			sprintf(fileLocation1, "fls0/fxcraft/world%d/playerData", world);
 
-   			unsigned short pFile1[sizeof(fileLocation1)*2];
-   			Bfile_StrToName_ncpy(pFile1, (unsigned char*)fileLocation1, sizeof(fileLocation1)); 
+			unsigned short pFile1[sizeof(fileLocation1)*2];
+			Bfile_StrToName_ncpy(pFile1, (unsigned char*)fileLocation1, sizeof(fileLocation1));
 			Bfile_DeleteEntry(pFile1);
 
             char fileLocation2[50];
-			sprintf(fileLocation2, "\\\\fls0\\fxcraft\\world%d\\chestData", world);
+			sprintf(fileLocation2, "fls0/fxcraft/world%d/chestData", world);
 
-   			unsigned short pFile2[sizeof(fileLocation2)*2];
-   			Bfile_StrToName_ncpy(pFile2, (unsigned char*)fileLocation2, sizeof(fileLocation2)); 
+			unsigned short pFile2[sizeof(fileLocation2)*2];
+			Bfile_StrToName_ncpy(pFile2, (unsigned char*)fileLocation2, sizeof(fileLocation2));
 			Bfile_DeleteEntry(pFile2);
 
             saveChestData(world);
@@ -18419,10 +18457,10 @@ int maxTextureIndex = 0;
 void loadTextureAssets()
 {
     char fileLocation[50] = "";
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\assets\\%s\\textures", texturePackTotalPath[currentTexturePackIndex]);
+    sprintf(fileLocation, "fls0/fxcraft/assets/%s/textures", texturePackTotalPath[currentTexturePackIndex]);
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
     int size = textureBlockAmount*256*2;
 
@@ -18431,14 +18469,14 @@ void loadTextureAssets()
         for (int j = 0; j < 256; j++)
         textures2[i*256+j] = missingTexture[j];
     }
-    
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL);
+
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
     if(hFile > 0)
     {
-        int length = Bfile_GetFileSize_OS(hFile);
+        int length = File_GetSize(hFile);
 
-        Bfile_ReadFile_OS(hFile, assetsInputBuffer, length, 0); 
-        Bfile_CloseFile_OS(hFile);
+        File_Read(hFile, assetsInputBuffer, length, 0);
+        File_Close(hFile);
 
         LZ4_decompress_safe(assetsInputBuffer, textures2, length, 0x40000);
     }
@@ -18448,10 +18486,10 @@ void loadTextureAssets()
 void loadIconAssets()
 {
     char fileLocation[50] = "";
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\assets\\%s\\icons", texturePackTotalPath[currentTexturePackIndex]);
+    sprintf(fileLocation, "fls0/fxcraft/assets/%s/icons", texturePackTotalPath[currentTexturePackIndex]);
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
     int size = itemAmount*676*2;
 
@@ -18460,14 +18498,14 @@ void loadIconAssets()
         for (int j = 0; j < 676; j++)
         itemIcons2[i*676+j] = missingIcon[j];
     }
-    
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL);
+
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
     if(hFile > 0)
     {
-        int length = Bfile_GetFileSize_OS(hFile);
+        int length = File_GetSize(hFile);
 
-        Bfile_ReadFile_OS(hFile, assetsInputBuffer, length, 0); 
-        Bfile_CloseFile_OS(hFile);
+        File_Read(hFile, assetsInputBuffer, length, 0);
+        File_Close(hFile);
 
         LZ4_decompress_safe(assetsInputBuffer, itemIcons2, length, 0x40000);
     }
@@ -18477,21 +18515,21 @@ void loadIconAssets()
 void loadTexturePackData(char *texturePackPath, char *creator, char *name, int* version)
 {
     char fileLocation[100];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\assets\\%s\\info", texturePackPath);
+    sprintf(fileLocation, "fls0/fxcraft/assets/%s/info", texturePackPath);
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
     int size = 52;
     char data[size];
-    
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);// Get handle         //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
-        int length = Bfile_GetFileSize_OS(hFile);
+        int length = File_GetSize(hFile);
 
-        Bfile_ReadFile_OS(hFile, data, length, 0); 
-        Bfile_CloseFile_OS(hFile);
+        File_Read(hFile, data, length, 0);
+        File_Close(hFile);
 
         int ver = 0;
         ver = 0;
@@ -18520,18 +18558,18 @@ void loadTexturePackData(char *texturePackPath, char *creator, char *name, int* 
 void loadTexturePackIcon(char *texturePackPath, color_t *icon)
 {
     char fileLocation[100];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\assets\\%s\\icon", texturePackPath);
+    sprintf(fileLocation, "fls0/fxcraft/assets/%s/icon", texturePackPath);
 
     unsigned short pFile[sizeof(fileLocation)*2];
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
-    
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL);
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
+
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
     if(hFile > 0)
     {
-        int length = Bfile_GetFileSize_OS(hFile);
+        int length = File_GetSize(hFile);
 
-        Bfile_ReadFile_OS(hFile, (unsigned char*)icon, 2048, 0); 
-        Bfile_CloseFile_OS(hFile);
+        File_Read(hFile, (unsigned char*)icon, 2048, 0);
+        File_Close(hFile);
     }
     else
     {
@@ -18543,7 +18581,7 @@ void loadTexturePackIcon(char *texturePackPath, color_t *icon)
 }
 void loadAvailableTexturePacks()
 {
-    char fileLocation[50] = "\\\\fls0\\fxcraft\\assets\\tex_*";
+    char fileLocation[50] = "fls0/fxcraft/assets/tex_*";
 
     unsigned short found[100];
     unsigned short pFile[sizeof(fileLocation)*2];
@@ -18552,7 +18590,7 @@ void loadAvailableTexturePacks()
     file_type_t info;
     char location[50] = "";
     maxTextureIndex = 0;
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); // Overkill
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));// Overkill
     ret = Bfile_FindFirst(pFile, &handle, found, &info);
     if(ret == 0){
         Bfile_NameToStr_ncpy(location, found, 50);
@@ -18581,65 +18619,65 @@ void loadAvailableTexturePacks()
                 if(location[i] != 0)
                 texturePackTotalPath[maxTextureIndex][i] = location[i];
             }
-    
+
             maxTextureIndex++;
         }
     }
     Bfile_FindClose(handle);
 }
 
-void convertToBitmap16bit() 
+void convertToBitmap16bit()
 {
-    ((void)0);
-    
+    DmaWaitNext();
+
     int imageWidth = 320;
     int imageHeight = 180;
-    
-    // Bitmap header (14 bytes)
+
+   // Bitmap header (14 bytes)
     unsigned char header[14] = {
-        'B', 'M',               // Signature
-        0, 0, 0, 0,             // File size (to be calculated)
-        0, 0,                   // Reserved
-        0, 0,                   // Reserved
-        138, 0, 0, 0            // Offset to pixel data (14 + 40 + 12)
+        'B', 'M',              // Signature
+        0, 0, 0, 0,            // File size (to be calculated)
+        0, 0,                  // Reserved
+        0, 0,                  // Reserved
+        138, 0, 0, 0           // Offset to pixel data (14 + 40 + 12)
     };
 
 	unsigned int imageSize = imageWidth * imageHeight * 2;
 
 	unsigned char v5_header[124] = {
-        124, 0, 0, 0,           // Header size (124 bytes)
+        124, 0, 0, 0,          // Header size (124 bytes)
         imageWidth & 0xFF, (imageWidth >> 8) & 0xFF, (imageWidth >> 16) & 0xFF, (imageWidth >> 24) & 0xFF,
         imageHeight & 0xFF, (imageHeight >> 8) & 0xFF, (imageHeight >> 16) & 0xFF, (imageHeight >> 24) & 0xFF,
-        1, 0,                   // Number of color planes (must be 1)
-        16, 0,                  // Bits per pixel (16-bit)
-        3, 0, 0, 0,             // Compression (BI_BITFIELDS)
+        1, 0,                  // Number of color planes (must be 1)
+        16, 0,                 // Bits per pixel (16-bit)
+        3, 0, 0, 0,            // Compression (BI_BITFIELDS)
         imageSize & 0xFF, (imageSize >> 8) & 0xFF, (imageSize >> 16) & 0xFF, (imageSize >> 24) & 0xFF,
-        0, 0, 0, 0,             // Horizontal resolution (pixels per meter)
-        0, 0, 0, 0,             // Vertical resolution (pixels per meter)
-        0, 0, 0, 0,             // Number of colors in the palette
-        0, 0, 0, 0,             // Important colors
+        0, 0, 0, 0,            // Horizontal resolution (pixels per meter)
+        0, 0, 0, 0,            // Vertical resolution (pixels per meter)
+        0, 0, 0, 0,            // Number of colors in the palette
+        0, 0, 0, 0,            // Important colors
 
-        // Color Masks (RGB565)
-        0x00, 0xF8, 0x00, 0x00, // Red mask:   0xF800
-        0xE0, 0x07, 0x00, 0x00, // Green mask: 0x07E0
-        0x1F, 0x00, 0x00, 0x00, // Blue mask:  0x001F
-        0x00, 0x00, 0x00, 0x00, // Alpha mask: 0 (unused)
+       // Color Masks (RGB565)
+        0x00, 0xF8, 0x00, 0x00,// Red mask:   0xF800
+        0xE0, 0x07, 0x00, 0x00,// Green mask: 0x07E0
+        0x1F, 0x00, 0x00, 0x00,// Blue mask:  0x001F
+        0x00, 0x00, 0x00, 0x00,// Alpha mask: 0 (unused)
 
-        // Color space type (LCS_WINDOWS_COLOR_SPACE)
-        0x20, 0x6E, 0x69, 0x57, // 'Win ' in little endian
+       // Color space type (LCS_WINDOWS_COLOR_SPACE)
+        0x20, 0x6E, 0x69, 0x57,// 'Win ' in little endian
 
-        // CIEXYZTRIPLE endpoints (unused, set to zero)
+       // CIEXYZTRIPLE endpoints (unused, set to zero)
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
-        // Gamma values (unused, set to zero)
+       // Gamma values (unused, set to zero)
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
-        // Rendering intent (LCS_GM_IMAGES)
+       // Rendering intent (LCS_GM_IMAGES)
         4, 0, 0, 0,
 
-        // Color profile data (unused)
+       // Color profile data (unused)
         0, 0, 0, 0, 0, 0, 0, 0
     };
 
@@ -18649,27 +18687,27 @@ void convertToBitmap16bit()
     header[4] = (file_size >> 16) & 0xFF;
     header[5] = (file_size >> 24) & 0xFF;
 
-    unsigned char *bitmap_image = (unsigned char *)(0x8C100000 + ALLOC_OFFSET);
+    unsigned char *bitmap_image = (unsigned char *)(0x8C200000 + ALLOC_OFFSET);
 
     memcpy(bitmap_image, header, 14);
     memcpy(bitmap_image + 14, v5_header, 124);
 
-    // Write pixel data
+   // Write pixel data
     unsigned char *pixel_data = (unsigned char *)(bitmap_image + 138);
 
-	for (int i = 0; i < imageHeight; i++) 
+	for (int i = 0; i < imageHeight; i++)
 	{
-	    for (int j = 0; j < imageWidth; j++) 
+	    for (int j = 0; j < imageWidth; j++)
 		{
-	        // Flip vertically: write from bottom to top
-	        unsigned short color = *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + i * resX + j);
+	       // Flip vertically: write from bottom to top
+	        unsigned short color = *(VRAMAddress + i * resX + j);
 
-	        // Convert to little-endian: swap bytes
-	        unsigned char low_byte = color & 0xFF;          // Least significant byte
-	        unsigned char high_byte = (color >> 8) & 0xFF;  // Most significant byte
+	       // Convert to little-endian: swap bytes
+	        unsigned char low_byte = color & 0xFF;         // Least significant byte
+	        unsigned char high_byte = (color >> 8) & 0xFF; // Most significant byte
 
-	        pixel_data[((imageHeight - 1 - i) * imageWidth + j) * 2]     = low_byte;   // LSB first
-	        pixel_data[((imageHeight - 1 - i) * imageWidth + j) * 2 + 1] = high_byte;  // MSB second
+	        pixel_data[((imageHeight - 1 - i) * imageWidth + j) * 2]     = low_byte;  // LSB first
+	        pixel_data[((imageHeight - 1 - i) * imageWidth + j) * 2 + 1] = high_byte; // MSB second
 	    }
 	}
 
@@ -18677,55 +18715,55 @@ void convertToBitmap16bit()
 	int amount = 1;
 	int fileSizeSize = 1;
 
-	char fileLocationSize[50] = "\\\\fls0\\fxcraft\\screenshots\\amount";
+	char fileLocationSize[50] = "fls0/fxcraft/screenshots/amount";
     unsigned short pFileSize[sizeof(fileLocationSize)*2];
-    Bfile_StrToName_ncpy(pFileSize, (unsigned char*)fileLocationSize, sizeof(fileLocationSize)); 
+    Bfile_StrToName_ncpy(pFileSize, (unsigned char*)fileLocationSize, sizeof(fileLocationSize));
 
-    int hFile2 = Bfile_OpenFile_OS(pFileSize, 3, NULL);
+    int hFile2 = File_Open(pFileSize, 3, NULL);
     if(hFile2 > 0)
     {
-        int length = Bfile_GetFileSize_OS(hFile2);
+        int length = File_GetSize(hFile2);
         char fileData[length];
 
-        Bfile_ReadFile_OS(hFile2, fileData, length, 0); 
-        Bfile_CloseFile_OS(hFile2);
+        File_Read(hFile2, fileData, length, 0);
+        File_Close(hFile2);
 		amount = fileData[0];
 	}
 	else
-    Bfile_CreateEntry_OS(pFileSize, 1, &fileSizeSize);
+    File_Create(pFileSize, 1, &fileSizeSize);
 
 	char fileData[1];
 	fileData[0] = amount+1;
-    int hFile3 = Bfile_OpenFile_OS(pFileSize, 3, NULL);
-    Bfile_WriteFile_OS(hFile3, fileData, fileSizeSize); 
-    Bfile_CloseFile_OS(hFile3);
+    int hFile3 = File_Open(pFileSize, 3, NULL);
+    File_Write(hFile3, fileData, fileSizeSize);
+    File_Close(hFile3);
 
 	//save the actual screenshot
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\screenshots\\image%d.bmp", amount);
+    sprintf(fileLocation, "fls0/fxcraft/screenshots/image%d.bmp", amount);
 
-    char fileLocation2[50] = "\\\\fls0\\fxcraft\\screenshots";
+    char fileLocation2[50] = "fls0/fxcraft/screenshots";
 
-    unsigned short pFile1[sizeof(fileLocation2)*2]; // Make buffer
-    Bfile_StrToName_ncpy(pFile1, (unsigned char*)fileLocation2, sizeof(fileLocation2)); 
+    unsigned short pFile1[sizeof(fileLocation2)*2];// Make buffer
+    Bfile_StrToName_ncpy(pFile1, (unsigned char*)fileLocation2, sizeof(fileLocation2));
 
-    Bfile_CreateEntry_OS(pFile1, 5, NULL);
+    File_Create(pFile1, 5, NULL);
 
 
-    unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
-    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); 
-    Bfile_CreateEntry_OS(pFile, 1, &file_size);
+    unsigned short pFile[sizeof(fileLocation)*2];// Make buffer
+    Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
+    File_Create(pFile, 1, &file_size);
 
-    int hFile = Bfile_OpenFile_OS(pFile, 3, NULL);
-    Bfile_WriteFile_OS(hFile, bitmap_image, file_size); 
-    Bfile_CloseFile_OS(hFile);
+    int hFile = File_Open(pFile, FILE_OPEN_READ | FILE_OPEN_WRITE, NULL);
+    File_Write(hFile, bitmap_image, file_size);
+    File_Close(hFile);
 
     if(hFile < 0)
     {
         clearAll(0xf800);
         char buffer1[40] = "Error";
         renderTextColord(5, 5, buffer1, 0xffff);
-        ((void)0)(200);
+        OS_InnerWait_ms(200);
     }
 }
 
@@ -18742,7 +18780,7 @@ bool chenkCollisionDoor(float positionFX, float positionFY, float positionFZ)
     pPosition.y = PPosY;
     pPosition.z = PPosZ;
 
-    int chunkIndex = position.x / width + position.z / width * totalChunkWidth;
+    int chunkIndex = position.x/ width + position.z/ width * totalChunkWidth;
     int blockIndex = (position.x % width) + (position.z % width) * width + position.y * width * width;
 
     int blockRotation = blockData[chunkIndex*width*width*height + blockIndex]&0b00000011;
@@ -18778,7 +18816,7 @@ bool checkCollision(float positionFX, float positionFY, float positionFZ)
     position.y = positionFY;
     position.z = positionFZ;
 
-    int chunkIndex = position.x / width + position.z / width * totalChunkWidth;
+    int chunkIndex = position.x/ width + position.z/ width * totalChunkWidth;
     int blockIndex = (position.x % width) + (position.z % width) * width + position.y * width * width;
 
     if(allBlock[blocks[chunkIndex][blockIndex]].blockType == 12)
@@ -18796,7 +18834,7 @@ bool checkIfInWater(float positionFX, float positionFY, float positionFZ)
     position.y = positionFY;
     position.z = positionFZ;
 
-    int chunkIndex = position.x / width + position.z / width * totalChunkWidth;
+    int chunkIndex = position.x/ width + position.z/ width * totalChunkWidth;
     int blockIndex = (position.x % width) + (position.z % width) * width + position.y * width * width;
 
     if(blocks[chunkIndex][blockIndex] == 6)
@@ -18814,7 +18852,7 @@ bool checkIfInLava(float positionFX, float positionFY, float positionFZ)
     position.y = positionFY;
     position.z = positionFZ;
 
-    int chunkIndex = position.x / width + position.z / width * totalChunkWidth;
+    int chunkIndex = position.x/ width + position.z/ width * totalChunkWidth;
     int blockIndex = (position.x % width) + (position.z % width) * width + position.y * width * width;
 
     if(blocks[chunkIndex][blockIndex] == 24)
@@ -18841,11 +18879,11 @@ void updateBlockReach()
 
     for (int i = 0; i < 50; i += 1)
     {
-        int pointX = (forw.x * i + pPos.x) / 10000;
-        int pointY = (forw.y * i + pPos.y) / 10000;
-        int pointZ = (forw.z * i + pPos.z) / 10000;
+        int pointX = (forw.x * i + pPos.x)/ 10000;
+        int pointY = (forw.y * i + pPos.y)/ 10000;
+        int pointZ = (forw.z * i + pPos.z)/ 10000;
 
-        if((forw.y * i + pPos.y) / 100 - pointY * 100 > 50)
+        if((forw.y * i + pPos.y)/ 100 - pointY * 100 > 50)
         isTopOfBlock = true;
         else
         isTopOfBlock = false;
@@ -18858,7 +18896,7 @@ void updateBlockReach()
 
             if(pointY < height)
             {
-                int chunkIndex = (pointX / width) + (pointZ / width) * totalChunkWidth;
+                int chunkIndex = (pointX/ width) + (pointZ/ width) * totalChunkWidth;
 
                 int blockIndex = blocks[chunkIndex][pointInChunkX + pointInChunkZ * width + pointInChunkY * width * width];
                 if(blockIndex != 0 && allBlock[blockIndex].blockType != 2)
@@ -18885,10 +18923,10 @@ void destroyBlock()
 
     if(removeBlock.x != -1)
     {
-        int chunkX = removeBlock.x / width;
-        int chunkY = removeBlock.z / width;
+        int chunkX = removeBlock.x/ width;
+        int chunkY = removeBlock.z/ width;
         int currentChunk_ = chunkX + chunkY * totalChunkWidth;
-        
+
         int blockIndex = (removeBlock.x % width) + (removeBlock.z % width) * width + (removeBlock.y) * width * width;
 
         if(blocks[currentChunk_][blockIndex] != 9)
@@ -18924,9 +18962,9 @@ void destroyBlock()
 						hotbarBlockAmount[currentSlot] = 0;
 						hotbarBlockTypes[currentSlot] = -1;
 
-            			blockSelected = -1;
+				blockSelected = -1;
 
-						return; //tool is brokey 
+						return;//tool is brokey
 					}
 
 					hotbarBlockHp[currentSlot]--;
@@ -18938,7 +18976,7 @@ void destroyBlock()
                 if(cont == 1)
                 {
                     makeItem((int)(removeBlock.x * 10) + 4, (int)(removeBlock.y * 10) + 4, (int)(removeBlock.z * 10) + 4, 0, 0, 0, dropType);
-                    if(dropType == 66) //if wheat drop 2 seed
+                    if(dropType == 66)//if wheat drop 2 seed
                     {
                         makeItem((int)(removeBlock.x * 10) + 4, (int)(removeBlock.y * 10) + 4, (int)(removeBlock.z * 10) + 4, 0, 0, 0, 65);
                         makeItem((int)(removeBlock.x * 10) + 4, (int)(removeBlock.y * 10) + 4, (int)(removeBlock.z * 10) + 4, 0, 0, 0, 65);
@@ -18981,10 +19019,10 @@ void destroyBlock()
             }
 
             if(blocks[currentChunk_][blockIndex] == 55)
-            blockData[currentChunk_*width*width*height + blockIndex + width*width] = (blockData[currentChunk_*width*width*height + blockIndex + width*width]&0b01111111); //remove redstone torch signal
+            blockData[currentChunk_*width*width*height + blockIndex + width*width] = (blockData[currentChunk_*width*width*height + blockIndex + width*width]&0b01111111);//remove redstone torch signal
 
             if(blocks[currentChunk_][blockIndex] == 54 && blockTypes[blocks[currentChunk_][blockIndex-width*width]].canTransferRedstoneSignal == true)
-            blockData[currentChunk_*width*width*height + blockIndex - width*width] = (blockData[currentChunk_*width*width*height + blockIndex - width*width]&0b10111111); //remove redstone wire signal
+            blockData[currentChunk_*width*width*height + blockIndex - width*width] = (blockData[currentChunk_*width*width*height + blockIndex - width*width]&0b10111111);//remove redstone wire signal
 
             if(blocks[currentChunk_][blockIndex] == 58)
             {
@@ -19000,7 +19038,7 @@ void destroyBlock()
                 int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
                 if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true)
-                blockData[blockDataIndex] = (blockData[blockDataIndex]&0b01111111); //remove repeater signal
+                blockData[blockDataIndex] = (blockData[blockDataIndex]&0b01111111);//remove repeater signal
             }
 
             if(blocks[currentChunk_][blockIndex] == 63 || allBlock[blocks[currentChunk_][blockIndex]].blockType == 18)
@@ -19017,7 +19055,7 @@ void destroyBlock()
                 int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
                 if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true)
-                blockData[blockDataIndex] = (blockData[blockDataIndex]&0b01111111); //remove repeater signal
+                blockData[blockDataIndex] = (blockData[blockDataIndex]&0b01111111);//remove repeater signal
             }
 
             blocks[currentChunk_][blockIndex] = 0;
@@ -19034,24 +19072,24 @@ void placeBlock(int itemType)
 {
     if(itemType != -1)
     {
-        if(addBlock.x != -1 && addBlock.y < 40)
+        if(addBlock.x != -1 && addBlock.y < height)
         {
-            int chunkX = addBlock.x / width;
-            int chunkY = addBlock.z / width;
+            int chunkX = addBlock.x/ width;
+            int chunkY = addBlock.z/ width;
             int currentChunk_ = chunkX + chunkY * totalChunkWidth;
 
             int blockIndex = (addBlock.x % width) + (addBlock.z % width) * width + (addBlock.y) * width * width;
             int blockIndex1 = (addBlock.x % width) + (addBlock.z % width) * width + (addBlock.y+1) * width * width;
 
-            if(itemType == 77 || itemType == 83) //check of door can be placed
+            if(itemType == 77 || itemType == 83)//check of door can be placed
             {
                 if(blocks[currentChunk_][blockIndex1] != 0 && blocks[currentChunk_][blockIndex1] != 6 && blocks[currentChunk_][blockIndex1] != 24)
                 return;
             }
-            if(itemType == 78) //check if bed can be placed
+            if(itemType == 78)//check if bed can be placed
             {
                 Vector3I newPos = addBlock;
-                
+
                 if(rotationY < 45 || rotationY > 315)
                 newPos.z--;
                 if(rotationY > 45 && rotationY < 135)
@@ -19061,8 +19099,8 @@ void placeBlock(int itemType)
                 if(rotationY > 225 && rotationY < 315)
                 newPos.x--;
 
-                int TchunkX = newPos.x / width;
-                int TchunkY = newPos.z / width;
+                int TchunkX = newPos.x/ width;
+                int TchunkY = newPos.z/ width;
                 int TcurrentChunk_ = chunkX + chunkY * totalChunkWidth;
 
                 int TblockIndex = (newPos.x % width) + (newPos.z % width) * width + (newPos.y) * width * width;
@@ -19078,7 +19116,7 @@ void placeBlock(int itemType)
                 hotbarBlockTypes[currentSlot] = -1;
             }
 
-            if(itemType == 78) //rotate bed 
+            if(itemType == 78)//rotate bed
             {
                 blocks[currentChunk_][blockIndex] = allItem[itemType].blockId+1;
 
@@ -19094,10 +19132,10 @@ void placeBlock(int itemType)
 			else
             blocks[currentChunk_][blockIndex] = allItem[itemType].blockId;
 
-			if(allBlock[allItem[itemType].blockId].blockType == 2) //set water and lava hight to a standart of 1 instead of full block
+			if(allBlock[allItem[itemType].blockId].blockType == 2)//set water and lava hight to a standart of 1 instead of full block
 			blockData[currentChunk_*width*width*height + blockIndex] = 0b10000001;
 
-            if(allBlock[allItem[itemType].blockId].blockType == 8) //
+            if(allBlock[allItem[itemType].blockId].blockType == 8)//
             {
                 if(removeBlock.x-addBlock.x != 0)
                 blockData[currentChunk_*width*width*height + blockIndex] = 2;
@@ -19106,7 +19144,7 @@ void placeBlock(int itemType)
                 if(removeBlock.z-addBlock.z != 0)
                 blockData[currentChunk_*width*width*height + blockIndex] = 1;
             }
-            if(allBlock[allItem[itemType].blockId].blockType == 9 || allBlock[allItem[itemType].blockId].blockType == 15) //
+            if(allBlock[allItem[itemType].blockId].blockType == 9 || allBlock[allItem[itemType].blockId].blockType == 15)//
             {
                 if(rotationY > 45 && rotationY < 135)
                 blockData[currentChunk_*width*width*height + blockIndex] = 2;
@@ -19223,7 +19261,7 @@ void placeBlock(int itemType)
 }
 void highlightBlock(Vector3I RB)
 {
-    screenPoint SP[8]; //screen positions
+    screenPoint SP[8];//screen positions
     SP[0] = pointToScreenCorrdinates((RB.x)   * 1000, (RB.y+1) * 1000, (RB.z)   * 1000);
     SP[1] = pointToScreenCorrdinates((RB.x+1) * 1000, (RB.y+1) * 1000, (RB.z)   * 1000);
     SP[2] = pointToScreenCorrdinates((RB.x)   * 1000, (RB.y+1) * 1000, (RB.z+1) * 1000);
@@ -19242,24 +19280,24 @@ void highlightBlock(Vector3I RB)
         if(SP[i].y < 0 || SP[i].y > resY)
         continue_ = false;
     }
-    
+
     if(continue_ == true)
     {
         if(pixelSize == 1)
         {
-            //top
+           //top
             renderLine(SP[0].x, SP[1].x, SP[0].y, SP[1].y);
             renderLine(SP[1].x, SP[3].x, SP[1].y, SP[3].y);
             renderLine(SP[2].x, SP[3].x, SP[2].y, SP[3].y);
             renderLine(SP[0].x, SP[2].x, SP[0].y, SP[2].y);
 
-            //sides
+           //sides
             renderLine(SP[0].x, SP[4].x, SP[0].y, SP[4].y);
             renderLine(SP[1].x, SP[5].x, SP[1].y, SP[5].y);
             renderLine(SP[2].x, SP[6].x, SP[2].y, SP[6].y);
             renderLine(SP[3].x, SP[7].x, SP[3].y, SP[7].y);
 
-            //bottom
+           //bottom
             renderLine(SP[4].x, SP[5].x, SP[4].y, SP[5].y);
             renderLine(SP[5].x, SP[7].x, SP[5].y, SP[7].y);
             renderLine(SP[6].x, SP[7].x, SP[6].y, SP[7].y);
@@ -19267,19 +19305,19 @@ void highlightBlock(Vector3I RB)
         }
         else
         {
-            //top
+           //top
             renderLinePX2(SP[0].x, SP[1].x, SP[0].y, SP[1].y);
             renderLinePX2(SP[1].x, SP[3].x, SP[1].y, SP[3].y);
             renderLinePX2(SP[2].x, SP[3].x, SP[2].y, SP[3].y);
             renderLinePX2(SP[0].x, SP[2].x, SP[0].y, SP[2].y);
 
-            //sides
+           //sides
             renderLinePX2(SP[0].x, SP[4].x, SP[0].y, SP[4].y);
             renderLinePX2(SP[1].x, SP[5].x, SP[1].y, SP[5].y);
             renderLinePX2(SP[2].x, SP[6].x, SP[2].y, SP[6].y);
             renderLinePX2(SP[3].x, SP[7].x, SP[3].y, SP[7].y);
 
-            //bottom
+           //bottom
             renderLinePX2(SP[4].x, SP[5].x, SP[4].y, SP[5].y);
             renderLinePX2(SP[5].x, SP[7].x, SP[5].y, SP[7].y);
             renderLinePX2(SP[6].x, SP[7].x, SP[6].y, SP[7].y);
@@ -19294,18 +19332,18 @@ void renderCorsAir(int renderBlockOutline)
     if(removeBlock.x != -1 && renderBlockOutline == true)
     highlightBlock(removeBlock);
 
-    int startX = resX / 2 - 1;
-    int startY = resY / 2 - 1;
+    int startX = resX/ 2 - 1;
+    int startY = resY/ 2 - 1;
     for (int x = startX; x < startX+2; x++)
     {
         for (int y = startY-3; y < startY+5; y++)
-        *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + (y * LCD_WIDTH_PX) + x) = 0xd6ba;
+        *(VRAMAddress + (y * LCD_WIDTH_PX) + x) = 0xd6ba;
     }
 
     for (int x = startX-3; x < startX+5; x++)
     {
         for (int y = startY; y < startY+2; y++)
-        *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + (y * LCD_WIDTH_PX) + x) = 0xd6ba;
+        *(VRAMAddress + (y * LCD_WIDTH_PX) + x) = 0xd6ba;
     }
 }
 void renderBlockDestruction(float timeDone, float totalTime)
@@ -19328,28 +19366,28 @@ void renderBlockDestruction(float timeDone, float totalTime)
 	{
 		int newX = removeBlock.x+directions[i].x;
         int newY = removeBlock.y+directions[i].y;
-    	int newZ = removeBlock.z+directions[i].z;
-    
-    	if(newX > 0 && newX < width*totalChunkWidth && newY > 0 && newY < height && newZ > 0 && newZ < width*totalChunkWidth)
-    	{
+	int newZ = removeBlock.z+directions[i].z;
+
+	if(newX > 0 && newX < width*totalChunkWidth && newY > 0 && newY < height && newZ > 0 && newZ < width*totalChunkWidth)
+	{
 			int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-        	int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
+		int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
 			int currentBlockType2 = allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType;
 			int blockIndexR2 = blockIndexNew + chunkIndexNew * width * width * height;
 			int blockRotation2 = blockData[blockIndexR2]&(blockTypes[currentBlockType2].diffrentRotationAmount-1);
 
 			if(blockTypes[currentBlockType].dir[blockRotation][i].x == 1)
-    		blockSideIndex = 0;
-    		else if(blockTypes[currentBlockType].dir[blockRotation][i].x == -1)
-    		blockSideIndex = 1;
-    		else if(blockTypes[currentBlockType].dir[blockRotation][i].y == 1)
-    		blockSideIndex = 2;
-    		else if(blockTypes[currentBlockType].dir[blockRotation][i].y == -1)
-    		blockSideIndex = 3;
-    		else if(blockTypes[currentBlockType].dir[blockRotation][i].z == 1)
-    		blockSideIndex = 4;
-    		else if(blockTypes[currentBlockType].dir[blockRotation][i].z == -1)
-    		blockSideIndex = 5;
+		blockSideIndex = 0;
+		else if(blockTypes[currentBlockType].dir[blockRotation][i].x == -1)
+		blockSideIndex = 1;
+		else if(blockTypes[currentBlockType].dir[blockRotation][i].y == 1)
+		blockSideIndex = 2;
+		else if(blockTypes[currentBlockType].dir[blockRotation][i].y == -1)
+		blockSideIndex = 3;
+		else if(blockTypes[currentBlockType].dir[blockRotation][i].z == 1)
+		blockSideIndex = 4;
+		else if(blockTypes[currentBlockType].dir[blockRotation][i].z == -1)
+		blockSideIndex = 5;
 
             if(blockTypes[currentBlockType2].otherBlocksRenderFace[blockRotation2][blockSideIndex] == 0 || (blockTypes[currentBlockType2].isTransprent == true && blockTypes[currentBlockType].isTransprent == false) || (blockTypes[currentBlockType2].isfluid == true && blockTypes[currentBlockType].isfluid == false))
 			{
@@ -19366,33 +19404,33 @@ void renderBlockDestruction(float timeDone, float totalTime)
                         {
 							int Depth = ((v1.z + v2.z + v3.z + v4.z) >> 2) - 1;
 
-              				Vector2S V1_ = {v1.x, v1.y};
-              				Vector2S V2_ = {v2.x, v2.y};
-              				Vector2S V3_ = {v3.x, v3.y};
-              				Vector2S V4_ = {v4.x, v4.y};
+					Vector2S V1_ = {v1.x, v1.y};
+					Vector2S V2_ = {v2.x, v2.y};
+					Vector2S V3_ = {v3.x, v3.y};
+					Vector2S V4_ = {v4.x, v4.y};
 
-              				Vector2S AT = {0, 0};
-              				Vector2S BT = {10, 0};
-              				Vector2S CT = {10, 10};
-              				Vector2S DT = {0, 10};
+					Vector2S AT = {0, 0};
+					Vector2S BT = {10, 0};
+					Vector2S CT = {10, 10};
+					Vector2S DT = {0, 10};
 
-              				if(pixelSize == 2)
-              				{
-              				    renderTriangleTexturedBlackTransNBPX2T(V1_, V2_, V3_, AT, BT, CT, Depth, 16, 16, &textures2[(111+destroyIndex)*256]);
-              				    renderTriangleTexturedBlackTransNBPX2T(V1_, V3_, V4_, AT, CT, DT, Depth, 16, 16, &textures2[(111+destroyIndex)*256]);
-              				}
-              				else
-              				{
-              				    renderTriangleTexturedBlackTransNBT(V1_, V2_, V3_, AT, BT, CT, Depth, 16, 16, &textures2[(111+destroyIndex)*256]);
-              				    renderTriangleTexturedBlackTransNBT(V1_, V3_, V4_, AT, CT, DT, Depth, 16, 16, &textures2[(111+destroyIndex)*256]);
-              				}
+					if(pixelSize == 2)
+					{
+					    renderTriangleTexturedBlackTransNBPX2T(V1_, V2_, V3_, AT, BT, CT, Depth, 16, 16, &textures2[(111+destroyIndex)*256]);
+					    renderTriangleTexturedBlackTransNBPX2T(V1_, V3_, V4_, AT, CT, DT, Depth, 16, 16, &textures2[(111+destroyIndex)*256]);
+					}
+					else
+					{
+					    renderTriangleTexturedBlackTransNBT(V1_, V2_, V3_, AT, BT, CT, Depth, 16, 16, &textures2[(111+destroyIndex)*256]);
+					    renderTriangleTexturedBlackTransNBT(V1_, V3_, V4_, AT, CT, DT, Depth, 16, 16, &textures2[(111+destroyIndex)*256]);
+					}
 						}
 					}
 				}
 			}
-	 	}
+		}
 	}
-    
+
 }
 
 //structures
@@ -19401,14 +19439,14 @@ void generateTree(int x, int y, int z, int hight)
 
     for (int yOnTree = hight-2; yOnTree <= hight-1; yOnTree++)
     {
-        if(y+yOnTree < 40)
+        if(y+yOnTree < height)
         {
             for (int xOnTree = -2; xOnTree <= 2; xOnTree++)
             {
-                int chunkX = (x+xOnTree) / width;
+                int chunkX = (x+xOnTree)/ width;
                 for (int zOnTree = -2; zOnTree <= 2; zOnTree++)
                 {
-                    int chunkZ = (z+zOnTree) / width;
+                    int chunkZ = (z+zOnTree)/ width;
                     int currentChunk = chunkX + chunkZ * totalChunkWidth;
 
                     int blockIndex = ((x+xOnTree) % width) + ((z+zOnTree) % width) * width + (y+yOnTree) * width * width;
@@ -19421,14 +19459,14 @@ void generateTree(int x, int y, int z, int hight)
 
     for (int yOnTree = hight; yOnTree <= hight+1; yOnTree++)
     {
-        if(y+yOnTree < 40)
+        if(y+yOnTree < height)
         {
             for (int xOnTree = -1; xOnTree <= 1; xOnTree++)
             {
-                int chunkX = (x+xOnTree) / width;
+                int chunkX = (x+xOnTree)/ width;
                 for (int zOnTree = -1; zOnTree <= 1; zOnTree++)
                 {
-                    int chunkZ = (z+zOnTree) / width;
+                    int chunkZ = (z+zOnTree)/ width;
                     int currentChunk = chunkX + chunkZ * totalChunkWidth;
 
                     int blockIndex = ((x+xOnTree) % width) + ((z+zOnTree) % width) * width + (y+yOnTree) * width * width;
@@ -19438,13 +19476,13 @@ void generateTree(int x, int y, int z, int hight)
             }
         }
     }
-    
+
     for (int yOnTree = 0; yOnTree <= hight; yOnTree++)
     {
-        if(y+yOnTree < 40)
+        if(y+yOnTree < height)
         {
-            int chunkX = x / width;
-            int chunkZ = z / width;
+            int chunkX = x/ width;
+            int chunkZ = z/ width;
             int currentChunk = chunkX + chunkZ * totalChunkWidth;
 
             int blockIndex = (x % width) + (z % width) * width + (y+yOnTree) * width * width;
@@ -19479,7 +19517,7 @@ void makeOrePatch(int xMain, int yMain, int zMain, int size, int chance, int low
             }
         }
     }
-    
+
 }
 void generateWorm(int x_, int y_, int z_, int distancePerStep, int length) {
     Vector3I current;
@@ -19489,30 +19527,30 @@ void generateWorm(int x_, int y_, int z_, int distancePerStep, int length) {
     int breakAll = 0;
 
     for (int i = 0; i < length; i++) {
-        // Generate random direction using Perlin noise
+       // Generate random direction using Perlin noise
         int dx = Perlin3D(current.x/12,         current.y/12,         current.z/12        ) * 2 - 1000;
         int dy = Perlin3D(current.x/12 + 10000, current.y/12 + 10000, current.z/12 + 10000) * 2 - 1000;
         int dz = Perlin3D(current.x/12 + 10000, current.y/12 + 10000, current.z/12 + 10000) * 2 - 1000;
-        
-        // Normalize direction
+
+       // Normalize direction
         int len = integer_sqrt(dx * dx + dy * dy + dz * dz);
         if (len == 0) len = 1;
-        dx = dx * 1000 / len;
-        dy = dy * 250 / len;
-        dz = dz * 1000 / len;
-        
-        // Move to the next point
+        dx = dx * 1000/ len;
+        dy = dy * 250/ len;
+        dz = dz * 1000/ len;
+
+       // Move to the next point
         current.x += dx * distancePerStep;
         current.y += dy * distancePerStep*4;
         current.z += dz * distancePerStep;
 
-        Vector3I currentWorld = {current.x / 1000, current.y / 1000, current.z / 1000};
-        
-        //Check boundaries
-        int sizeHalf = (4 + generate_random3D(SEED, 5, currentWorld.x, currentWorld.y, currentWorld.z)) / 2;
+        Vector3I currentWorld = {current.x/ 1000, current.y/ 1000, current.z/ 1000};
+
+       //Check boundaries
+        int sizeHalf = (4 + generate_random3D(SEED, 5, currentWorld.x, currentWorld.y, currentWorld.z))/ 2;
 
         if(generate_random3D(SEED, 30, currentWorld.x, currentWorld.y, currentWorld.z) == 1)
-        sizeHalf = (4 + generate_random3D(SEED, 5, currentWorld.x, currentWorld.y, currentWorld.z)) / 2;
+        sizeHalf = (4 + generate_random3D(SEED, 5, currentWorld.x, currentWorld.y, currentWorld.z))/ 2;
 
         for (int x = currentWorld.x-sizeHalf; x <= currentWorld.x+sizeHalf; x++)
         {
@@ -19538,7 +19576,7 @@ void generateWorm(int x_, int y_, int z_, int distancePerStep, int length) {
                             blocks[chunkX + chunkZ * totalChunkWidth][xInChunk + zInChunk * width + y * width * width] = 0;
                             else
 							{
-                            	blocks[chunkX + chunkZ * totalChunkWidth][xInChunk + zInChunk * width + y * width * width] = 24;
+				blocks[chunkX + chunkZ * totalChunkWidth][xInChunk + zInChunk * width + y * width * width] = 24;
 								blockData[(chunkX + chunkZ * totalChunkWidth)*width*width*height + xInChunk + zInChunk * width + y * width * width] = 0b10000001;
 							}
                         }else
@@ -19564,7 +19602,7 @@ void loadPerlinCaves(int chunkX, int chunkY)
                 for (int y = 0; y < height; y++)
                 {
                     if(generate_random3D(SEED, 100000, x+chunkX*width, y, z+chunkY*width) < 30)
-                    //if(x+chunkX*width == 48 && y == 10 && z+chunkY*width == 48)
+                   //if(x+chunkX*width == 48 && y == 10 && z+chunkY*width == 48)
                     generateWorm((x+chunkX*width)*1000, y*1000, (z+chunkY*width)*1000, 1, generate_random3D(SEED+1, 200, x+chunkX*width, y, z+chunkY*width) + 200);
                 }
             }
@@ -19593,13 +19631,13 @@ void loadPerlin(int chunkX, int chunkY)
                             if(y == maxY)
                             {
                                 if(maxY >= 20+terrainHeight)
-                                blocks[chunkIndex][x + z * width + y * width * width] = 1; //grass
+                                blocks[chunkIndex][x + z * width + y * width * width] = 1;//grass
                                 else
 								{
 									if(trulyRandom2D(SEED, 5, x+chunkX*width, z+chunkY*width) == 1 && maxY < 18+terrainHeight)
-									blocks[chunkIndex][x + z * width + y * width * width] = 27; //clay
+									blocks[chunkIndex][x + z * width + y * width * width] = 27;//clay
 									else
-                                	blocks[chunkIndex][x + z * width + y * width * width] = 7; //sand
+					blocks[chunkIndex][x + z * width + y * width * width] = 7;//sand
 								}
 
                                 if(mobs == true)
@@ -19614,60 +19652,60 @@ void loadPerlin(int chunkX, int chunkY)
                                 generateTree(x+chunkX*width, y+1, z+chunkY*width, generate_random2D(SEED, 4, x+chunkX*width, z+chunkY*width) + 4);
 
                                 if(generate_random2D(SEED+1, 64, x+chunkX*width, z+chunkY*width) == 1 && maxY > 20+terrainHeight)
-                                blocks[chunkIndex][x + z * width + (y+1) * width * width] = 40; //short grass
+                                blocks[chunkIndex][x + z * width + (y+1) * width * width] = 40;//short grass
 
                                 if(generate_random2D(SEED+2, 128, x+chunkX*width, z+chunkY*width) == 1 && maxY > 20+terrainHeight)
-                                blocks[chunkIndex][x + z * width + (y+1) * width * width] = 22; //dandelion
+                                blocks[chunkIndex][x + z * width + (y+1) * width * width] = 22;//dandelion
                             }
 
                             if(maxY >= 20+terrainHeight)
                             {
                                 if(y == maxY-1 || y == maxY-2)
-                                blocks[chunkIndex][x + z * width + y * width * width] = 2; //dirt
+                                blocks[chunkIndex][x + z * width + y * width * width] = 2;//dirt
                             }else
                             {
                                 if(y == maxY-1 || y == maxY-2)
 								{
 									if(trulyRandom2D(SEED, 5, x+chunkX*width, z+chunkY*width) == 1 && maxY < 18+terrainHeight)
-									blocks[chunkIndex][x + z * width + y * width * width] = 27; //clay
+									blocks[chunkIndex][x + z * width + y * width * width] = 27;//clay
 									else
-                                	blocks[chunkIndex][x + z * width + y * width * width] = 7; //sand
+					blocks[chunkIndex][x + z * width + y * width * width] = 7;//sand
 								}
                             }
                             if(y < maxY-2)
                             {
                                 blocks[chunkIndex][x + z * width + y * width * width] = 3;
-                                int ROG = generate_random3D(SEED, 100000, x+chunkX*width, y, z+chunkY*width); //random ore generation
+                                int ROG = generate_random3D(SEED, 100000, x+chunkX*width, y, z+chunkY*width);//random ore generation
                                 if(OrePatches == true)
                                 {
-                                    if(ROG < 150)                                                   //coal ore
+                                    if(ROG < 150)                                                  //coal ore
                                     makeOrePatch(x+chunkX*width, y, z+chunkY*width, 5, 1, 4, 11);
-                                    if(ROG > 150 && ROG < 250)                                      //iron ore
+                                    if(ROG > 150 && ROG < 250)                                     //iron ore
                                     makeOrePatch(x+chunkX*width, y, z+chunkY*width, 4, 1, 6, 12);
-                                    if(ROG > 250 && ROG < 300 && y < 20)                            //gold ore
+                                    if(ROG > 250 && ROG < 300 && y < 20)                           //gold ore
                                     makeOrePatch(x+chunkX*width, y, z+chunkY*width, 3, 1, 8, 13);
-                                    if(ROG > 300 && ROG < 340 && y < 25)                            //emerald ore
+                                    if(ROG > 300 && ROG < 340 && y < 25)                           //emerald ore
                                     makeOrePatch(x+chunkX*width, y, z+chunkY*width, 3, 1, 20, 15);
-                                    if(ROG > 340 && ROG < 410 && y < 12)                            //diamond ore
+                                    if(ROG > 340 && ROG < 410 && y < 12)                           //diamond ore
                                     makeOrePatch(x+chunkX*width, y, z+chunkY*width, 3, 1, 8, 14);
-                                    if(ROG > 410 && ROG < 450 && y < 20)                            //lapiz ore
+                                    if(ROG > 410 && ROG < 450 && y < 20)                           //lapiz ore
                                     makeOrePatch(x+chunkX*width, y, z+chunkY*width, 3, 1, 4, 16);
                                 }
                                 else
                                 {
-                                    if(ROG < 635)                                                   //coal ore
+                                    if(ROG < 635)                                                  //coal ore
                                     blocks[chunkIndex][x + z * width + y * width * width] = 11;
-                                    if(ROG > 635 && ROG < 1203)                                     //iron ore
+                                    if(ROG > 635 && ROG < 1203)                                    //iron ore
                                     blocks[chunkIndex][x + z * width + y * width * width] = 12;
-                                    if(ROG > 1203 && ROG < 1205 && y < 20)                          //gold ore
+                                    if(ROG > 1203 && ROG < 1205 && y < 20)                         //gold ore
                                     blocks[chunkIndex][x + z * width + y * width * width] = 13;
-                                    if(ROG > 1205 && ROG < 1210 && y < 25)                          //emerald ore
+                                    if(ROG > 1205 && ROG < 1210 && y < 25)                         //emerald ore
                                     blocks[chunkIndex][x + z * width + y * width * width] = 15;
-                                    if(ROG > 1210 && ROG < 1226 && y < 12)                          //diamond ore
+                                    if(ROG > 1210 && ROG < 1226 && y < 12)                         //diamond ore
                                     blocks[chunkIndex][x + z * width + y * width * width] = 14;
-                                    if(ROG > 1226 && ROG < 1360 && y < 20)                          //lapiz ore
+                                    if(ROG > 1226 && ROG < 1360 && y < 20)                         //lapiz ore
                                     blocks[chunkIndex][x + z * width + y * width * width] = 16;
-									if(ROG > 1360 && ROG < 1860 && y < 20)                          //redstone ore
+									if(ROG > 1360 && ROG < 1860 && y < 20)                         //redstone ore
                                     blocks[chunkIndex][x + z * width + y * width * width] = 53;
                                 }
                             }
@@ -19681,7 +19719,7 @@ void loadPerlin(int chunkX, int chunkY)
                     {
                         for (int y = maxY+1; y <= 18; y++)
 						{
-                        	blocks[chunkIndex][x + z * width + y * width * width] = 6;
+				blocks[chunkIndex][x + z * width + y * width * width] = 6;
 							blockData[chunkIndex*width*width*height + x + z * width + y * width * width] = 0b10000001;
 						}
                     }
@@ -19772,7 +19810,7 @@ void generateChunkV2(int chunkX, int chunkZ)
 
                     int currentBlockIndex = blocks[chunkIndex][blockIndex];
                     int currentBlockType = allBlock[currentBlockIndex].blockType;
-                    
+
                     if(currentBlockIndex != 0)
                     {
                         for (int i = 0; i < blockTypes[currentBlockType].facesLength; i++)
@@ -19804,7 +19842,7 @@ void generateChunkV2(int chunkX, int chunkZ)
 
                                         int blockIndexR2 = blockIndex2 + chunkIndex2 * width * width * height;
                                         int blockRotation2 = blockData[blockIndexR2]&(blockTypes[currentBlockType2].diffrentRotationAmount-1);
-                                        
+
                                         int blockSideIndex = 0;
 
                                         if(blockTypes[currentBlockType].dir[blockRotation][i].x == 1)
@@ -19916,7 +19954,7 @@ void generateChunkV2(int chunkX, int chunkZ)
                                             allObj[chunkIndex].triangles[currentTriangleLength].w = currentVerticeLength+3;
 
                                             allObj[chunkIndex].normal[currentTriangleLength] = blockTypes[currentBlockType].normal[blockRotation][i];
-                                            allObj[chunkIndex].textureSize[currentTriangleLength] = blockTypes[currentBlockType].texureSize[i]; //here
+                                            allObj[chunkIndex].textureSize[currentTriangleLength] = blockTypes[currentBlockType].texureSize[i];//here
 
                                             if(renderTextured == true)
                                             allObj[chunkIndex].color[currentTriangleLength] = allBlock[blocks[chunkIndex][blockIndex]].textureIndex[i];
@@ -19933,10 +19971,10 @@ void generateChunkV2(int chunkX, int chunkZ)
                                                 brightness = lightmap[lightIndex];
                                             }
 
-                                            //if(blockTypes[currentBlockType].normal[blockRotation][i].x != 0)
-                                            //brightness -= 2;
-                                            //if(blockTypes[currentBlockType].normal[blockRotation][i].z != 0)
-                                            //brightness -= 4;
+                                           //if(blockTypes[currentBlockType].normal[blockRotation][i].x != 0)
+                                           //brightness -= 2;
+                                           //if(blockTypes[currentBlockType].normal[blockRotation][i].z != 0)
+                                           //brightness -= 4;
 
                                             if(brightness < 0)
                                             brightness = 0;
@@ -19973,11 +20011,11 @@ void generateChunkV2(int chunkX, int chunkZ)
                                 allObj[chunkIndex].triangles[currentTriangleLength].w = currentVerticeLength+3;
 
                                 allObj[chunkIndex].normal[currentTriangleLength] = blockTypes[currentBlockType].normal[blockRotation][i];
-                                allObj[chunkIndex].textureSize[currentTriangleLength] = blockTypes[currentBlockType].texureSize[i]; //here
+                                allObj[chunkIndex].textureSize[currentTriangleLength] = blockTypes[currentBlockType].texureSize[i];//here
 
                                 if(renderTextured == true)
                                 {
-                                    if(blocks[chunkIndex][blockIndex] == 54) //if redstone wire color based on signal strength
+                                    if(blocks[chunkIndex][blockIndex] == 54)//if redstone wire color based on signal strength
                                     allObj[chunkIndex].color[currentTriangleLength] = allBlock[blocks[chunkIndex][blockIndex]].textureIndex[i] + (blockData[blockIndexR]&0x0F);
                                     else
                                     allObj[chunkIndex].color[currentTriangleLength] = allBlock[blocks[chunkIndex][blockIndex]].textureIndex[i];
@@ -20019,10 +20057,10 @@ void generateChunkV2(int chunkX, int chunkZ)
                                     }
                                 }
 
-                                //if(blockTypes[currentBlockType].normal[blockRotation][i].x != 0)
-                                //brightness -= 2;
-                                //if(blockTypes[currentBlockType].normal[blockRotation][i].z != 0)
-                                //brightness -= 4;
+                               //if(blockTypes[currentBlockType].normal[blockRotation][i].x != 0)
+                               //brightness -= 2;
+                               //if(blockTypes[currentBlockType].normal[blockRotation][i].z != 0)
+                               //brightness -= 4;
 
                                 if(brightness < 0)
                                 brightness = 0;
@@ -20063,7 +20101,7 @@ void generateChunkV2(int chunkX, int chunkZ)
             int newVerticeLength = 0;
 
 
-            for (int i = 0; i < totalVerticeLength; i++) 
+            for (int i = 0; i < totalVerticeLength; i++)
             usedTable[i] = -1;
 
             for (int i = 0; i < totalVerticeLength; i++)
@@ -20073,7 +20111,7 @@ void generateChunkV2(int chunkX, int chunkZ)
                 {
                     if(usedTable[j] == -1)
                     break;
-                    
+
                     if(positionTable[j].x == verticesIPCTemp[i].x && positionTable[j].y == verticesIPCTemp[i].y && positionTable[j].z == verticesIPCTemp[i].z)
                     {
                         oldToNew[i] = j;
@@ -20097,7 +20135,7 @@ void generateChunkV2(int chunkX, int chunkZ)
             for (int i = 0; i < newVerticeLength; i++)
             allObj[chunkIndex].verticesIPC[i] = verticesIPCTemp[i];
 
-            for (int i = 0; i < totalTriangleLength; i++) 
+            for (int i = 0; i < totalTriangleLength; i++)
             {
                 allObj[chunkIndex].triangles[i].x = oldToNew[allObj[chunkIndex].triangles[i].x];
                 allObj[chunkIndex].triangles[i].y = oldToNew[allObj[chunkIndex].triangles[i].y];
@@ -20174,7 +20212,7 @@ void updateChunkV2(int chunkX, int chunkZ)
 
                     int currentBlockIndex = blocks[chunkIndex][blockIndex];
                     int currentBlockType = allBlock[currentBlockIndex].blockType;
-                    
+
                     if(currentBlockIndex != 0)
                     {
                         for (int i = 0; i < blockTypes[currentBlockType].facesLength; i++)
@@ -20318,7 +20356,7 @@ void updateChunkV2(int chunkX, int chunkZ)
                                             allObj[chunkIndex].triangles[currentTriangleLength].w = currentVerticeLength+3;
 
                                             allObj[chunkIndex].normal[currentTriangleLength] = blockTypes[currentBlockType].normal[blockRotation][i];
-                                            allObj[chunkIndex].textureSize[currentTriangleLength] = blockTypes[currentBlockType].texureSize[i]; //here
+                                            allObj[chunkIndex].textureSize[currentTriangleLength] = blockTypes[currentBlockType].texureSize[i];//here
 
                                             if(renderTextured == true)
                                             allObj[chunkIndex].color[currentTriangleLength] = allBlock[blocks[chunkIndex][blockIndex]].textureIndex[i];
@@ -20335,10 +20373,10 @@ void updateChunkV2(int chunkX, int chunkZ)
                                                 brightness = lightmap[lightIndex];
                                             }
 
-                                            //if(blockTypes[currentBlockType].normal[blockRotation][i].x != 0)
-                                            //brightness -= 2;
-                                            //if(blockTypes[currentBlockType].normal[blockRotation][i].z != 0)
-                                            //brightness -= 4;
+                                           //if(blockTypes[currentBlockType].normal[blockRotation][i].x != 0)
+                                           //brightness -= 2;
+                                           //if(blockTypes[currentBlockType].normal[blockRotation][i].z != 0)
+                                           //brightness -= 4;
 
                                             if(brightness < 0)
                                             brightness = 0;
@@ -20375,11 +20413,11 @@ void updateChunkV2(int chunkX, int chunkZ)
                                 allObj[chunkIndex].triangles[currentTriangleLength].w = currentVerticeLength+3;
 
                                 allObj[chunkIndex].normal[currentTriangleLength] = blockTypes[currentBlockType].normal[blockRotation][i];
-                                allObj[chunkIndex].textureSize[currentTriangleLength] = blockTypes[currentBlockType].texureSize[i]; //here
+                                allObj[chunkIndex].textureSize[currentTriangleLength] = blockTypes[currentBlockType].texureSize[i];//here
 
                                 if(renderTextured == true)
                                 {
-                                    if(blocks[chunkIndex][blockIndex] == 54) //if redstone wire color based on signal strength
+                                    if(blocks[chunkIndex][blockIndex] == 54)//if redstone wire color based on signal strength
                                     allObj[chunkIndex].color[currentTriangleLength] = allBlock[blocks[chunkIndex][blockIndex]].textureIndex[i] + (blockData[blockIndexR]&0x0F);
                                     else
                                     allObj[chunkIndex].color[currentTriangleLength] = allBlock[blocks[chunkIndex][blockIndex]].textureIndex[i];
@@ -20421,10 +20459,10 @@ void updateChunkV2(int chunkX, int chunkZ)
                                     }
                                 }
 
-                                //if(blockTypes[currentBlockType].normal[blockRotation][i].x != 0)
-                                //brightness -= 2;
-                                //if(blockTypes[currentBlockType].normal[blockRotation][i].z != 0)
-                                //brightness -= 4;
+                               //if(blockTypes[currentBlockType].normal[blockRotation][i].x != 0)
+                               //brightness -= 2;
+                               //if(blockTypes[currentBlockType].normal[blockRotation][i].z != 0)
+                               //brightness -= 4;
 
                                 if(brightness < 0)
                                 brightness = 0;
@@ -20465,7 +20503,7 @@ void updateChunkV2(int chunkX, int chunkZ)
             int newVerticeLength = 0;
 
 
-            for (int i = 0; i < totalVerticeLength; i++) 
+            for (int i = 0; i < totalVerticeLength; i++)
             usedTable[i] = -1;
 
             for (int i = 0; i < totalVerticeLength; i++)
@@ -20475,7 +20513,7 @@ void updateChunkV2(int chunkX, int chunkZ)
                 {
                     if(usedTable[j] == -1)
                     break;
-                    
+
                     if(positionTable[j].x == verticesIPCTemp[i].x && positionTable[j].y == verticesIPCTemp[i].y && positionTable[j].z == verticesIPCTemp[i].z)
                     {
                         oldToNew[i] = j;
@@ -20499,7 +20537,7 @@ void updateChunkV2(int chunkX, int chunkZ)
             for (int i = 0; i < newVerticeLength; i++)
             allObj[chunkIndex].verticesIPC[i] = verticesIPCTemp[i];
 
-            for (int i = 0; i < totalTriangleLength; i++) 
+            for (int i = 0; i < totalTriangleLength; i++)
             {
                 allObj[chunkIndex].triangles[i].x = oldToNew[allObj[chunkIndex].triangles[i].x];
                 allObj[chunkIndex].triangles[i].y = oldToNew[allObj[chunkIndex].triangles[i].y];
@@ -20624,7 +20662,7 @@ void updateChunkTexturesV2(int chunkX, int chunkZ)
                             {
                                 if(renderTextured == true)
                                 {
-                                    if(blocks[chunkIndex][blockIndex] == 54) //if redstone wire color based on signal strength
+                                    if(blocks[chunkIndex][blockIndex] == 54)//if redstone wire color based on signal strength
                                     allObj[chunkIndex].color[currentTriangleLength] = allBlock[blocks[chunkIndex][blockIndex]].textureIndex[i] + (blockData[blockIndexR]&0x0F);
                                     else
                                     allObj[chunkIndex].color[currentTriangleLength] = allBlock[blocks[chunkIndex][blockIndex]].textureIndex[i];
@@ -20723,10 +20761,10 @@ void updateChunkLightFacesV2(int chunkX, int chunkZ)
                                                 brightness = lightmap[lightIndex];
                                             }
 
-                                            //if(blockTypes[currentBlockType].normal[blockRotation][i].x != 0)
-                                            //brightness -= 2;
-                                            //if(blockTypes[currentBlockType].normal[blockRotation][i].z != 0)
-                                            //brightness -= 4;
+                                           //if(blockTypes[currentBlockType].normal[blockRotation][i].x != 0)
+                                           //brightness -= 2;
+                                           //if(blockTypes[currentBlockType].normal[blockRotation][i].z != 0)
+                                           //brightness -= 4;
 
                                             if(brightness < 0)
                                             brightness = 0;
@@ -20775,10 +20813,10 @@ void updateChunkLightFacesV2(int chunkX, int chunkZ)
                                     }
                                 }
 
-                                //if(blockTypes[currentBlockType].normal[blockRotation][i].x != 0)
-                                //brightness -= 2;
-                                //if(blockTypes[currentBlockType].normal[blockRotation][i].z != 0)
-                                //brightness -= 4;
+                               //if(blockTypes[currentBlockType].normal[blockRotation][i].x != 0)
+                               //brightness -= 2;
+                               //if(blockTypes[currentBlockType].normal[blockRotation][i].z != 0)
+                               //brightness -= 4;
 
                                 if(brightness < 0)
                                 brightness = 0;
@@ -20817,9 +20855,9 @@ void makeExplosion(int size, int posX, int posY, int posZ)
                 {
                     int xInMap = x - half + posX;
                     int zInMap = z - half + posZ;
-                    
-                    int chunkX = xInMap / width;
-                    int chunkY = zInMap / width;
+
+                    int chunkX = xInMap/ width;
+                    int chunkY = zInMap/ width;
                     int currentChunk_ = chunkX + chunkY * totalChunkWidth;
                     int blockIndex = (xInMap % width) + (zInMap % width) * width + (yInMap) * width * width;
 
@@ -20847,13 +20885,13 @@ void makeExplosion(int size, int posX, int posY, int posZ)
                     for (int i = 0; i < totalChunkWidth*totalChunkWidth; i++)
                     {
                         if(chunk2DActive[i] == true)
-                        updateChunkLightFacesV2(i % totalChunkWidth, i / totalChunkWidth);
+                        updateChunkLightFacesV2(i % totalChunkWidth, i/ totalChunkWidth);
                     }
                 }
             }
         }
     }
-    
+
 }
 void updateMap()
 {
@@ -20864,7 +20902,7 @@ void updateMap()
     Vector3I allSides[6] = {{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}, {0, 1, 0}, {0, -1, 0}};
 
 	Vector3I sidesdiagonal[4] = {{1, 0, 1}, {-1, 0, 1}, {-1, 0, 1}, {-1, 0, -1}};
-    
+
     Vector3I sidesRepeater[4] = {{1, 0, 0}, {0, 0, -1}, {-1, 0, 0}, {0, 0, 1}};
 
 	Vector3I sidesRepeaterForStopSignal[4][2] = {{{0, 0, 1}, {0, 0, -1}}, {{1, 0, 0}, {-1, 0, 0}}, {{0, 0, 1}, {0, 0, -1}}, {{1, 0, 0}, {-1, 0, 0}}};
@@ -20876,7 +20914,7 @@ void updateMap()
 
 	Vector3I sidesWater[5] = {{1, 0, 0}, {-1, 0, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
 	Vector3B sidesDirtToGrass[12] = {{1,-1,0}, {-1,-1,0}, {0,-1,1}, {0,-1,-1}, {1,0,0}, {-1,0,0}, {0,0,1}, {0,0,-1}, {1,1,0}, {-1,1,0}, {0,1,1}, {0,1,-1}};
-    
+
     char redstoneData[5760];
 	char updateRedstoneData[5760];
 	char redstoneBlockData[5760];
@@ -20899,14 +20937,14 @@ void updateMap()
 
 	chunkXMapRedstone++;
 
-    //for (int chunkZ = 0; chunkZ < totalChunkWidth; chunkZ++)
-    //{
-    //    for (int chunkX = 0; chunkX < totalChunkWidth; chunkX++)
-    //    {
+   //for (int chunkZ = 0; chunkZ < totalChunkWidth; chunkZ++)
+   //{
+   //    for (int chunkX = 0; chunkX < totalChunkWidth; chunkX++)
+   //    {
             int chunkIndex = chunkX + chunkZ * totalChunkWidth;
-    //        if(chunk2DActive[chunkIndex] == true)
-    //        {
-                //char *redstoneData = 0xE5017000;
+   //        if(chunk2DActive[chunkIndex] == true)
+   //        {
+               //char *redstoneData = 0xE5017000;
                 memset(updateRedstoneData, 0, 5760);
 				memset(redstoneBlockData, 0, 5760);
 				memset(waterMovementChunk, 0, 5760);
@@ -20933,15 +20971,15 @@ void updateMap()
 									int rotation = ((blockData[chunkIndex*width*width*height + blockIndex]&0b00001110)>>1);
 
 									int posX = chunkX*width + x;
-                        		    int posZ = chunkZ*width + z;
+					    int posZ = chunkZ*width + z;
 
 									int newX = posX+allSidesLeverButton[rotation].x;
-                        		    int newY = y+allSidesLeverButton[rotation].y;
-                        		    int newZ = posZ+allSidesLeverButton[rotation].z;
+					    int newY = y+allSidesLeverButton[rotation].y;
+					    int newZ = posZ+allSidesLeverButton[rotation].z;
 
-                        		    int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                        		    int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
-                        		    int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
+					    int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
+					    int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
+					    int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
 									if((blockData[chunkIndex*width*width*height + blockIndex]&0b00000001) == 0b00000001)
 									{
@@ -20983,15 +21021,15 @@ void updateMap()
 									int rotation = ((blockData[chunkIndex*width*width*height + blockIndex]&0b00001110)>>1);
 
 									int posX = chunkX*width + x;
-                        		    int posZ = chunkZ*width + z;
+					    int posZ = chunkZ*width + z;
 
 									int newX = posX+allSidesLeverButton[rotation].x;
-                        		    int newY = y+allSidesLeverButton[rotation].y;
-                        		    int newZ = posZ+allSidesLeverButton[rotation].z;
+					    int newY = y+allSidesLeverButton[rotation].y;
+					    int newZ = posZ+allSidesLeverButton[rotation].z;
 
-                        		    int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                        		    int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
-                        		    int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
+					    int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
+					    int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
+					    int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
 									int time = ((blockData[chunkIndex*width*width*height + blockIndex]&0b00110000)>>4);
 									if(time > 0)
@@ -21038,165 +21076,165 @@ void updateMap()
 									}
 								}
 
-                                //updateing blocks above torch
-                        		if(blocks[chunkIndex][blockIndex] == 55)
-                        		{
-                        		    int blockIndexNew = blockIndex+width*width;
-                        		    int blockDataIndex = chunkIndex*width*width*height + blockIndexNew;
-                        		    if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew]].blockType].canHoldRedstoneSignal == true && (blockData[blockDataIndex]&0b10000000) == 0b00000000)
-                        		    {
-                        		        blockData[blockDataIndex] = ((blockData[blockDataIndex]&0b01111111)|0b10000000);
-                        		        updateChunkAtIndex = 1;
-                        		    }
-                        		}
-                        		if(blocks[chunkIndex][blockIndex] == 56)
-                        		{
-                        		    int blockIndexNew = blockIndex+width*width;
-                        		    int blockDataIndex = chunkIndex*width*width*height + blockIndexNew;
-                        		    if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew]].blockType].canHoldRedstoneSignal == true  && (blockData[blockDataIndex]&0b10000000) == 0b10000000)
-                        		    {
-                        		        blockData[blockDataIndex] = (blockData[blockDataIndex]&0b01111111);
-                        		        updateChunkAtIndex = 1;
-                        		    }
-                        		}
+                               //updateing blocks above torch
+					if(blocks[chunkIndex][blockIndex] == 55)
+					{
+					    int blockIndexNew = blockIndex+width*width;
+					    int blockDataIndex = chunkIndex*width*width*height + blockIndexNew;
+					    if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew]].blockType].canHoldRedstoneSignal == true && (blockData[blockDataIndex]&0b10000000) == 0b00000000)
+					    {
+					        blockData[blockDataIndex] = ((blockData[blockDataIndex]&0b01111111)|0b10000000);
+					        updateChunkAtIndex = 1;
+					    }
+					}
+					if(blocks[chunkIndex][blockIndex] == 56)
+					{
+					    int blockIndexNew = blockIndex+width*width;
+					    int blockDataIndex = chunkIndex*width*width*height + blockIndexNew;
+					    if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew]].blockType].canHoldRedstoneSignal == true  && (blockData[blockDataIndex]&0b10000000) == 0b10000000)
+					    {
+					        blockData[blockDataIndex] = (blockData[blockDataIndex]&0b01111111);
+					        updateChunkAtIndex = 1;
+					    }
+					}
 
-                        		//updating torch
-                        		if(blocks[chunkIndex][blockIndex] == 55)
-                        		{
-                        		    int blockIndexNew = blockIndex-width*width;
-                        		    int blockDataIndex = chunkIndex*width*width*height + blockIndexNew;
+					//updating torch
+					if(blocks[chunkIndex][blockIndex] == 55)
+					{
+					    int blockIndexNew = blockIndex-width*width;
+					    int blockDataIndex = chunkIndex*width*width*height + blockIndexNew;
 
 									if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew]].blockType].canHoldRedstoneSignal == true)
 									{
-                        		    	if((blockData[blockDataIndex]&0b11000000) > 0b00000000)
-                        		    	{
-                        		    	    redstoneBlockData[blockIndex] = 56;
+						if((blockData[blockDataIndex]&0b11000000) > 0b00000000)
+						{
+						    redstoneBlockData[blockIndex] = 56;
 											blockData[chunkIndex*width*width*height + blockIndex] = 0b00000000;
 
                                             int blockIndexNew2 = blockIndex+width*width;
-                        		            int blockDataIndex2 = chunkIndex*width*width*height + blockIndexNew2;
-                        		            if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew2]].blockType].canHoldRedstoneSignal == true  && (blockData[blockDataIndex2]&0b10000000) == 0b10000000)
-                        		            {
+					            int blockDataIndex2 = chunkIndex*width*width*height + blockIndexNew2;
+					            if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew2]].blockType].canHoldRedstoneSignal == true  && (blockData[blockDataIndex2]&0b10000000) == 0b10000000)
+					            {
                                                 if(y+1 != height)
-                        		                blockData[blockDataIndex2] = (blockData[blockDataIndex2]&0b01111111);
-                        		            }
+					                blockData[blockDataIndex2] = (blockData[blockDataIndex2]&0b01111111);
+					            }
 
-                        		    	    updateChunkAtIndex = 1;
-                        		    	}
+						    updateChunkAtIndex = 1;
+						}
 									}
-                        		}
-                        		if(blocks[chunkIndex][blockIndex] == 56)
-                        		{
-                        		    int blockIndexNew = blockIndex-width*width;
-                        		    int blockDataIndex = chunkIndex*width*width*height + blockIndexNew;
+					}
+					if(blocks[chunkIndex][blockIndex] == 56)
+					{
+					    int blockIndexNew = blockIndex-width*width;
+					    int blockDataIndex = chunkIndex*width*width*height + blockIndexNew;
 
 									if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew]].blockType].canHoldRedstoneSignal == true)
 									{
-                        		    	if((blockData[blockDataIndex]&0b11000000) == 0b00000000)
-                        		    	{
-                        		    	    redstoneBlockData[blockIndex] = 55;
+						if((blockData[blockDataIndex]&0b11000000) == 0b00000000)
+						{
+						    redstoneBlockData[blockIndex] = 55;
 											blockData[chunkIndex*width*width*height + blockIndex] = 0b10000000;
 
-                                            int blockIndexNew2 = blockIndex+width*width; //updating blocks above torch
-                        		            int blockDataIndex2 = chunkIndex*width*width*height + blockIndexNew2;
-                        		            if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew2]].blockType].canHoldRedstoneSignal == true && (blockData[blockDataIndex2]&0b10000000) == 0b00000000)
-                        		            {
+                                            int blockIndexNew2 = blockIndex+width*width;//updating blocks above torch
+					            int blockDataIndex2 = chunkIndex*width*width*height + blockIndexNew2;
+					            if(blockTypes[allBlock[blocks[chunkIndex][blockIndexNew2]].blockType].canHoldRedstoneSignal == true && (blockData[blockDataIndex2]&0b10000000) == 0b00000000)
+					            {
                                                 if(y+1 != height)
-                        		                redstoneData[blockIndexNew2] = ((blockData[blockDataIndex2]&0b01111111)|0b10000000);
-                        		            }
+					                redstoneData[blockIndexNew2] = ((blockData[blockDataIndex2]&0b01111111)|0b10000000);
+					            }
 
-                        		    	    updateChunkAtIndex = 1;
-                        		    	}
+						    updateChunkAtIndex = 1;
+						}
 									}
-                        		}
-	
-                                //updating block in front of repeater
-                        		if(blocks[chunkIndex][blockIndex] == 57)
-                        		{
-                        		    int blockDataIndex = chunkIndex*width*width*height + blockIndex;
-                        		    int rotation = blockData[blockDataIndex]&0b00000011;
+					}
 
-                        		    int newX = (chunkX*width + x) - sidesRepeater[rotation].x;
-                        		    int newZ = (chunkZ*width + z) - sidesRepeater[rotation].z;
+                               //updating block in front of repeater
+					if(blocks[chunkIndex][blockIndex] == 57)
+					{
+					    int blockDataIndex = chunkIndex*width*width*height + blockIndex;
+					    int rotation = blockData[blockDataIndex]&0b00000011;
 
-                        		    if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth)
-                        		    {
-                        		        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                        		        int blockIndexNew = (newX%width) + (newZ%width) * width + y * width * width;
-                        		        int blockDataIndexNew = chunkIndexNew*width*width*height + blockIndexNew;
+					    int newX = (chunkX*width + x) - sidesRepeater[rotation].x;
+					    int newZ = (chunkZ*width + z) - sidesRepeater[rotation].z;
 
-                        		        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true && (blockData[blockDataIndexNew]&0b10000000) == 0b10000000)
-                        		        {
-                        		            blockData[blockDataIndexNew] = ((blockData[blockDataIndexNew]&0b01111111));
-                        		            updateChunkAtIndex = 1;
-                        		        }
-                        		    }
-                        		}
-                        		if(blocks[chunkIndex][blockIndex] == 58)
-                        		{
-                        		    int blockDataIndex = chunkIndex*width*width*height + blockIndex;
-                        		    int rotation = blockData[blockDataIndex]&0b00000011;
+					    if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth)
+					    {
+					        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
+					        int blockIndexNew = (newX%width) + (newZ%width) * width + y * width * width;
+					        int blockDataIndexNew = chunkIndexNew*width*width*height + blockIndexNew;
 
-                        		    int newX = (chunkX*width + x) - sidesRepeater[rotation].x;
-                        		    int newZ = (chunkZ*width + z) - sidesRepeater[rotation].z;
+					        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true && (blockData[blockDataIndexNew]&0b10000000) == 0b10000000)
+					        {
+					            blockData[blockDataIndexNew] = ((blockData[blockDataIndexNew]&0b01111111));
+					            updateChunkAtIndex = 1;
+					        }
+					    }
+					}
+					if(blocks[chunkIndex][blockIndex] == 58)
+					{
+					    int blockDataIndex = chunkIndex*width*width*height + blockIndex;
+					    int rotation = blockData[blockDataIndex]&0b00000011;
 
-                        		    if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth)
-                        		    {
-                        		        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                        		        int blockIndexNew = (newX%width) + (newZ%width) * width + y * width * width;
-                        		        int blockDataIndexNew = chunkIndexNew*width*width*height + blockIndexNew;
+					    int newX = (chunkX*width + x) - sidesRepeater[rotation].x;
+					    int newZ = (chunkZ*width + z) - sidesRepeater[rotation].z;
 
-                        		        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true && (blockData[blockDataIndexNew]&0b10000000) == 0b00000000)
-                        		        {
-                        		            blockData[blockDataIndexNew] = ((blockData[blockDataIndexNew]&0b01111111)|0b10000000);
-                        		            updateChunkAtIndex = 1;
-                        		        }
-                        		    }
-                        		}
+					    if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth)
+					    {
+					        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
+					        int blockIndexNew = (newX%width) + (newZ%width) * width + y * width * width;
+					        int blockDataIndexNew = chunkIndexNew*width*width*height + blockIndexNew;
 
-                        		//updating repeater
-                        		if(blocks[chunkIndex][blockIndex] == 57)
-                        		{
-                        		    int posX = chunkX*width + x;
-                        		    int posZ = chunkZ*width + z;
+					        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true && (blockData[blockDataIndexNew]&0b10000000) == 0b00000000)
+					        {
+					            blockData[blockDataIndexNew] = ((blockData[blockDataIndexNew]&0b01111111)|0b10000000);
+					            updateChunkAtIndex = 1;
+					        }
+					    }
+					}
 
-                        		    int blockDataIndex = chunkIndex*width*width*height + blockIndex;
-                        		    int rotation = blockData[blockDataIndex]&0b00000011;
+					//updating repeater
+					if(blocks[chunkIndex][blockIndex] == 57)
+					{
+					    int posX = chunkX*width + x;
+					    int posZ = chunkZ*width + z;
 
-                        		    int newX = posX+sidesRepeater[rotation].x;
-                        		    int newY = y+sidesRepeater[rotation].y;
-                        		    int newZ = posZ+sidesRepeater[rotation].z;
+					    int blockDataIndex = chunkIndex*width*width*height + blockIndex;
+					    int rotation = blockData[blockDataIndex]&0b00000011;
 
-                        		    if(newX > 0 && newX < width*totalChunkWidth && newY > 0 && newY < height && newZ > 0 && newZ < width*totalChunkWidth)
-                        		    {
-                        		        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                        		        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
+					    int newX = posX+sidesRepeater[rotation].x;
+					    int newY = y+sidesRepeater[rotation].y;
+					    int newZ = posZ+sidesRepeater[rotation].z;
 
-                        		        bool change = false;
+					    if(newX > 0 && newX < width*totalChunkWidth && newY > 0 && newY < height && newZ > 0 && newZ < width*totalChunkWidth)
+					    {
+					        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
+					        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
+
+					        bool change = false;
 
 										if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canHoldRedstoneSignal == true)
 										{
 											if((blockData[chunkIndexNew*width*width*height+blockIndexNew]&0b11000000) > 0b00000000)
-                        		            change = true;
+					            change = true;
 										}
-                        		        else if(blocks[chunkIndexNew][blockIndexNew] == 58)
-                        		        {
-                        		            int blockDataIndexNew = chunkIndexNew*width*width*height + blockIndexNew;
-                        		            if((blockData[blockDataIndexNew]&0b00000011) == rotation)
-                        		            change = true;
-                        		        }
-	
-                        		        if(change == true)
-                        		        {
+					        else if(blocks[chunkIndexNew][blockIndexNew] == 58)
+					        {
+					            int blockDataIndexNew = chunkIndexNew*width*width*height + blockIndexNew;
+					            if((blockData[blockDataIndexNew]&0b00000011) == rotation)
+					            change = true;
+					        }
+
+					        if(change == true)
+					        {
 											bool hasNoSignal = true;
 											for (int i = 0; i < 2; i++)
 											{
 												int newX2 = posX+sidesRepeaterForStopSignal[rotation][i].x;
-                        		    			int newY2 = y+sidesRepeaterForStopSignal[rotation][i].y;
-                        		    			int newZ2 = posZ+sidesRepeaterForStopSignal[rotation][i].z;
+								int newY2 = y+sidesRepeaterForStopSignal[rotation][i].y;
+								int newZ2 = posZ+sidesRepeaterForStopSignal[rotation][i].z;
 
 												int chunkIndexNew2 = (newX2/width) + (newZ2/width) * totalChunkWidth;
-                        		        		int blockIndexNew2 = (newX2%width) + (newZ2%width) * width + newY2 * width * width;
+								int blockIndexNew2 = (newX2%width) + (newZ2%width) * width + newY2 * width * width;
 
 												if(blocks[chunkIndexNew2][blockIndexNew2] == 58 && (blockData[chunkIndexNew2*width*width*height+blockIndexNew2]&0b00000011) == sidesRepeaterForStopSignalRotation[rotation][i])
 												hasNoSignal = false;
@@ -21204,78 +21242,78 @@ void updateMap()
 
 											if(hasNoSignal == true)
 											{
-                        		            	redstoneBlockData[blockIndex] = 58;
+							redstoneBlockData[blockIndex] = 58;
 
                                                 int newX3 = (chunkX*width + x) - sidesRepeater[rotation].x;
-                        		                int newZ3 = (chunkZ*width + z) - sidesRepeater[rotation].z;
+					                int newZ3 = (chunkZ*width + z) - sidesRepeater[rotation].z;
 
-                        		                if(newX3 > 0 && newX3 < width*totalChunkWidth && newZ3 > 0 && newZ3 < width*totalChunkWidth)
-                        		                {
-                        		                    int chunkIndexNew3 = (newX3/width) + (newZ3/width) * totalChunkWidth;
-                        		                    int blockIndexNew3 = (newX3%width) + (newZ3%width) * width + y * width * width;
-                        		                    int blockDataIndexNew3 = chunkIndexNew3*width*width*height + blockIndexNew3;
+					                if(newX3 > 0 && newX3 < width*totalChunkWidth && newZ3 > 0 && newZ3 < width*totalChunkWidth)
+					                {
+					                    int chunkIndexNew3 = (newX3/width) + (newZ3/width) * totalChunkWidth;
+					                    int blockIndexNew3 = (newX3%width) + (newZ3%width) * width + y * width * width;
+					                    int blockDataIndexNew3 = chunkIndexNew3*width*width*height + blockIndexNew3;
 
-                        		                    if(blockTypes[allBlock[blocks[chunkIndexNew3][blockIndexNew3]].blockType].canTransferRedstoneSignal == true && (blockData[blockDataIndexNew3]&0b10000000) == 0b00000000)
-                        		                    {
+					                    if(blockTypes[allBlock[blocks[chunkIndexNew3][blockIndexNew3]].blockType].canTransferRedstoneSignal == true && (blockData[blockDataIndexNew3]&0b10000000) == 0b00000000)
+					                    {
                                                         if(chunkIndexNew3 != chunkIndex)
-                        		                        blockData[blockDataIndexNew3] = ((blockData[blockDataIndexNew3]&0b01111111)|0b10000000);
+					                        blockData[blockDataIndexNew3] = ((blockData[blockDataIndexNew3]&0b01111111)|0b10000000);
                                                         else
                                                         {
                                                             redstoneData[blockIndexNew3] = ((blockData[blockDataIndexNew3]&0b01111111)|0b10000000);
                                                             updateRedstoneData[blockIndexNew3] = 1;
                                                         }
-                        		                    }
-                        		                }
+					                    }
+					                }
 
-                        		            	updateChunkAtIndex = 1;
+							updateChunkAtIndex = 1;
 											}
-                        		        }
-                        		    }
-                        		}
-                        		if(blocks[chunkIndex][blockIndex] == 58)
-                        		{
-                        		    int posX = chunkX*width + x;
-                        		    int posZ = chunkZ*width + z;
+					        }
+					    }
+					}
+					if(blocks[chunkIndex][blockIndex] == 58)
+					{
+					    int posX = chunkX*width + x;
+					    int posZ = chunkZ*width + z;
 
-                        		    int blockDataIndex = chunkIndex*width*width*height + blockIndex;
-                        		    int rotation = blockData[blockDataIndex]&0b00000011;
+					    int blockDataIndex = chunkIndex*width*width*height + blockIndex;
+					    int rotation = blockData[blockDataIndex]&0b00000011;
 
-                        		    int newX = posX+sidesRepeater[rotation].x;
-                        		    int newY = y+sidesRepeater[rotation].y;
-                        		    int newZ = posZ+sidesRepeater[rotation].z;
+					    int newX = posX+sidesRepeater[rotation].x;
+					    int newY = y+sidesRepeater[rotation].y;
+					    int newZ = posZ+sidesRepeater[rotation].z;
 
-                        		    if(newX > 0 && newX < width*totalChunkWidth && newY > 0 && newY < height && newZ > 0 && newZ < width*totalChunkWidth)
-                        		    {
-                        		        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                        		        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
+					    if(newX > 0 && newX < width*totalChunkWidth && newY > 0 && newY < height && newZ > 0 && newZ < width*totalChunkWidth)
+					    {
+					        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
+					        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
 
-                        		        bool change = false;
+					        bool change = false;
 
 										if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canHoldRedstoneSignal == true)
 										{
 											if((blockData[chunkIndexNew*width*width*height+blockIndexNew]&0b11000000) == 0b00000000)
-                        		            change = true;
+					            change = true;
 										}
-                        		        else if(blocks[chunkIndexNew][blockIndexNew] == 58)
-                        		        {
-                        		            int blockDataIndexNew = chunkIndexNew*width*width*height + blockIndexNew;
-                        		            if((blockData[blockDataIndexNew]&0b00000011) != rotation)
-                        		            change = true;
-                        		        }
-                        		        else
-                        		        change = true;
+					        else if(blocks[chunkIndexNew][blockIndexNew] == 58)
+					        {
+					            int blockDataIndexNew = chunkIndexNew*width*width*height + blockIndexNew;
+					            if((blockData[blockDataIndexNew]&0b00000011) != rotation)
+					            change = true;
+					        }
+					        else
+					        change = true;
 
-                        		        if(change == true)
-                        		        {
+					        if(change == true)
+					        {
 											bool hasNoSignal = true;
 											for (int i = 0; i < 2; i++)
 											{
 												int newX2 = posX+sidesRepeaterForStopSignal[rotation][i].x;
-                        		    			int newY2 = y+sidesRepeaterForStopSignal[rotation][i].y;
-                        		    			int newZ2 = posZ+sidesRepeaterForStopSignal[rotation][i].z;
+								int newY2 = y+sidesRepeaterForStopSignal[rotation][i].y;
+								int newZ2 = posZ+sidesRepeaterForStopSignal[rotation][i].z;
 
 												int chunkIndexNew2 = (newX2/width) + (newZ2/width) * totalChunkWidth;
-                        		        		int blockIndexNew2 = (newX2%width) + (newZ2%width) * width + newY2 * width * width;
+								int blockIndexNew2 = (newX2%width) + (newZ2%width) * width + newY2 * width * width;
 
 												if(blocks[chunkIndexNew2][blockIndexNew2] == 58 && (blockData[chunkIndexNew2*width*width*height+blockIndexNew2]&0b00000011) == sidesRepeaterForStopSignalRotation[rotation][i])
 												hasNoSignal = false;
@@ -21283,249 +21321,249 @@ void updateMap()
 
 											if(hasNoSignal == true)
 											{
-                        		            	redstoneBlockData[blockIndex] = 57;
+							redstoneBlockData[blockIndex] = 57;
 
 												int newX3 = (chunkX*width + x) - sidesRepeater[rotation].x;
-                        		    			int newZ3 = (chunkZ*width + z) - sidesRepeater[rotation].z;
+								int newZ3 = (chunkZ*width + z) - sidesRepeater[rotation].z;
 
-                        		    			if(newX3 > 0 && newX3 < width*totalChunkWidth && newZ3 > 0 && newZ3 < width*totalChunkWidth) //update block in front of the repeater
-                        		    			{
-                        		    			    int chunkIndexNew3 = (newX3/width) + (newZ3/width) * totalChunkWidth;
-                        		    			    int blockIndexNew3 = (newX3%width) + (newZ3%width) * width + y * width * width;
-                        		    			    int blockDataIndexNew3 = chunkIndexNew3*width*width*height + blockIndexNew3;
+								if(newX3 > 0 && newX3 < width*totalChunkWidth && newZ3 > 0 && newZ3 < width*totalChunkWidth)//update block in front of the repeater
+								{
+								    int chunkIndexNew3 = (newX3/width) + (newZ3/width) * totalChunkWidth;
+								    int blockIndexNew3 = (newX3%width) + (newZ3%width) * width + y * width * width;
+								    int blockDataIndexNew3 = chunkIndexNew3*width*width*height + blockIndexNew3;
 
-                        		    			    if(blockTypes[allBlock[blocks[chunkIndexNew3][blockIndexNew3]].blockType].canTransferRedstoneSignal == true && (blockData[blockDataIndexNew3]&0b10000000) == 0b10000000)
-                        		    			    {
+								    if(blockTypes[allBlock[blocks[chunkIndexNew3][blockIndexNew3]].blockType].canTransferRedstoneSignal == true && (blockData[blockDataIndexNew3]&0b10000000) == 0b10000000)
+								    {
 														if(chunkIndexNew3 != chunkIndex)
-                        		    			        blockData[blockDataIndexNew3] = ((blockData[blockDataIndexNew3]&0b01111111));
+								        blockData[blockDataIndexNew3] = ((blockData[blockDataIndexNew3]&0b01111111));
 														else
 														{
 															redstoneData[blockIndexNew3] = ((blockData[blockDataIndexNew3]&0b01111111));
                                                             updateRedstoneData[blockIndexNew3] = 1;
 														}
-                        		    			    }
-                        		    			}
+								    }
+								}
 
-                        		            	updateChunkAtIndex = 1;
+							updateChunkAtIndex = 1;
 											}
-                        		        }
-                        		    }
-                        		}
+					        }
+					    }
+					}
 
-                        		//updating iron door
-                        		if(blocks[chunkIndex][blockIndex] == 59)
-                        		{
-                        		    int posX = chunkX*width + x;
-                        		    int posZ = chunkZ*width + z;
+					//updating iron door
+					if(blocks[chunkIndex][blockIndex] == 59)
+					{
+					    int posX = chunkX*width + x;
+					    int posZ = chunkZ*width + z;
 
-                        		    bool openDoor = false;
+					    bool openDoor = false;
 
-                        		    for (int i = 0; i < 10; i++)
-                        		    {
-                        		        int newX = posX+allSidesDoor[i].x;
-                        		        int newY = y+allSidesDoor[i].y;
-                        		        int newZ = posZ+allSidesDoor[i].z;
+					    for (int i = 0; i < 10; i++)
+					    {
+					        int newX = posX+allSidesDoor[i].x;
+					        int newY = y+allSidesDoor[i].y;
+					        int newZ = posZ+allSidesDoor[i].z;
 
-                        		        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                        		        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
-                        		        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
+					        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
+					        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
+					        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-                        		        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 17 || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 18)
+					        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 17 || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 18)
 										{
 											if((blockData[blockDataIndex]&0b10000000) == 0b10000000)
-                        		        	openDoor = true;
+							openDoor = true;
 										}
-                        		    }
+					    }
 
-                        		    for (int i = 0; i < 4; i++)
-                        		    {
-                        		        int newX = posX+sidesRepeater[i].x;
-                        		        int newY = y+sidesRepeater[i].y;
-                        		        int newZ = posZ+sidesRepeater[i].z;
+					    for (int i = 0; i < 4; i++)
+					    {
+					        int newX = posX+sidesRepeater[i].x;
+					        int newY = y+sidesRepeater[i].y;
+					        int newZ = posZ+sidesRepeater[i].z;
 
-                        		        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                        		        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
-                        		        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
+					        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
+					        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
+					        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-                        		        if(blocks[chunkIndexNew][blockIndexNew] == 58 && (blockData[blockDataIndex]&0b00000011) == i)
-                        		        openDoor = true;
-                        		    }
+					        if(blocks[chunkIndexNew][blockIndexNew] == 58 && (blockData[blockDataIndex]&0b00000011) == i)
+					        openDoor = true;
+					    }
 
-                        		    for (int i = 0; i < 4; i++)
-                        		    {
-                        		        int newX = posX+sidesRepeater[i].x;
-                        		        int newY = y+sidesRepeater[i].y+1;
-                        		        int newZ = posZ+sidesRepeater[i].z;
+					    for (int i = 0; i < 4; i++)
+					    {
+					        int newX = posX+sidesRepeater[i].x;
+					        int newY = y+sidesRepeater[i].y+1;
+					        int newZ = posZ+sidesRepeater[i].z;
 
-                        		        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                        		        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
-                        		        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
+					        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
+					        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
+					        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-                        		        if(blocks[chunkIndexNew][blockIndexNew] == 58 && (blockData[blockDataIndex]&0b00000011) == i)
-                        		        openDoor = true;
-                        		    }
+					        if(blocks[chunkIndexNew][blockIndexNew] == 58 && (blockData[blockDataIndex]&0b00000011) == i)
+					        openDoor = true;
+					    }
 
-                        		    if(openDoor == true)
-                        		    {
-                        		        if(((blockData[chunkIndex*width*width*height + blockIndex]&0b00000100)>>2) == 0)
-                        		        {
-                        		            if((blockData[chunkIndex*width*width*height + blockIndex]&0b00000011) == 3)
-                        		            blockData[chunkIndex*width*width*height + blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0b11111100);
-                        		            else
-                        		            blockData[chunkIndex*width*width*height + blockIndex]++;
+					    if(openDoor == true)
+					    {
+					        if(((blockData[chunkIndex*width*width*height + blockIndex]&0b00000100)>>2) == 0)
+					        {
+					            if((blockData[chunkIndex*width*width*height + blockIndex]&0b00000011) == 3)
+					            blockData[chunkIndex*width*width*height + blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0b11111100);
+					            else
+					            blockData[chunkIndex*width*width*height + blockIndex]++;
 
-                        		            if((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b00000011) == 3)
-                        		            blockData[chunkIndex*width*width*height + blockIndex + width*width] = (blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b11111100);
-                        		            else
-                        		            blockData[chunkIndex*width*width*height + blockIndex + width*width]++;
+					            if((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b00000011) == 3)
+					            blockData[chunkIndex*width*width*height + blockIndex + width*width] = (blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b11111100);
+					            else
+					            blockData[chunkIndex*width*width*height + blockIndex + width*width]++;
 
-                        		            blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11111011) | 0b00000100);
-                        		            blockData[chunkIndex*width*width*height + blockIndex + width*width] = ((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b11111011) | 0b00000100);
+					            blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11111011) | 0b00000100);
+					            blockData[chunkIndex*width*width*height + blockIndex + width*width] = ((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b11111011) | 0b00000100);
 
-                        		            updateChunkAtIndexFull = 1;
-                        		        }
-                        		    }
-                        		    else
-                        		    {
-                        		        if(((blockData[chunkIndex*width*width*height + blockIndex]&0b00000100)>>2) == 1)
-                        		        {
-                        		            if((blockData[chunkIndex*width*width*height + blockIndex]&0b00000011) == 0)
-                        		            blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11111100) | 3);
-                        		            else
-                        		            blockData[chunkIndex*width*width*height + blockIndex]--;
+					            updateChunkAtIndexFull = 1;
+					        }
+					    }
+					    else
+					    {
+					        if(((blockData[chunkIndex*width*width*height + blockIndex]&0b00000100)>>2) == 1)
+					        {
+					            if((blockData[chunkIndex*width*width*height + blockIndex]&0b00000011) == 0)
+					            blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11111100) | 3);
+					            else
+					            blockData[chunkIndex*width*width*height + blockIndex]--;
 
-                        		            if((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b00000011) == 0)
-                        		            blockData[chunkIndex*width*width*height + blockIndex + width*width] = ((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b11111100) | 3);
-                        		            else
-                        		            blockData[chunkIndex*width*width*height + blockIndex + width*width]--;
+					            if((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b00000011) == 0)
+					            blockData[chunkIndex*width*width*height + blockIndex + width*width] = ((blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b11111100) | 3);
+					            else
+					            blockData[chunkIndex*width*width*height + blockIndex + width*width]--;
 
-                        		            blockData[chunkIndex*width*width*height + blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0b11111011);
-                        		            blockData[chunkIndex*width*width*height + blockIndex + width*width] = (blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b11111011);
+					            blockData[chunkIndex*width*width*height + blockIndex] = (blockData[chunkIndex*width*width*height + blockIndex]&0b11111011);
+					            blockData[chunkIndex*width*width*height + blockIndex + width*width] = (blockData[chunkIndex*width*width*height + blockIndex + width*width]&0b11111011);
 
-                        		            updateChunkAtIndexFull = 1;
-                        		        }
-                        		    }
-                        		}
+					            updateChunkAtIndexFull = 1;
+					        }
+					    }
+					}
 
-                        		//updating redstone lamps
-                        		if(blocks[chunkIndex][blockIndex] == 61 || blocks[chunkIndex][blockIndex] == 62)
-                        		{
-                        		    int posX = chunkX*width + x;
-                        		    int posZ = chunkZ*width + z;
+					//updating redstone lamps
+					if(blocks[chunkIndex][blockIndex] == 61 || blocks[chunkIndex][blockIndex] == 62)
+					{
+					    int posX = chunkX*width + x;
+					    int posZ = chunkZ*width + z;
 
-                        		    bool turnOnLamp = false;
+					    bool turnOnLamp = false;
 
-                        		    for (int i = 0; i < 6; i++)
-                        		    {
-                        		        int newX = posX+allSides[i].x;
-                        		        int newY = y+allSides[i].y;
-                        		        int newZ = posZ+allSides[i].z;
+					    for (int i = 0; i < 6; i++)
+					    {
+					        int newX = posX+allSides[i].x;
+					        int newY = y+allSides[i].y;
+					        int newZ = posZ+allSides[i].z;
 
-                        		        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                        		        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
-                        		        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
+					        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
+					        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
+					        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-                        		        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 17 || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 18)
+					        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 17 || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 18)
 										{
 											if((blockData[blockDataIndex]&0b11000000) > 0b00000000)
-                        		        	turnOnLamp = true;
+							turnOnLamp = true;
 										}
 
-                        		        if(blocks[chunkIndexNew][blockIndexNew] == 55)
-                        		        turnOnLamp = true;
-                        		    }
+					        if(blocks[chunkIndexNew][blockIndexNew] == 55)
+					        turnOnLamp = true;
+					    }
 
-                        		    for (int i = 0; i < 4; i++)
-                        		    {
-                        		        int newX = posX+sidesRepeater[i].x;
-                        		        int newY = y+sidesRepeater[i].y;
-                        		        int newZ = posZ+sidesRepeater[i].z;
+					    for (int i = 0; i < 4; i++)
+					    {
+					        int newX = posX+sidesRepeater[i].x;
+					        int newY = y+sidesRepeater[i].y;
+					        int newZ = posZ+sidesRepeater[i].z;
 
-                        		        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                        		        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
-                        		        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
+					        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
+					        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
+					        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-                        		        if(blocks[chunkIndexNew][blockIndexNew] == 58 && (blockData[blockDataIndex]&0b00000011) == i)
-                        		        turnOnLamp = true;
-                        		    }
+					        if(blocks[chunkIndexNew][blockIndexNew] == 58 && (blockData[blockDataIndex]&0b00000011) == i)
+					        turnOnLamp = true;
+					    }
 
-                        		    int chunkIndexNew = (posX/width) + (posZ/width) * totalChunkWidth;
-                        		    int blockIndexNew = (posX%width) + (posZ%width) * width + (y+1) * width * width;
-                        		    int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
+					    int chunkIndexNew = (posX/width) + (posZ/width) * totalChunkWidth;
+					    int blockIndexNew = (posX%width) + (posZ%width) * width + (y+1) * width * width;
+					    int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-                        		    if(blocks[chunkIndexNew][blockIndexNew] == 54 && (blockData[blockDataIndex]&0b00001111) > 0)
-                        		    turnOnLamp = true;
+					    if(blocks[chunkIndexNew][blockIndexNew] == 54 && (blockData[blockDataIndex]&0b00001111) > 0)
+					    turnOnLamp = true;
 
-                        		    if(turnOnLamp == true)
-                        		    {
-                        		        if(blocks[chunkIndex][blockIndex] == 61)
-                        		        {
-                        		            blocks[chunkIndex][blockIndex] = 62;
-                        		            updateChunkAtIndex = 1;
-                        		            updateChunkAtIndexLight = 1;
-                        		        }
-                        		    }
-                        		    else
-                        		    {
-                        		        if(blocks[chunkIndex][blockIndex] == 62)
-                        		        {
-                        		            blocks[chunkIndex][blockIndex] = 61;
-                        		            updateChunkAtIndex = 1;
-                        		            updateChunkAtIndexLight = 1;
-                        		        }
-                        		    }
-                        		}
+					    if(turnOnLamp == true)
+					    {
+					        if(blocks[chunkIndex][blockIndex] == 61)
+					        {
+					            blocks[chunkIndex][blockIndex] = 62;
+					            updateChunkAtIndex = 1;
+					            updateChunkAtIndexLight = 1;
+					        }
+					    }
+					    else
+					    {
+					        if(blocks[chunkIndex][blockIndex] == 62)
+					        {
+					            blocks[chunkIndex][blockIndex] = 61;
+					            updateChunkAtIndex = 1;
+					            updateChunkAtIndexLight = 1;
+					        }
+					    }
+					}
 
 								//update the tnt do the boom
 								if(blocks[chunkIndex][blockIndex] == 18)
 								{
 									int posX = chunkX*width + x;
-                        		    int posZ = chunkZ*width + z;
+					    int posZ = chunkZ*width + z;
 
-                        		    for (int i = 0; i < 6; i++)
-                        		    {
-                        		        int newX = posX+allSides[i].x;
-                        		        int newY = y+allSides[i].y;
-                        		        int newZ = posZ+allSides[i].z;
+					    for (int i = 0; i < 6; i++)
+					    {
+					        int newX = posX+allSides[i].x;
+					        int newY = y+allSides[i].y;
+					        int newZ = posZ+allSides[i].z;
 
-                        		        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                        		        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
-                        		        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
+					        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
+					        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
+					        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-                        		        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 17 || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 18)
+					        if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType].canTransferRedstoneSignal == true || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 17 || allBlock[blocks[chunkIndexNew][blockIndexNew]].blockType == 18)
 										{
 											if((blockData[blockDataIndex]&0b11000000) > 0b00000000)
-                        		        	makeExplosion(10, posX, y, posZ);
+							makeExplosion(10, posX, y, posZ);
 										}
 
-                        		        if(blocks[chunkIndexNew][blockIndexNew] == 55)
-                        		        makeExplosion(10, posX, y, posZ);
-                        		    }
+					        if(blocks[chunkIndexNew][blockIndexNew] == 55)
+					        makeExplosion(10, posX, y, posZ);
+					    }
 
-                        		    for (int i = 0; i < 4; i++)
-                        		    {
-                        		        int newX = posX+sidesRepeater[i].x;
-                        		        int newY = y+sidesRepeater[i].y;
-                        		        int newZ = posZ+sidesRepeater[i].z;
+					    for (int i = 0; i < 4; i++)
+					    {
+					        int newX = posX+sidesRepeater[i].x;
+					        int newY = y+sidesRepeater[i].y;
+					        int newZ = posZ+sidesRepeater[i].z;
 
-                        		        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                        		        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
-                        		        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
+					        int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
+					        int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
+					        int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-                        		        if(blocks[chunkIndexNew][blockIndexNew] == 58 && (blockData[blockDataIndex]&0b00000011) == i)
-                        		        makeExplosion(10, posX, y, posZ);
-                        		    }
+					        if(blocks[chunkIndexNew][blockIndexNew] == 58 && (blockData[blockDataIndex]&0b00000011) == i)
+					        makeExplosion(10, posX, y, posZ);
+					    }
 
-                        		    int chunkIndexNew = (x/width) + (z/width) * totalChunkWidth;
-                        		    int blockIndexNew = (x%width) + (z%width) * width + (y+1) * width * width;
-                        		    int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
+					    int chunkIndexNew = (x/width) + (z/width) * totalChunkWidth;
+					    int blockIndexNew = (x%width) + (z%width) * width + (y+1) * width * width;
+					    int blockDataIndex = chunkIndexNew*width*width*height + blockIndexNew;
 
-                        		    if(blocks[chunkIndexNew][blockIndexNew] == 54 && (blockData[blockDataIndex]&0b00001111) > 0)
-                        		    makeExplosion(10, posX, y, posZ);
+					    if(blocks[chunkIndexNew][blockIndexNew] == 54 && (blockData[blockDataIndex]&0b00001111) > 0)
+					    makeExplosion(10, posX, y, posZ);
 								}
-                                //-------------------------redstone end-------------------------
+                               //-------------------------redstone end-------------------------
 								//-------------------------normal start-------------------------
-								if(blocks[chunkIndex][blockIndex] == 4) //update leaves
+								if(blocks[chunkIndex][blockIndex] == 4)//update leaves
 								{
 									bool hasLogClose = false;
 									int totalX = chunkX*width + x;
@@ -21541,7 +21579,7 @@ void updateMap()
 												{
 													int x3 = totalX + x2;
 													int z3 = totalZ + z2;
-													int chunkIndex2 = (x3/width) + (z3/width) * totalChunkWidth; 
+													int chunkIndex2 = (x3/width) + (z3/width) * totalChunkWidth;
 													int blockIndex2 = (x3%width) + (z3%width) * width + (y+y2) * width * width;
 													if(blocks[chunkIndex2][blockIndex2] == 5)
 													hasLogClose = true;
@@ -21551,33 +21589,33 @@ void updateMap()
 									}
 									if(hasLogClose == false)
                                     {
-										if(generate_random3D(SEED+0, 256, totalX, y, totalZ) == 1)
+										if(generate_random3D(SEED+RTC_GetTicks(), 256, totalX, y, totalZ) == 1)
 										{
-									    	blocks[chunkIndex][blockIndex] = 0;
-                                        	updateChunkAtIndexFull = 1;
+										blocks[chunkIndex][blockIndex] = 0;
+						updateChunkAtIndexFull = 1;
 
-											if(generate_random1D(SEED, 20, 0) == 1)
-                            				makeItem(totalX*10, y*10, totalZ*10, 0, 0, 0, 54);
+											if(generate_random1D(SEED, 20, RTC_GetTicks()) == 1)
+							makeItem(totalX*10, y*10, totalZ*10, 0, 0, 0, 54);
 										}
                                     }
 								}
 
-								else if(blocks[chunkIndex][blockIndex] == 24 && cycle % 6 == 0) //update lava
+								else if(blocks[chunkIndex][blockIndex] == 24 && cycle % 6 == 0)//update lava
 								{
 									int posX = chunkX*width + x;
-              					    int posZ = chunkZ*width + z;
+						    int posZ = chunkZ*width + z;
 
                                     if(y != 0)
                                     {
-                                        if(blocks[chunkIndex][blockIndex-width*width] == 0) //update block below
+                                        if(blocks[chunkIndex][blockIndex-width*width] == 0)//update block below
                                         {
                                             waterMovementChunk[blockIndex-width*width] = 24;
 											blockData[chunkIndex*width*width*height + (blockIndex-width*width)] = 0;
 											updateChunkAtIndexWater = 1;
                                         }
-										else if(blocks[chunkIndex][blockIndex-width*width] == 24) //
+										else if(blocks[chunkIndex][blockIndex-width*width] == 24)//
 										{
-											if((blockData[chunkIndex*width*width*height + (blockIndex-width*width)]&0b00001111) != 0b00000000) //if water below, update water below to full block
+											if((blockData[chunkIndex*width*width*height + (blockIndex-width*width)]&0b00001111) != 0b00000000)//if water below, update water below to full block
 											{
 												blockData[chunkIndex*width*width*height + (blockIndex-width*width)] = (blockData[chunkIndex*width*width*height + (blockIndex-width*width)]&0b11110000);
 												updateChunkAtIndexWater = 2;
@@ -21595,12 +21633,12 @@ void updateMap()
 												for (int i = 0; i < 4; i++)
 												{
 													int newX = posX+sidesStraight[i].x;
-                                        			int newZ = posZ+sidesStraight[i].z;
-                    
-                                        			if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth)
-                                        			{
+								int newZ = posZ+sidesStraight[i].z;
+
+								if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth)
+								{
 														int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                                        		    	int blockIndexNew = (newX%width) + (newZ%width) * width + y * width * width;
+								int blockIndexNew = (newX%width) + (newZ%width) * width + y * width * width;
 
 														if(blocks[chunkIndexNew][blockIndexNew] == 24)
 														{
@@ -21610,7 +21648,7 @@ void updateMap()
 																break;
 															}
 														}
-												 	}
+													}
 												}
 
 												if(hasHigherClose == false)
@@ -21628,7 +21666,7 @@ void updateMap()
 												}
 											}
 										}
-										else if(blocks[chunkIndex][blockIndex-width*width] == 6) //check for water below
+										else if(blocks[chunkIndex][blockIndex-width*width] == 6)//check for water below
 										{
 											blocks[chunkIndex][blockIndex-width*width] = 3;
                                             updateChunkAtIndexFull = 1;
@@ -21649,12 +21687,12 @@ void updateMap()
 											for (int i = 0; i < 4; i++)
 											{
 												int newX = posX+sidesStraight[i].x;
-                                            	int newZ = posZ+sidesStraight[i].z;
-                    
-                                            	if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth)
-                                            	{
+						int newZ = posZ+sidesStraight[i].z;
+
+						if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth)
+						{
 													int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                                                	int blockIndexNew = (newX%width) + (newZ%width) * width + y * width * width;
+							int blockIndexNew = (newX%width) + (newZ%width) * width + y * width * width;
 
 													if(blocks[chunkIndexNew][blockIndexNew] == 0 || blocks[chunkIndexNew][blockIndexNew] == 24)
 													{
@@ -21692,7 +21730,7 @@ void updateMap()
 															hasHigherClose = true;
 														}
 													}
-											 	}
+												}
 											}
 
 											if(hasHigherClose == false)
@@ -21712,22 +21750,22 @@ void updateMap()
 									}
 								}
 
-								else if(blocks[chunkIndex][blockIndex] == 6) //update water
+								else if(blocks[chunkIndex][blockIndex] == 6)//update water
 								{
 									int posX = chunkX*width + x;
-              					    int posZ = chunkZ*width + z;
+						    int posZ = chunkZ*width + z;
 
                                     if(y != 0)
                                     {
-                                        if(blocks[chunkIndex][blockIndex-width*width] == 0) //update block below
+                                        if(blocks[chunkIndex][blockIndex-width*width] == 0)//update block below
                                         {
                                             waterMovementChunk[blockIndex-width*width] = 6;
 											blockData[chunkIndex*width*width*height + (blockIndex-width*width)] = 0;
 											updateChunkAtIndexWater = 1;
                                         }
-										else if(blocks[chunkIndex][blockIndex-width*width] == 6) //
+										else if(blocks[chunkIndex][blockIndex-width*width] == 6)//
 										{
-											if((blockData[chunkIndex*width*width*height + (blockIndex-width*width)]&0b00001111) != 0b00000000) //if water below, update water below to full block
+											if((blockData[chunkIndex*width*width*height + (blockIndex-width*width)]&0b00001111) != 0b00000000)//if water below, update water below to full block
 											{
 												blockData[chunkIndex*width*width*height + (blockIndex-width*width)] = (blockData[chunkIndex*width*width*height + (blockIndex-width*width)]&0b11110000);
 												updateChunkAtIndexWater = 2;
@@ -21743,19 +21781,19 @@ void updateMap()
 											for (int i = 0; i < 4; i++)
 											{
 												int newX = posX+sidesStraight[i].x;
-                                        		int newZ = posZ+sidesStraight[i].z;
-                    
-                                        		if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth)
-                                        		{
-													int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                                        	    	int blockIndexNew = (newX%width) + (newZ%width) * width + y * width * width;
+							int newZ = posZ+sidesStraight[i].z;
 
-													if(blocks[chunkIndexNew][blockIndexNew] == 24) //check for lava
+							if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth)
+							{
+													int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
+							int blockIndexNew = (newX%width) + (newZ%width) * width + y * width * width;
+
+													if(blocks[chunkIndexNew][blockIndexNew] == 24)//check for lava
 													{
 														if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0b10000000) == 0b10000000)
-														blocks[chunkIndexNew][blockIndexNew] = 25; //make obsidian
+														blocks[chunkIndexNew][blockIndexNew] = 25;//make obsidian
 														else
-														blocks[chunkIndexNew][blockIndexNew] = 10; //make cobblestone
+														blocks[chunkIndexNew][blockIndexNew] = 10;//make cobblestone
 
 														updateChunkAtIndexFull = 1;
 													}
@@ -21768,9 +21806,9 @@ void updateMap()
 															hasHigherClose = true;
 														}
 													}
-											 	}
+												}
 											}
-												
+
 
 											if(hasHigherClose == false)
 											{
@@ -21786,12 +21824,12 @@ void updateMap()
 												updateChunkAtIndexWater = 3;
 											}
 										}
-										else if(blocks[chunkIndex][blockIndex-width*width] == 24) //check for lava below
+										else if(blocks[chunkIndex][blockIndex-width*width] == 24)//check for lava below
 										{
 											if((blockData[chunkIndex*width*width*height + blockIndex-width*width]&0b10000000) == 0b10000000)
-											blocks[chunkIndex][blockIndex-width*width] = 25; //make obsidian
+											blocks[chunkIndex][blockIndex-width*width] = 25;//make obsidian
 											else
-											blocks[chunkIndex][blockIndex-width*width] = 10; //make cobblestone
+											blocks[chunkIndex][blockIndex-width*width] = 10;//make cobblestone
                                             updateChunkAtIndexFull = 1;
 										}
 										else
@@ -21810,12 +21848,12 @@ void updateMap()
 											for (int i = 0; i < 4; i++)
 											{
 												int newX = posX+sidesStraight[i].x;
-                                            	int newZ = posZ+sidesStraight[i].z;
-                    
-                                            	if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth)
-                                            	{
+						int newZ = posZ+sidesStraight[i].z;
+
+						if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth)
+						{
 													int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                                                	int blockIndexNew = (newX%width) + (newZ%width) * width + y * width * width;
+							int blockIndexNew = (newX%width) + (newZ%width) * width + y * width * width;
 
 													if(blocks[chunkIndexNew][blockIndexNew] == 0 || blocks[chunkIndexNew][blockIndexNew] == 6)
 													{
@@ -21844,12 +21882,12 @@ void updateMap()
 															}
 														}
 													}
-													else if(blocks[chunkIndexNew][blockIndexNew] == 24) //check for lava
+													else if(blocks[chunkIndexNew][blockIndexNew] == 24)//check for lava
 													{
 														if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0b10000000) == 0b10000000)
-														blocks[chunkIndexNew][blockIndexNew] = 25; //make obsidian
+														blocks[chunkIndexNew][blockIndexNew] = 25;//make obsidian
 														else
-														blocks[chunkIndexNew][blockIndexNew] = 10; //make cobblestone
+														blocks[chunkIndexNew][blockIndexNew] = 10;//make cobblestone
 
 														updateChunkAtIndexFull = 1;
 													}
@@ -21862,7 +21900,7 @@ void updateMap()
 															hasHigherClose = true;
 														}
 													}
-											 	}
+												}
 											}
 
 											if(hasHigherClose == false)
@@ -21887,18 +21925,18 @@ void updateMap()
 											//		for (int i = 0; i < 4; i++)
 											//		{
 											//			int newX = posX+sidesdiagonal[i].x;
-                                        	//			int newY = y+sidesdiagonal[i].y;
-                                        	//			int newZ = posZ+sidesdiagonal[i].z;
-                    
-                                        	//			if(newX > 0 && newX < width*totalChunkWidth && newY > 0 && newY < height && newZ > 0 && newZ < width*totalChunkWidth)
-                                        	//			{
+						//			int newY = y+sidesdiagonal[i].y;
+						//			int newZ = posZ+sidesdiagonal[i].z;
+
+						//			if(newX > 0 && newX < width*totalChunkWidth && newY > 0 && newY < height && newZ > 0 && newZ < width*totalChunkWidth)
+						//			{
 											//				int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                                        	//		    	int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
+						//		    	int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
 
 											//				if((blockData[chunkIndexNew*width*width*height + blockIndexNew]&0b10000000) == 0b10000000)
 											//				{
 											//					int chunkIndexNewX = (newX/width) + (posZ/width) * totalChunkWidth;
-                                        	//		    		int blockIndexNewX = (newX%width) + (posZ%width) * width + newY * width * width;
+						//		    		int blockIndexNewX = (newX%width) + (posZ%width) * width + newY * width * width;
 
 											//					if((blockData[chunkIndexNewX*width*width*height + blockIndexNewX]&0b10000000) == 0b00000000)
 											//					{
@@ -21907,7 +21945,7 @@ void updateMap()
 											//					}
 
 											//					int chunkIndexNewZ = (posX/width) + (newZ/width) * totalChunkWidth;
-                                        	//		    		int blockIndexNewZ = (posX%width) + (newZ%width) * width + newY * width * width;
+						//		    		int blockIndexNewZ = (posX%width) + (newZ%width) * width + newY * width * width;
 
 											//					if((blockData[chunkIndexNewZ*width*width*height + blockIndexNewZ]&0b10000000) == 0b00000000)
 											//					{
@@ -21923,26 +21961,26 @@ void updateMap()
                                     }
 								}
 
-                                else if(blocks[chunkIndex][blockIndex] == 23) //update sapling
+                                else if(blocks[chunkIndex][blockIndex] == 23)//update sapling
                                 {
                                     int posX = chunkX*width + x;
-              					    int posZ = chunkZ*width + z;
+						    int posZ = chunkZ*width + z;
 
                                     if((lightmap[blockIndex+chunkIndex*width*width*height] > 8 && lighting == true) || (skyBrightness > 8 && lighting == false))
                                     {
-                                        if(generate_random3D(SEED+0, 1024, posX, y, posZ) == 1)
+                                        if(generate_random3D(SEED+RTC_GetTicks(), 1024, posX, y, posZ) == 1)
                                         {
-                                            generateTree(posX, y, posZ, generate_random1D(SEED, 4, 0) + 4);
+                                            generateTree(posX, y, posZ, generate_random1D(SEED, 4, RTC_GetTicks()) + 4);
 
                                             updateChunkAtIndexFull = 1;
                                         }
                                     }
                                 }
 
-                                else if(blockTypes[allBlock[blocks[chunkIndex][blockIndex]].blockType].hasToBeOnGrass == true) //update block that has to be on grass
+                                else if(blockTypes[allBlock[blocks[chunkIndex][blockIndex]].blockType].hasToBeOnGrass == true)//update block that has to be on grass
                                 {
                                     int posX = chunkX*width + x;
-              					    int posZ = chunkZ*width + z;
+						    int posZ = chunkZ*width + z;
 
                                     if(y > 0)
                                     {
@@ -21956,14 +21994,14 @@ void updateMap()
                                     }
                                 }
 
-                                else if(blocks[chunkIndex][blockIndex] > 31 && blocks[chunkIndex][blockIndex] < 39) //wheat growing
+                                else if(blocks[chunkIndex][blockIndex] > 31 && blocks[chunkIndex][blockIndex] < 39)//wheat growing
                                 {
                                     if((lightmap[blockIndex+chunkIndex*width*width*height] > 8 && lighting == true) || (skyBrightness > 8 && lighting == false))
                                     {
 										int posX = chunkX*width + x;
-              					    	int posZ = chunkZ*width + z;
+							int posZ = chunkZ*width + z;
 
-                                        if(generate_random3D(SEED+0, 512, posX, y, posZ) == 1)
+                                        if(generate_random3D(SEED+RTC_GetTicks(), 512, posX, y, posZ) == 1)
                                         {
                                             blocks[chunkIndex][blockIndex] = blocks[chunkIndex][blockIndex]+1;
                                             updateChunkAtIndex = 1;
@@ -21972,7 +22010,7 @@ void updateMap()
 									if(y != 0)
 									{
 										int posX = chunkX*width + x;
-              					    	int posZ = chunkZ*width + z;
+							int posZ = chunkZ*width + z;
 
 										if(blocks[chunkIndex][blockIndex-width*width] != 30 && blocks[chunkIndex][blockIndex-width*width] != 31)
 										{
@@ -21982,8 +22020,8 @@ void updateMap()
 										}
 									}
                                 }
-                                
-								else if(blocks[chunkIndex][blockIndex] == 2) //dirt to grass
+
+								else if(blocks[chunkIndex][blockIndex] == 2)//dirt to grass
 								{
 									if(y != height-1)
 									{
@@ -21996,31 +22034,31 @@ void updateMap()
 
 										        for (int i = 0; i < 12; i++)
 										        {
-										        	int newX = posX+sidesDirtToGrass[i].x;
-                        		  		        	int newY = y+sidesDirtToGrass[i].y;
-                        		  		        	int newZ = posZ+sidesDirtToGrass[i].z;
+												int newX = posX+sidesDirtToGrass[i].x;
+									int newY = y+sidesDirtToGrass[i].y;
+									int newZ = posZ+sidesDirtToGrass[i].z;
 
-										        	if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth)
-										        	{
-                        		  		        		int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
-                        		  		        		int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
+												if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth)
+												{
+										int chunkIndexNew = (newX/width) + (newZ/width) * totalChunkWidth;
+										int blockIndexNew = (newX%width) + (newZ%width) * width + newY * width * width;
 
-													if(blocks[chunkIndexNew][blockIndexNew] == 1 && generate_random3D(SEED+0, 80, newX, newY, newZ) == 0)
-										        		{
-										        			if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew+width*width]].blockType].canHaveGrassBelow == true)
-										        			{
-										        				blocks[chunkIndex][blockIndex] = 1;
-										        				updateChunkAtIndex = 1;
-										        			}
-										        		}
-										        	}
+													if(blocks[chunkIndexNew][blockIndexNew] == 1 && generate_random3D(SEED+RTC_GetTicks(), 80, newX, newY, newZ) == 0)
+													{
+														if(blockTypes[allBlock[blocks[chunkIndexNew][blockIndexNew+width*width]].blockType].canHaveGrassBelow == true)
+														{
+															blocks[chunkIndex][blockIndex] = 1;
+															updateChunkAtIndex = 1;
+														}
+													}
+												}
 										        }
                                             }
 										}
 									}
 								}
 
-								else if(blocks[chunkIndex][blockIndex] == 1) //grass with block above to dirt
+								else if(blocks[chunkIndex][blockIndex] == 1)//grass with block above to dirt
 								{
 									if(y != height-1)
 									{
@@ -22029,7 +22067,7 @@ void updateMap()
 											int posX = chunkX*width + x;
 											int posZ = chunkZ*width + z;
 
-											if(generate_random3D(SEED+0, 80, posX, y, posZ) == 0)
+											if(generate_random3D(SEED+RTC_GetTicks(), 80, posX, y, posZ) == 0)
 											{
 												blocks[chunkIndex][blockIndex] = 1;
 												updateChunkAtIndex = 1;
@@ -22038,21 +22076,21 @@ void updateMap()
 									}
 								}
 
-								else if(blocks[chunkIndex][blockIndex] == 30) //farmland to wet farmland or dirt
+								else if(blocks[chunkIndex][blockIndex] == 30)//farmland to wet farmland or dirt
 								{
 									int posX = chunkX*width + x;
 									int posZ = chunkZ*width + z;
-									
+
 									bool hasWaterClose = false;
 
-									if(y != height-1) //crop is on top
+									if(y != height-1)//crop is on top
 									{
 										for (int x1 = -5; x1 < 6; x1++)
 										{
 											for (int z1 = -5; z1 < 6; z1++)
 											{
 												int newX = posX+x1;
-                        						int newZ = posZ+z1;
+									int newZ = posZ+z1;
 
 												if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth)
 												{
@@ -22074,7 +22112,7 @@ void updateMap()
 										{
 											if(hasWaterClose == false)
 											{
-												if(generate_random3D(SEED+0, 120, posX, y, posZ) == 0)
+												if(generate_random3D(SEED+RTC_GetTicks(), 120, posX, y, posZ) == 0)
 												{
 													blocks[chunkIndex][blockIndex] = 2;
 													updateChunkAtIndexFull = 1;
@@ -22084,7 +22122,7 @@ void updateMap()
 
 										if(hasWaterClose == true)
 										{
-											if(generate_random3D(SEED+0, 120, posX, y, posZ) == 0)
+											if(generate_random3D(SEED+RTC_GetTicks(), 120, posX, y, posZ) == 0)
 											{
 												blocks[chunkIndex][blockIndex] = 31;
 												updateChunkAtIndex = 1;
@@ -22093,11 +22131,11 @@ void updateMap()
 									}
 								}
 
-								else if(blocks[chunkIndex][blockIndex] == 31) //wet farmland to farmland
+								else if(blocks[chunkIndex][blockIndex] == 31)//wet farmland to farmland
 								{
 									int posX = chunkX*width + x;
 									int posZ = chunkZ*width + z;
-									
+
 									bool hasWaterClose = false;
 
 									for (int x1 = -5; x1 < 6; x1++)
@@ -22105,7 +22143,7 @@ void updateMap()
 										for (int z1 = -5; z1 < 6; z1++)
 										{
 											int newX = posX+x1;
-                        					int newZ = posZ+z1;
+								int newZ = posZ+z1;
 
 											if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth)
 											{
@@ -22125,7 +22163,7 @@ void updateMap()
 
 									if(hasWaterClose == false)
 									{
-										if(generate_random3D(SEED+0, 120, posX, y, posZ) == 0)
+										if(generate_random3D(SEED+RTC_GetTicks(), 120, posX, y, posZ) == 0)
 										{
 											blocks[chunkIndex][blockIndex] = 30;
 											updateChunkAtIndex = 1;
@@ -22138,7 +22176,7 @@ void updateMap()
                     }
                 }
 
-				for (int i = 0; i < 5760; i++) //update the map itself
+				for (int i = 0; i < 5760; i++)//update the map itself
 				{
 					if(redstoneBlockData[i] != 0)
 					blocks[chunkIndex][i] = redstoneBlockData[i];
@@ -22148,7 +22186,7 @@ void updateMap()
 				}
 
 				memset(redstoneData, 0, 5760);
-				
+
                 for (int j = 0; j < 16; j++)
                 {
                     int redstoneMapChanges = 0;
@@ -22185,8 +22223,8 @@ void updateMap()
                                             }
                                         }
                                     }
-                                
-                                    for (int i = 0; i < 4; i++) //same level
+
+                                    for (int i = 0; i < 4; i++)//same level
                                     {
                                         int newX = posX+sidesRepeater[i].x;
                                         int newY = y+sidesRepeater[i].y;
@@ -22219,7 +22257,7 @@ void updateMap()
                                             highestNeighbourLevel = 16;
                                         }
                                     }
-                                    for (int i = 0; i < 4; i++) //one down
+                                    for (int i = 0; i < 4; i++)//one down
                                     {
                                         int newX = posX+sidesDown[i].x;
                                         int newY = y+sidesDown[i].y;
@@ -22245,7 +22283,7 @@ void updateMap()
                                             }
                                         }
                                     }
-                                    for (int i = 0; i < 4; i++) //one up
+                                    for (int i = 0; i < 4; i++)//one up
                                     {
                                         int newX = posX+sidesUp[i].x;
                                         int newY = y+sidesUp[i].y;
@@ -22303,12 +22341,12 @@ void updateMap()
                             {
                                 if(redstoneData[i] > 0)
 								{
-                                	blockData[chunkIndex*width*width*height+(i-width*width)] = ((blockData[chunkIndex*width*width*height+(i-width*width)]&0b10111111)|0b01000000);
+					blockData[chunkIndex*width*width*height+(i-width*width)] = ((blockData[chunkIndex*width*width*height+(i-width*width)]&0b10111111)|0b01000000);
 									blockData[chunkIndex*width*width*height+i] = ((blockData[chunkIndex*width*width*height+i]&0b10111111)|0b01000000);
 								}
                                 else
 								{
-                                	blockData[chunkIndex*width*width*height+(i-width*width)] = (blockData[chunkIndex*width*width*height+(i-width*width)]&0b10111111);
+					blockData[chunkIndex*width*width*height+(i-width*width)] = (blockData[chunkIndex*width*width*height+(i-width*width)]&0b10111111);
 									blockData[chunkIndex*width*width*height+i] = (blockData[chunkIndex*width*width*height+i]&0b10111111);
 								}
                             }
@@ -22325,7 +22363,7 @@ void updateMap()
                     }
 
 					if(lighting == true)
-					updateChunkLighting2(chunkX, chunkZ); 
+					updateChunkLighting2(chunkX, chunkZ);
 
 					updateChunkAtIndexFull = 1;
                 }
@@ -22337,16 +22375,16 @@ void updateMap()
 				{
 					if(lighting == true)
 					{
-                		updateChunkLighting2(chunkX, chunkZ); 
+				updateChunkLighting2(chunkX, chunkZ);
 						updateChunkLightFacesV2(chunkX, chunkZ);
 					}
 				}
 
                 if(updateChunkAtIndexFull == 1)
                 updateChunkV2(chunkX, chunkZ);
-    //        }
-    //    }
-    //}
+   //        }
+   //    }
+   //}
 }
 void changeBrightnessAllTriangles(int lighChange)
 {
@@ -22382,7 +22420,7 @@ void clearAllChunks()
             tlsf_free(tlsf, allObj[i].brightnes);
             tlsf_free(tlsf, allObj[i].normal);
             tlsf_free(tlsf, allObj[i].textureSize);
-            
+
             allObj[i].sizeT = 0;
             allObj[i].sizeV = 0;
             allObj[i].position.x = 0;
@@ -22464,8 +22502,8 @@ void loadAllEntitys()
 }
 void loadInChunks()
 {
-    int pChunkX = PPosX / width;
-    int pChunkY = PPosZ / width;
+    int pChunkX = PPosX/ width;
+    int pChunkY = PPosZ/ width;
 
     for (int i = 0; i < totalChunkWidth*totalChunkWidth; i++)
     {
@@ -22575,8 +22613,8 @@ void loadLighting2()
 
                                         if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth && newY > 0 && newY < height)
                                         {
-                                            int newChunkX = newX / width;
-                                            int newChunkZ = newZ / width;
+                                            int newChunkX = newX/ width;
+                                            int newChunkZ = newZ/ width;
 
                                             int newBlockX = newX % width;
                                             int newBlockz = newZ % width;
@@ -22606,7 +22644,7 @@ void loadLighting2()
 void updateChunkLighting2(int chunkX, int chunkZ)
 {
     int chunkIndex = chunkX + chunkZ*totalChunkWidth;
-    
+
     for (int x = 0; x < width; x++)
     {
         for (int z = 0; z < width; z++)
@@ -22673,8 +22711,8 @@ void updateChunkLighting2(int chunkX, int chunkZ)
 
                                 if(newX > 0 && newX < width*totalChunkWidth && newZ > 0 && newZ < width*totalChunkWidth && newY > 0 && newY < height)
                                 {
-                                    int newChunkX = newX / width;
-                                    int newChunkZ = newZ / width;
+                                    int newChunkX = newX/ width;
+                                    int newChunkZ = newZ/ width;
 
                                     int newBlockX = newX % width;
                                     int newBlockz = newZ % width;
@@ -22718,25 +22756,25 @@ void intToHex(unsigned int num, char *hexStr) {
     const char hexDigits[] = "0123456789ABCDEF";
     int i = 0;
 
-    // Handle zero case
+   // Handle zero case
     if (num == 0) {
         hexStr[i++] = '0';
         hexStr[i] = '\0';
         return;
     }
 
-    // Convert the number to hexadecimal, starting from the least significant digit
+   // Convert the number to hexadecimal, starting from the least significant digit
     while (num != 0) {
         hexStr[i++] = hexDigits[num % 16];
-        num /= 16;
+        num/= 16;
     }
 
-    // Null-terminate the string
+   // Null-terminate the string
     hexStr[i] = '\0';
 
-    // Reverse the string to get the correct order
+   // Reverse the string to get the correct order
     int len = i;
-    for (int j = 0; j < len / 2; ++j) {
+    for (int j = 0; j < len/ 2; ++j) {
         char tmp = hexStr[j];
         hexStr[j] = hexStr[len - j - 1];
         hexStr[len - j - 1] = tmp;
@@ -22758,18 +22796,18 @@ void renderUnderWaterEffect()
             {
                 xNew = x >> 1;
                 yNew = y >> 1;
-                ZbufWidth = 320;
+                ZbufWidth = 160;
             }
 
-            int waterDepthP1 = ZBuffer[xNew + yNew * ZbufWidth] / 200;
+            int waterDepthP1 = ZBuffer[xNew + yNew * ZbufWidth]/ 200;
             if(waterDepthP1 > 40)
             waterDepthP1 = 40;
             int waterDepth = 40 + waterDepthP1;
 
-            color_t startColor = *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + x + y * 320);
+            color_t startColor = *(VRAMAddress + x + y * 320);
             color_t endColor16 = combineColors(startColor, 0x42f4, waterDepth);
 
-            *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + x + y * 320) = endColor16;
+            *(VRAMAddress + x + y * 320) = endColor16;
         }
     }
 }
@@ -22779,10 +22817,10 @@ void renderMenuEffect()
     {
         for (int x = 0; x < 320; x++)
         {
-            color_t startColor = *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + x + y * 320);
+            color_t startColor = *(VRAMAddress + x + y * 320);
             color_t endColor16 = combineColors(startColor, 0x8c51, 50);
 
-            *(((unsigned short*)LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) + x + y * 320) = endColor16;
+            *(VRAMAddress + x + y * 320) = endColor16;
         }
     }
 }
@@ -22814,22 +22852,22 @@ void drawHp(int x, int y, int barHeight, int barWidth, int hp, int maxHp)
 	{
 		for (int j = 0; j < barWidth-1; j++)
 		{
-            ((unsigned short*)LCD_GetVRAMAddress())[(x+j) + (y+i) * 320] = 0x2200;
+            VRAMAddress[(x+j) + (y+i) * 320] = 0x2200;
 
 			color_t color = combineColors(0xe880, 0x07c0, (hp*100)/maxHp);
 
 			if(j < hpBarWidth)
-			((unsigned short*)LCD_GetVRAMAddress())[(x+j) + (y+i) * 320] = color;
+			VRAMAddress[(x+j) + (y+i) * 320] = color;
 		}
-        ((unsigned short*)LCD_GetVRAMAddress())[(x+barWidth-1) + (y+i) * 320] = 0x0000;
-        ((unsigned short*)LCD_GetVRAMAddress())[(x+barWidth-1) + (y+i+2) * 320] = 0x0000;
+        VRAMAddress[(x+barWidth-1) + (y+i) * 320] = 0x0000;
+        VRAMAddress[(x+barWidth-1) + (y+i+2) * 320] = 0x0000;
 	}
 
     for (int j = 0; j < barWidth; j++)
     {
-        ((unsigned short*)LCD_GetVRAMAddress())[(x+j) + (y+2) * 320] = 0x0000;
+        VRAMAddress[(x+j) + (y+2) * 320] = 0x0000;
     }
-    
+
 }
 void drawMinecraftFont(int x1, int x2, int y, bool center, int textLength, char text[], color_t textColor, color_t textColorShadow)
 {
@@ -22839,7 +22877,7 @@ void drawMinecraftFont(int x1, int x2, int y, bool center, int textLength, char 
 
     for (int i = 0; i < textLength; i++)
     totalXLength += asciiLength[text[i]];
-    
+
     if(center == true)
     xCenter = (x2-x1-totalXLength)/2;
     else
@@ -22849,7 +22887,7 @@ void drawMinecraftFont(int x1, int x2, int y, bool center, int textLength, char 
     {
         int letterIndex = text[i];
 
-        int xOnTexture = letterIndex%16; 
+        int xOnTexture = letterIndex%16;
         int yOnTexture = letterIndex/16;
 
         for (int y_ = 0; y_ < 8; y_++)
@@ -22861,7 +22899,7 @@ void drawMinecraftFont(int x1, int x2, int y, bool center, int textLength, char 
                     int index = (xOnTexture*8+x_) + (yOnTexture*8+y_) * 128;
                     unsigned char currentPixel = asciiMap2[index>>3];
                     if((currentPixel & (1<<(7-index%8))) == 0)
-                    ((unsigned short*)LCD_GetVRAMAddress())[(x1 + x_ + xLetterPos + 1 + xCenter) + (y + y_ + 1) * 320] = textColorShadow;
+                    VRAMAddress[(x1 + x_ + xLetterPos + 1 + xCenter) + (y + y_ + 1) * 320] = textColorShadow;
                 }
             }
         }
@@ -22874,7 +22912,7 @@ void drawMinecraftFont(int x1, int x2, int y, bool center, int textLength, char 
                     int index = (xOnTexture*8+x_) + (yOnTexture*8+y_) * 128;
                     unsigned char currentPixel = asciiMap2[index>>3];
                     if((currentPixel & (1<<(7-index%8))) == 0)
-                    ((unsigned short*)LCD_GetVRAMAddress())[(x1 + x_ + xLetterPos + xCenter) + (y + y_) * 320] = textColor;
+                    VRAMAddress[(x1 + x_ + xLetterPos + xCenter) + (y + y_) * 320] = textColor;
                 }
             }
         }
@@ -22900,10 +22938,10 @@ void itemDetails(int posX, int posY, char text[])
         for (int x = posX; x < posX+totalXLength+8; x++)
         {
             if(x < 320)
-            ((unsigned short*)LCD_GetVRAMAddress())[x + y * 320] = combineColors(((unsigned short*)LCD_GetVRAMAddress())[x + y * 320], 0x2104, 60);
+            VRAMAddress[x + y * 320] = combineColors(VRAMAddress[x + y * 320], 0x2104, 60);
         }
     }
-    
+
     drawMinecraftFont(posX+4, posX+4, posY+4, false, textLength, text, 0xdefb, 0x39c7);
 }
 
@@ -22927,7 +22965,7 @@ float buttonPressTimer2 = 0;
 
 int currentChestIndex = 0;
 
-int WorldOpenMode = 0; //0=create/load, 1=overwrite, 2=always load-
+int WorldOpenMode = 0;//0=create/load, 1=overwrite, 2=always load-
 
 bool ExitLoop = false;
 bool isInCraftingTable = false;
@@ -22939,13 +22977,13 @@ int returnTotalItemAmount(int type)
         if(inventoryBlockTypes[i] == type)
         totAmount += inventoryBlockAmount[i];
     }
-    
+
     for (int i = 0; i < 9; i++)
     {
         if(hotbarBlockTypes[i] == type)
         totAmount += hotbarBlockAmount[i];
     }
-    
+
     return totAmount;
 }
 void makeHealthBar()
@@ -22962,7 +23000,7 @@ void makeHealthBar()
         if(i == allheart && halfHeart == 1)
         CopySpriteHeart(heart[1], 60+i*14, 170, 14, 14, 0x0000, 8);
     }
-    
+
 }
 void loadingScreen(int currentPos, int total, char text[], int textLength)
 {
@@ -22972,23 +23010,23 @@ void loadingScreen(int currentPos, int total, char text[], int textLength)
         {
             int xOnTexture = x%16;
             int yOnTexture = y%16;
-            //((unsigned short*)LCD_GetVRAMAddress())[y*320+x] = textures[3][xOnTexture+yOnTexture*16];
-            ((unsigned short*)LCD_GetVRAMAddress())[y*320+x] = textures2[xOnTexture+yOnTexture*16 + 3*256];
+           //VRAMAddress[y*320+x] = textures[3][xOnTexture+yOnTexture*16];
+            VRAMAddress[y*320+x] = textures2[xOnTexture+yOnTexture*16 + 3*256];
         }
     }
 
     drawMinecraftFont(0, 320, 100, true, textLength, text, 0xdefb, 0x39c7);
 
-    int progress = currentPos * 160 / total;
+    int progress = currentPos * 160/ total;
 
     for (int y = 0; y < 4; y++)
     {
         for (int x = 0; x < 160; x++)
         {
             if(x <= progress)
-            ((unsigned short*)LCD_GetVRAMAddress())[(112+x) + (110+y) * 320] = 0x87f0;
+            VRAMAddress[(112+x) + (110+y) * 320] = 0x87f0;
             else
-            ((unsigned short*)LCD_GetVRAMAddress())[(112+x) + (110+y) * 320] = 0x8410;
+            VRAMAddress[(112+x) + (110+y) * 320] = 0x8410;
         }
     }
 
@@ -23003,7 +23041,7 @@ void makeHotbar(int selected)
         CopySprite(hotbarDeselected, startPos, 185, 30, 30, 0x0000);
         if(hotbarBlockTypes[i] != -1)
         {
-            //itemIsdcons[allItem[hotbarBlockTypes[i]].iconIndex]
+           //itemIsdcons[allItem[hotbarBlockTypes[i]].iconIndex]
             CopySpriteIcon(&itemIcons2[676 * allItem[hotbarBlockTypes[i]].iconIndex], startPos+2, 187, 26, 26, 0x0000);
 
             if(hotbarBlockAmount[i] != 1)
@@ -23129,7 +23167,7 @@ void swapItemsChest(int cursorX1, int cursorY1, int cursorX2, int cursorY2)
 
 void makeUI()
 {
-    /*game*/if(UIState == 0)
+   /*game*/if(UIState == 0)
     {
         char bufferFPS[50];
         sprintf(bufferFPS, "FPS: %d", (int)fps);
@@ -23172,16 +23210,16 @@ void makeUI()
             renderText(205, 65, bufferRY);
         }
 
-        //0.1ms
+       //0.1ms
         makeHotbar(currentSlot);
 
         if(survival == true)
         makeHealthBar();
     }
-    if(UIState == 9 ) //startup menu
+    if(UIState == 9 )//startup menu
     {
         int Buttonlength = 3;
-        char text[3][50] = 
+        char text[3][50] =
         {
             "Singleplayer",
             "Options",
@@ -23228,7 +23266,7 @@ void makeUI()
             {
                 int xOnTexture = x%16;
                 int yOnTexture = y%16;
-                ((unsigned short*)LCD_GetVRAMAddress())[y*320+x] = textures2[xOnTexture+yOnTexture*16 + 3*256];
+                VRAMAddress[y*320+x] = textures2[xOnTexture+yOnTexture*16 + 3*256];
             }
         }
 
@@ -23248,17 +23286,17 @@ void makeUI()
             }
         }
     }
-    if(UIState == 10) //world selection
+    if(UIState == 10)//world selection
     {
         int Buttonlength = 6;
-        char text[6][50] = 
+        char text[6][50] =
         {
             "Slot 1 - ",
             "Slot 2 - ",
             "Slot 3 - ",
             "Slot 4 - ",
             "Slot 5 - ",
-            "Cancel", 
+            "Cancel",
         };
         int textLength[6] = {9, 9, 9, 9, 9, 6};
         int textHeight[6] = {30, 55, 80, 105, 130, 165};
@@ -23362,7 +23400,7 @@ void makeUI()
             {
                 int xOnTexture = x%16;
                 int yOnTexture = y%16;
-                ((unsigned short*)LCD_GetVRAMAddress())[y*320+x] = textures2[xOnTexture+yOnTexture*16 + 3*256];
+                VRAMAddress[y*320+x] = textures2[xOnTexture+yOnTexture*16 + 3*256];
             }
         }
 
@@ -23413,10 +23451,10 @@ void makeUI()
             }
         }
     }
-    if(UIState == 11) //world creation
+    if(UIState == 11)//world creation
     {
         int Buttonlength = 8;
-        char text[8][50] = 
+        char text[8][50] =
         {
             "superflat: ",
             "Seed: ",
@@ -23425,11 +23463,11 @@ void makeUI()
             "Day/night cycle: ",
 			"mobs: ",
             "Create world",
-            "Cancel", 
+            "Cancel",
         };
         int textLength[8] = {11, 6, 7, 10, 17, 6, 12, 6};
         int textHeight[8] = {30, 30, 55, 55, 80, 80, 115, 150};
-        Vector2I textWidth[8] = {{0, 159}, {160, 319}, {0, 159}, {160, 319}, {0, 159}, {160, 319}, {0, 319}, {0, 319}};
+        Vector2I textWidth[8] = {{0, 191}, {160, 383}, {0, 191}, {160, 383}, {0, 191}, {160, 383}, {0, 383}, {0, 383}};
 
         keyupdate();
         if(keydownlast(KEY_PRGM_UP) && !keydownhold(KEY_PRGM_UP))
@@ -23476,7 +23514,7 @@ void makeUI()
 
             if(cursorY == 3)
             survival = !survival;
-            
+
             if(cursorY == 4)
             dayNightCycle = !dayNightCycle;
 
@@ -23486,7 +23524,7 @@ void makeUI()
             if(cursorY == 6)
             {
                 if(SEED == 0)
-                SEED = generate_random(0, 999999999);
+                SEED = generate_random(RTC_GetTicks(), 999999999);
 
                 for (int y = 0; y < totalChunkWidth; y++)
                 {
@@ -23540,7 +23578,7 @@ void makeUI()
             {
                 int xOnTexture = x%16;
                 int yOnTexture = y%16;
-                ((unsigned short*)LCD_GetVRAMAddress())[y*320+x] = textures2[xOnTexture+yOnTexture*16 + 3*256];
+                VRAMAddress[y*320+x] = textures2[xOnTexture+yOnTexture*16 + 3*256];
             }
         }
 
@@ -23620,7 +23658,7 @@ void makeUI()
                 strcat(buttonText, temp);
             }
 
-            int startX = (textWidth[i].y - textWidth[i].x - 160) / 2 + textWidth[i].x;
+            int startX = (textWidth[i].y - textWidth[i].x - 160)/ 2 + textWidth[i].x;
             int endX = startX + 160;
             if(cursorY != i)
             {
@@ -23634,10 +23672,10 @@ void makeUI()
             }
         }
     }
-    if(UIState == 15) //world conversion
+    if(UIState == 15)//world conversion
     {
         int Buttonlength = 8;
-        char text[8][50] = 
+        char text[8][50] =
         {
             "superflat: ",
             "Seed: ",
@@ -23646,11 +23684,11 @@ void makeUI()
             "Day/night cycle: ",
 			"mobs: ",
             "Create world",
-            "Cancel", 
+            "Cancel",
         };
         int textLength[8] = {11, 6, 7, 10, 17, 6, 12, 6};
         int textHeight[8] = {30, 30, 55, 55, 80, 80, 115, 150};
-        Vector2I textWidth[8] = {{0, 159}, {160, 319}, {0, 159}, {160, 319}, {0, 159}, {160, 319}, {0, 319}, {0, 319}};
+        Vector2I textWidth[8] = {{0, 191}, {160, 383}, {0, 191}, {160, 383}, {0, 191}, {160, 383}, {0, 383}, {0, 383}};
 
         keyupdate();
         if(keydownlast(KEY_PRGM_UP) && !keydownhold(KEY_PRGM_UP))
@@ -23697,7 +23735,7 @@ void makeUI()
 
             if(cursorY == 3)
             survival = !survival;
-            
+
             if(cursorY == 4)
             {
                 dayNightCycle = !dayNightCycle;
@@ -23735,7 +23773,7 @@ void makeUI()
             {
                 int xOnTexture = x%16;
                 int yOnTexture = y%16;
-                ((unsigned short*)LCD_GetVRAMAddress())[y*320+x] = textures2[xOnTexture+yOnTexture*16 + 3*256];
+                VRAMAddress[y*320+x] = textures2[xOnTexture+yOnTexture*16 + 3*256];
             }
         }
 
@@ -23814,7 +23852,7 @@ void makeUI()
                 strcat(buttonText, temp);
             }
 
-            int startX = (textWidth[i].y - textWidth[i].x - 160) / 2 + textWidth[i].x;
+            int startX = (textWidth[i].y - textWidth[i].x - 160)/ 2 + textWidth[i].x;
             int endX = startX + 160;
             if(cursorY != i)
             {
@@ -23828,27 +23866,27 @@ void makeUI()
             }
         }
     }
-    if(UIState == 12) //settings startup menu
+    if(UIState == 12)//settings startup menu
     {
         int Buttonlength = 12;
-        char text[12][50] = 
+        char text[12][50] =
         {
-            "back", //0
-            "Render distance: ", //1
-            "Compress vertices: ", //2
-            "Render underwater: ", //3
-            "Render resolution: ", //4
-            "Render textured: ", //5
-            "Lighting: ", //6
-            "Stop chunk loading: ", //7
-            "Render mode: ", //8
-			"Chunk update distance: ", //9
-			"Beautiful Sky: ", //10
-            "Texture packs", //11
+            "back",//0
+            "Render distance: ",//1
+            "Compress vertices: ",//2
+            "Render underwater: ",//3
+            "Render resolution: ",//4
+            "Render textured: ",//5
+            "Lighting: ",//6
+            "Stop chunk loading: ",//7
+            "Render mode: ",//8
+			"Chunk update distance: ",//9
+			"Beautiful Sky: ",//10
+            "Texture packs",//11
         };
         int textLength[12] = {4, 17, 19, 19, 19, 17, 10, 20, 13, 23, 15, 13};
         int textHeight[12] = {30, 55, 55, 80, 80, 105, 105, 130, 130, 155, 155, 180};
-        Vector2I textWidth[12] = {{0, 319}, {0, 159}, {160, 319}, {0, 159}, {160, 319}, {0, 159}, {160, 319}, {0, 159}, {160, 319}, {0, 159}, {160, 319}, {0, 319}};
+        Vector2I textWidth[12] = {{0, 383}, {0, 191}, {160, 383}, {0, 191}, {160, 383}, {0, 191}, {160, 383}, {0, 191}, {160, 383}, {0, 191}, {160, 383}, {0, 383}};
 
         keyupdate();
         if(keydownlast(KEY_PRGM_UP) && !keydownhold(KEY_PRGM_UP))
@@ -23927,8 +23965,8 @@ void makeUI()
                     else
                     pixelSize = 1;
 
-                    resXZBuffer = resX / pixelSize;
-                    resYZBuffer = resY / pixelSize;
+                    resXZBuffer = resX/ pixelSize;
+                    resYZBuffer = resY/ pixelSize;
                 }
             }
 
@@ -23970,7 +24008,7 @@ void makeUI()
             {
                 int xOnTexture = x%16;
                 int yOnTexture = y%16;
-                ((unsigned short*)LCD_GetVRAMAddress())[y*320+x] = textures2[xOnTexture+yOnTexture*16 + 3*256];
+                VRAMAddress[y*320+x] = textures2[xOnTexture+yOnTexture*16 + 3*256];
             }
         }
 
@@ -24076,12 +24114,12 @@ void makeUI()
 					if(redstoneRenderDistance > 0)
 					{
 						sprintf(temp, "%d", redstoneRenderDistance-1);
-                    	extra = countDigits(redstoneRenderDistance-1);
+			extra = countDigits(redstoneRenderDistance-1);
 					}
 					else
 					{
 						sprintf(temp, "OFF");
-                    	extra = 3;
+			extra = 3;
 					}
 				}
 				if(i == 10)
@@ -24099,7 +24137,7 @@ void makeUI()
                 strcat(buttonText, temp);
             }
 
-            int startX = (textWidth[i].y - textWidth[i].x - 160) / 2 + textWidth[i].x;
+            int startX = (textWidth[i].y - textWidth[i].x - 160)/ 2 + textWidth[i].x;
             int endX = startX + 160;
             if(cursorY != i)
             {
@@ -24113,20 +24151,20 @@ void makeUI()
             }
         }
     }
-    if(UIState == 13) //game menu
+    if(UIState == 13)//game menu
     {
         int Buttonlength = 5;
-        char text[5][50] = 
+        char text[5][50] =
         {
-            "Back to game", //0
-            "Options...", //1
-            "Save game", //2
-            "Save and quit to title", //3
-            "Quit without saving" //4
+            "Back to game",//0
+            "Options...",//1
+            "Save game",//2
+            "Save and quit to title",//3
+            "Quit without saving"//4
         };
         int textLength[5] = {12, 10, 9, 22, 19};
         int textHeight[5] = {30, 60, 90, 120, 150};
-        Vector2I textWidth[5] = {{0, 319}, {0, 319}, {0, 319}, {0, 319}, {0, 319}};
+        Vector2I textWidth[5] = {{0, 383}, {0, 383}, {0, 383}, {0, 383}, {0, 383}};
 
         keyupdate();
         if(keydownlast(KEY_PRGM_UP) && !keydownhold(KEY_PRGM_UP))
@@ -24161,16 +24199,16 @@ void makeUI()
                 UIState = 14;
                 cursorY = 0;
             }
-            
+
             if(cursorY == 2)
-            {   
+            {
                 saveAllChunk(currentSelectedWorld, worldExists[currentSelectedWorld-1]);
                 worldExists[currentSelectedWorld-1] = 1;
                 worldVersion[currentSelectedWorld-1] = currentVersion;
 
                 savegameData();
             }
-            
+
             if(cursorY == 3)
             {
                 saveAllChunk(currentSelectedWorld, worldExists[currentSelectedWorld-1]);
@@ -24224,7 +24262,7 @@ void makeUI()
 					inventoryBlockHp[i] = 0;
                 }
             }
-            
+
             if(cursorY == 4)
             {
                 clearAllChunks();
@@ -24281,7 +24319,7 @@ void makeUI()
 
         for (int i = 0; i < Buttonlength; i++)
         {
-            int startX = (textWidth[i].y - textWidth[i].x - 160) / 2 + textWidth[i].x;
+            int startX = (textWidth[i].y - textWidth[i].x - 160)/ 2 + textWidth[i].x;
             int endX = startX + 160;
             if(cursorY != i)
             {
@@ -24295,27 +24333,27 @@ void makeUI()
             }
         }
     }
-    if(UIState == 14) //settings in game
+    if(UIState == 14)//settings in game
     {
         int Buttonlength = 12;
-        char text[12][50] = 
+        char text[12][50] =
         {
-            "back", //0
-            "Render distance: ", //1
-            "Compress vertices: ", //2
-            "Render underwater: ", //3
-            "Render resolution: ", //4
-            "Render textured: ", //5
-            "Lighting: ", //6
-            "Stop chunk loading: ", //7
-            "Render mode: ", //8
-			"Chunk update distance: ", //9
-			"Beautiful Sky: ", //10
-            "Texture packs", //11
+            "back",//0
+            "Render distance: ",//1
+            "Compress vertices: ",//2
+            "Render underwater: ",//3
+            "Render resolution: ",//4
+            "Render textured: ",//5
+            "Lighting: ",//6
+            "Stop chunk loading: ",//7
+            "Render mode: ",//8
+			"Chunk update distance: ",//9
+			"Beautiful Sky: ",//10
+            "Texture packs",//11
         };
         int textLength[12] = {4, 17, 19, 19, 19, 17, 10, 20, 13, 23, 15, 13};
         int textHeight[12] = {30, 55, 55, 80, 80, 105, 105, 130, 130, 155, 155, 180};
-        Vector2I textWidth[12] = {{0, 319}, {0, 159}, {160, 319}, {0, 159}, {160, 319}, {0, 159}, {160, 319}, {0, 159}, {160, 319}, {0, 159}, {160, 319}, {0, 319}};
+        Vector2I textWidth[12] = {{0, 383}, {0, 191}, {160, 383}, {0, 191}, {160, 383}, {0, 191}, {160, 383}, {0, 191}, {160, 383}, {0, 191}, {160, 383}, {0, 383}};
 
         keyupdate();
         if(keydownlast(KEY_PRGM_UP) && !keydownhold(KEY_PRGM_UP))
@@ -24397,8 +24435,8 @@ void makeUI()
                     else
                     pixelSize = 1;
 
-                    resXZBuffer = resX / pixelSize;
-                    resYZBuffer = resY / pixelSize;
+                    resXZBuffer = resX/ pixelSize;
+                    resYZBuffer = resY/ pixelSize;
                 }
             }
 
@@ -24550,12 +24588,12 @@ void makeUI()
 					if(redstoneRenderDistance > 0)
 					{
 						sprintf(temp, "%d", redstoneRenderDistance-1);
-                    	extra = countDigits(redstoneRenderDistance-1);
+			extra = countDigits(redstoneRenderDistance-1);
 					}
 					else
 					{
 						sprintf(temp, "OFF");
-                    	extra = 3;
+			extra = 3;
 					}
 				}
 
@@ -24574,7 +24612,7 @@ void makeUI()
                 strcat(buttonText, temp);
             }
 
-            int startX = (textWidth[i].y - textWidth[i].x - 160) / 2 + textWidth[i].x;
+            int startX = (textWidth[i].y - textWidth[i].x - 160)/ 2 + textWidth[i].x;
             int endX = startX + 160;
             if(cursorY != i)
             {
@@ -24588,7 +24626,7 @@ void makeUI()
             }
         }
     }
-    if(UIState == 16) //inventory
+    if(UIState == 16)//inventory
     {
         keyupdate();
         if(keydownlast(KEY_PRGM_UP) && !keydownhold(KEY_PRGM_UP))
@@ -24700,10 +24738,10 @@ void makeUI()
             else
             {
                 int craftIndex = (cursorY + cursorYExtra) * 3 + (cursorX + 3);
-                int totRecourcesNeeded = craftingRecipes[craftIndex].diffrentItemAmount; 
+                int totRecourcesNeeded = craftingRecipes[craftIndex].diffrentItemAmount;
                 int continueCraft = 1;
 
-                //addItemToHotbarInventory(craftingRecipes[craftIndex].outputItem+1, craftingRecipes[craftIndex].outputItemAmount);
+               //addItemToHotbarInventory(craftingRecipes[craftIndex].outputItem+1, craftingRecipes[craftIndex].outputItemAmount);
 
                 if(craftingRecipes[craftIndex].needsCraftingTable == false || isInCraftingTable == true)
                 {
@@ -24731,8 +24769,8 @@ void makeUI()
 
         renderMenuEffect();
 
-        CopySpriteNbitMasked(inventory, 108, 42, 268, 132, inventory_palette, 0x0001, 4);  //crafting menu will be 100 pixels width
-        CopySprite(recipeSelector, 8, 42, 100, 128, 0x0001);  //crafting menu will be 100 pixels width
+        CopySpriteNbitMasked(inventory, 180, 42, 268, 132, inventory_palette, 0x0001, 4); //crafting menu will be 100 pixels width
+        CopySprite(recipeSelector, 8, 42, 100, 128, 0x0001); //crafting menu will be 100 pixels width
 
         for (int y = 0; y < 3; y++)
         {
@@ -24748,19 +24786,19 @@ void makeUI()
                         for (int y_ = 0; y_ < 26; y_++)
                         {
                             for (int x_ = 0; x_ < 26; x_++)
-                            ((unsigned short*)LCD_GetVRAMAddress())[xOnScreen+x_+1 + (yOnScreen+y_+1) * 320] = 0xc638;
+                            VRAMAddress[xOnScreen+x_+1 + (yOnScreen+y_+1) * 320] = 0xc638;
                         }
                     }
                 }
 
-                //inventoryBlockTypes[inventoryIndex], inventoryBlockAmount[inventoryIndex]
+               //inventoryBlockTypes[inventoryIndex], inventoryBlockAmount[inventoryIndex]
                 int inventoryIndex = x + y * 9;
                 int itemType = inventoryBlockTypes[inventoryIndex];
                 if(itemType > itemAmount)
                 itemType = 0;
                 int itemAmount_ = inventoryBlockAmount[inventoryIndex];
 				int itemHp = inventoryBlockHp[inventoryIndex];
-                
+
                 if(itemType != -1)
                 {
                     CopySpriteIcon(&itemIcons2[676 * allItem[itemType].iconIndex], xOnScreen+1, yOnScreen+1, 26, 26, 0x0000);
@@ -24787,16 +24825,16 @@ void makeUI()
                 for (int y_ = 0; y_ < 26; y_++)
                 {
                     for (int x_ = 0; x_ < 26; x_++)
-                    ((unsigned short*)LCD_GetVRAMAddress())[xOnScreen+x_+1 + (yOnScreen+y_+1) * 320] = 0xc638;
+                    VRAMAddress[xOnScreen+x_+1 + (yOnScreen+y_+1) * 320] = 0xc638;
                 }
             }
-            
+
             int itemType = hotbarBlockTypes[x];
             if(itemType > itemAmount)
             itemType = 0;
             int itemAmount_ = hotbarBlockAmount[x];
 			int itemHp = hotbarBlockHp[x];
-            
+
             if(itemType != -1)
             {
                 CopySpriteIcon(&itemIcons2[676 * allItem[itemType].iconIndex], xOnScreen+1, yOnScreen+1, 26, 26, 0x0000);
@@ -24828,12 +24866,12 @@ void makeUI()
                         for (int y_ = 0; y_ < 26; y_++)
                         {
                             for (int x_ = 0; x_ < 26; x_++)
-                            ((unsigned short*)LCD_GetVRAMAddress())[xOnScreen+x_+1 + (yOnScreen+y_+1) * 320] = 0xc638;
+                            VRAMAddress[xOnScreen+x_+1 + (yOnScreen+y_+1) * 320] = 0xc638;
                         }
                     }
                 }
 
-                //inventoryBlockTypes[inventoryIndex], inventoryBlockAmount[inventoryIndex]
+               //inventoryBlockTypes[inventoryIndex], inventoryBlockAmount[inventoryIndex]
                 int inventoryIndex = x + (y+cursorYExtra) * 3;
                 if(inventoryIndex < craftingRecipeAmount)
                 {
@@ -24904,19 +24942,19 @@ void makeUI()
         {
             int xOnScreen = 116 + x*28;
             int yOnScreen = 138;
-            
+
             if(cursorX == x && cursorY == 3)
             {
                 int itemType = hotbarBlockTypes[x];
                 if(itemType > itemAmount)
                 itemType = 0;
-                
+
                 if(itemType != -1)
                 itemDetails(xOnScreen+24, yOnScreen+4, allItem[itemType].name);
             }
         }
     }
-    if(UIState == 17) //creative menu
+    if(UIState == 17)//creative menu
     {
         keyupdate();
         if(keydownlast(KEY_PRGM_UP) && !keydownhold(KEY_PRGM_UP))
@@ -25014,8 +25052,8 @@ void makeUI()
 
         renderMenuEffect();
 
-        //CopySprite(inventory, 58, 42, 268, 132, 0x0001);  //crafting menu will be 100 pixels width
-        CopySpriteNbitMasked(inventory, 58, 42, 268, 132, inventory_palette, 0x0001, 4);  //crafting menu will be 100 pixels width
+       //CopySprite(inventory, 58, 42, 268, 132, 0x0001); //crafting menu will be 100 pixels width
+        CopySpriteNbitMasked(inventory, 58, 42, 268, 132, inventory_palette, 0x0001, 4); //crafting menu will be 100 pixels width
 
         for (int y = 0; y < 3; y++)
         {
@@ -25031,13 +25069,13 @@ void makeUI()
                         for (int y_ = 0; y_ < 26; y_++)
                         {
                             for (int x_ = 0; x_ < 26; x_++)
-                            ((unsigned short*)LCD_GetVRAMAddress())[xOnScreen+x_+1 + (yOnScreen+y_+1) * 320] = 0xc638;
+                            VRAMAddress[xOnScreen+x_+1 + (yOnScreen+y_+1) * 320] = 0xc638;
                         }
                     }
                 }
-                
+
                 int itemType = x + (y+cursorYExtra) * 9 + 1;
-                
+
                 if(itemType < itemAmount)
                 CopySpriteIcon(&itemIcons2[676 * allItem[itemType].iconIndex], xOnScreen+1, yOnScreen+1, 26, 26, 0x0000);
             }
@@ -25054,7 +25092,7 @@ void makeUI()
                     if(x == cursorX && y == cursorY)
                     {
                         int itemType = x + (y+cursorYExtra) * 9 + 1;
-                
+
                         if(itemType < itemAmount)
                         itemDetails(xOnScreen+24, yOnScreen+4, allItem[itemType].name);
                     }
@@ -25073,16 +25111,16 @@ void makeUI()
                     for (int y_ = 0; y_ < 26; y_++)
                     {
                         for (int x_ = 0; x_ < 26; x_++)
-                        ((unsigned short*)LCD_GetVRAMAddress())[xOnScreen+x_+1 + (yOnScreen+y_+1) * 320] = 0xc638;
+                        VRAMAddress[xOnScreen+x_+1 + (yOnScreen+y_+1) * 320] = 0xc638;
                     }
                 }
             }
-            
+
             int itemType = hotbarBlockTypes[x];
             if(itemType > itemAmount)
             itemType = 0;
             int itemAmount_ = hotbarBlockAmount[x];
-            
+
             if(itemType != -1)
             {
                 CopySpriteIcon(&itemIcons2[676 * allItem[itemType].iconIndex], xOnScreen+1, yOnScreen+1, 26, 26, 0x0000);
@@ -25096,7 +25134,7 @@ void makeUI()
             }
         }
     }
-    if(UIState == 18) //inventory chest
+    if(UIState == 18)//inventory chest
     {
         keyupdate();
         if(keydownlast(KEY_PRGM_UP) && !keydownhold(KEY_PRGM_UP))
@@ -25171,7 +25209,7 @@ void makeUI()
 
         renderMenuEffect();
 
-        CopySpriteNbitMasked(chestInv, 58, 0, 268, 180, chestInv_palette, 0x0001, 4);  //crafting menu will be 100 pixels width
+        CopySpriteNbitMasked(chestInv, 58, 0, 268, 180, chestInv_palette, 0x0001, 4); //crafting menu will be 100 pixels width
 
         int chestIndex = -1;
         for (int i = 0; i < chestAmount; i++)
@@ -25186,12 +25224,12 @@ void makeUI()
             }
         }
 
-        if(chestIndex == -1) //chest does not exist exit
+        if(chestIndex == -1)//chest does not exist exit
         UIState = 0;
         else
         {
             currentChestIndex = chestIndex;
-            for (int y = 0; y < 3; y++) //chest
+            for (int y = 0; y < 3; y++)//chest
             {
                 for (int x = 0; x < 9; x++)
                 {
@@ -25205,19 +25243,19 @@ void makeUI()
                             for (int y_ = 0; y_ < 26; y_++)
                             {
                                 for (int x_ = 0; x_ < 26; x_++)
-                                ((unsigned short*)LCD_GetVRAMAddress())[xOnScreen+x_+1 + (yOnScreen+y_+1) * 320] = 0xc638;
+                                VRAMAddress[xOnScreen+x_+1 + (yOnScreen+y_+1) * 320] = 0xc638;
                             }
                         }
                     }
 
-                    //inventoryBlockTypes[inventoryIndex], inventoryBlockAmount[inventoryIndex]
+                   //inventoryBlockTypes[inventoryIndex], inventoryBlockAmount[inventoryIndex]
                     int inventoryIndex = x + y * 9;
                     int itemType = allchest[chestIndex].chestBlockTypes[inventoryIndex];
                     if(itemType > itemAmount)
                     itemType = 0;
                     int itemAmount_ = allchest[chestIndex].chestBlockAmount[inventoryIndex];
 					int itemHp = allchest[chestIndex].chestBlockHp[inventoryIndex];
-                    
+
                     if(itemType != -1)
                     {
                         CopySpriteIcon(&itemIcons2[676 * allItem[itemType].iconIndex], xOnScreen+1, yOnScreen+1, 26, 26, 0x0000);
@@ -25235,7 +25273,7 @@ void makeUI()
                 }
             }
 
-            for (int y = 0; y < 3; y++) //inventory
+            for (int y = 0; y < 3; y++)//inventory
             {
                 for (int x = 0; x < 9; x++)
                 {
@@ -25249,12 +25287,12 @@ void makeUI()
                             for (int y_ = 0; y_ < 26; y_++)
                             {
                                 for (int x_ = 0; x_ < 26; x_++)
-                                ((unsigned short*)LCD_GetVRAMAddress())[xOnScreen+x_+1 + (yOnScreen+y_+1) * 320] = 0xc638;
+                                VRAMAddress[xOnScreen+x_+1 + (yOnScreen+y_+1) * 320] = 0xc638;
                             }
                         }
                     }
 
-                    //inventoryBlockTypes[inventoryIndex], inventoryBlockAmount[inventoryIndex]
+                   //inventoryBlockTypes[inventoryIndex], inventoryBlockAmount[inventoryIndex]
                     int inventoryIndex = x + y * 9;
                     int itemType = inventoryBlockTypes[inventoryIndex];
                     if(itemType > itemAmount)
@@ -25278,7 +25316,7 @@ void makeUI()
                     }
                 }
             }
-            for (int x = 0; x < 9; x++) //hotbar
+            for (int x = 0; x < 9; x++)//hotbar
             {
                 int xOnScreen = 66 + x*28;
                 int yOnScreen = 181;
@@ -25288,7 +25326,7 @@ void makeUI()
                     for (int y_ = 0; y_ < 26; y_++)
                     {
                         for (int x_ = 0; x_ < 26; x_++)
-                        ((unsigned short*)LCD_GetVRAMAddress())[xOnScreen+x_+1 + (yOnScreen+y_+1) * 320] = 0xc638;
+                        VRAMAddress[xOnScreen+x_+1 + (yOnScreen+y_+1) * 320] = 0xc638;
                     }
                 }
 
@@ -25314,7 +25352,7 @@ void makeUI()
                 }
             }
 
-            for (int y = 0; y < 3; y++) //chest
+            for (int y = 0; y < 3; y++)//chest
             {
                 for (int x = 0; x < 9; x++)
                 {
@@ -25336,7 +25374,7 @@ void makeUI()
                     }
                 }
             }
-            for (int y = 0; y < 3; y++) //inventory
+            for (int y = 0; y < 3; y++)//inventory
             {
                 for (int x = 0; x < 9; x++)
                 {
@@ -25358,7 +25396,7 @@ void makeUI()
                     }
                 }
             }
-            for (int x = 0; x < 9; x++) //hotbar 
+            for (int x = 0; x < 9; x++)//hotbar
             {
                 int xOnScreen = 66  + x*28;
                 int yOnScreen = 181;
@@ -25375,7 +25413,7 @@ void makeUI()
             }
         }
     }
-    if(UIState == 19) //texture pack selector
+    if(UIState == 19)//texture pack selector
     {
         keyupdate();
         if(keydownlast(KEY_PRGM_UP) && !keydownhold(KEY_PRGM_UP))
@@ -25423,14 +25461,14 @@ void makeUI()
             {
                 int xOnTexture = x%16;
                 int yOnTexture = y%16;
-                ((unsigned short*)LCD_GetVRAMAddress())[y*320+x] = textures2[xOnTexture+yOnTexture*16 + 3*256];
+                VRAMAddress[y*320+x] = textures2[xOnTexture+yOnTexture*16 + 3*256];
             }
         }
 
         for (int y = 5; y < 185; y++)
         {
             for (int x = 128; x < 256; x++)
-            ((unsigned short*)LCD_GetVRAMAddress())[y*320+x] = combineColors(((unsigned short*)LCD_GetVRAMAddress())[y*320+x], 0x0000, 50);
+            VRAMAddress[y*320+x] = combineColors(VRAMAddress[y*320+x], 0x0000, 50);
         }
 
         for (int i = 0; i < 6; i++)
@@ -25457,21 +25495,21 @@ void makeUI()
                         for (int y = 6+36*i; y < 40+36*i; y++)
                         {
                             for (int x = 129; x < 255; x++)
-                            ((unsigned short*)LCD_GetVRAMAddress())[y*320+x] = 0x7000;
+                            VRAMAddress[y*320+x] = 0x7000;
                         }
                     }
 
-                    CopySprite(texturePackIcon[i], 130, 7+36*i, 32, 32, 0xffff);                                                                    //draw icon
-                    drawMinecraftFont(164, 164, 7+36*i, false, getTextLength(texturePackName[i], 24), texturePackName[i], 0xdefb, 0x39c7);          //draw name
-                    drawMinecraftFont(164, 164, 17+36*i, false, getTextLength(texturePackCreator[i], 24), texturePackCreator[i], 0xdefb, 0x39c7);   //draw creator
+                    CopySprite(texturePackIcon[i], 130, 7+36*i, 32, 32, 0xffff);                                                                   //draw icon
+                    drawMinecraftFont(164, 164, 7+36*i, false, getTextLength(texturePackName[i], 24), texturePackName[i], 0xdefb, 0x39c7);         //draw name
+                    drawMinecraftFont(164, 164, 17+36*i, false, getTextLength(texturePackCreator[i], 24), texturePackCreator[i], 0xdefb, 0x39c7);  //draw creator
 
                     char versionStr[12] = "";
                     memset(versionStr, 0, 12);
                     sprintf(versionStr, "V%d", texturePackVersion[i]);
-                    drawMinecraftFont(164, 164, 27+36*i, false, getTextLength(versionStr, 12), versionStr, 0xdefb, 0x39c7);                         //draw version
+                    drawMinecraftFont(164, 164, 27+36*i, false, getTextLength(versionStr, 12), versionStr, 0xdefb, 0x39c7);                        //draw version
 
                     if(currentTexturePackIndex == i)
-                    drawMinecraftFont(180, 180, 27+36*i, false, 6, "active", 0xdefb, 0x39c7);                                                       //draw active
+                    drawMinecraftFont(180, 180, 27+36*i, false, 6, "active", 0xdefb, 0x39c7);                                                      //draw active
                 }
 
                 if(cursorY == i)
@@ -25479,7 +25517,7 @@ void makeUI()
                     for (int y = 6+36*i; y < 40+36*i; y++)
                     {
                         for (int x = 129; x < 255; x++)
-                        ((unsigned short*)LCD_GetVRAMAddress())[y*320+x] = combineColors(((unsigned short*)LCD_GetVRAMAddress())[y*320+x], 0x0000, 25);
+                        VRAMAddress[y*320+x] = combineColors(VRAMAddress[y*320+x], 0x0000, 25);
                     }
                 }
             }
@@ -25513,7 +25551,7 @@ void addItemToHotbar(int itemIndex, int amount)
             break;
         }
     }
-    
+
 }
 void addItemToInventory(int itemIndex, int amount)
 {
@@ -25534,7 +25572,7 @@ void addItemToInventory(int itemIndex, int amount)
             break;
         }
     }
-    
+
 }
 void addItemToHotbarInventory(int itemIndex, int amount)
 {
@@ -25744,19 +25782,19 @@ void updatePerformanceLog()
     }
 
     int totalTicks = 0;
-    
+
     for (int i = 0; i < 10; i++)
     {
         for (int x = totalTicks; x < totalTicks+Cperformace[i]; x++)
         {
             for (int y = 0; y < 8; y++)
-            ((unsigned short*)LCD_GetVRAMAddress())[y * 320 + x] = performanceColors[i];
+            VRAMAddress[y * 320 + x] = performanceColors[i];
         }
 
         for (int y = 10; y < 18; y++)
         {
             for (int x = 0; x < 8; x++)
-            ((unsigned short*)LCD_GetVRAMAddress())[(y + i*10) * 320 + x] = performanceColors[i];
+            VRAMAddress[(y + i*10) * 320 + x] = performanceColors[i];
         }
 
         int textLength = 0;
@@ -25770,7 +25808,7 @@ void updatePerformanceLog()
 
         char text_[10];
         sprintf(text_, "%d", Cperformace[i]);
-        drawMinecraftFont(108, 108, i*10+10, false, countDigits(Cperformace[i]), text_, 0xdefb, 0x39c7);
+        drawMinecraftFont(180, 180, i*10+10, false, countDigits(Cperformace[i]), text_, 0xdefb, 0x39c7);
 
         totalTicks += Cperformace[i];
     }
@@ -25782,7 +25820,7 @@ void viewMap()
     color_t sandC = 0xd653;
     color_t waterC = 0x42f4;
 
-    color_t *screenLoc = ((unsigned short*)LCD_GetVRAMAddress());
+    color_t *screenLoc = VRAMAddress;
 
     for (int x = 0; x < 320; x++)
     {
@@ -25790,16 +25828,16 @@ void viewMap()
         {
             int perlinHeight = Perlin3D(x * 10, 0, z * 10);
 
-            int r5 = (perlinHeight * 31) / 1000;
-            int g6 = (perlinHeight * 63) / 1000;
-            int b5 = (perlinHeight * 31) / 1000;
+            int r5 = (perlinHeight * 31)/ 1000;
+            int g6 = (perlinHeight * 63)/ 1000;
+            int b5 = (perlinHeight * 31)/ 1000;
 
-            ((unsigned short*)LCD_GetVRAMAddress())[x + z*320] = (r5 << 11) | (g6 << 5) | b5;
-            //screenLoc++;
+            VRAMAddress[x + z*320] = (r5 << 11) | (g6 << 5) | b5;
+           //screenLoc++;
         }
     }
     LCD_Refresh();
-    ((void)0)(2000);
+    OS_InnerWait_ms(2000);
 }
 
 //update Entitys
@@ -25820,36 +25858,36 @@ void updateEntityReach()
 
             for (int j = 0; j < 50; j += 1)
             {
-                int pointX = (forw.x * j + pPos.x) / 1000;
-                int pointY = (forw.y * j + pPos.y) / 1000;
-                int pointZ = (forw.z * j + pPos.z) / 1000;
+                int pointX = (forw.x * j + pPos.x)/ 1000;
+                int pointY = (forw.y * j + pPos.y)/ 1000;
+                int pointZ = (forw.z * j + pPos.z)/ 1000;
 
                 if(pointX == (int)entPos.x && pointY == (int)entPos.y && pointZ == (int)entPos.z){
-                	entityInFrontIndex = i;
+			entityInFrontIndex = i;
 					break;
 				}
                 if(pointX == (int)entPos.x && pointY+1 == (int)entPos.y && pointZ == (int)entPos.z){
-                	entityInFrontIndex = i;
+			entityInFrontIndex = i;
 					break;
 				}
 				if(pointX == (int)entPos.x && pointY-1 == (int)entPos.y && pointZ == (int)entPos.z){
-                	entityInFrontIndex = i;
+			entityInFrontIndex = i;
 					break;
 				}
 				if(pointX+1 == (int)entPos.x && pointY == (int)entPos.y && pointZ == (int)entPos.z){
-                	entityInFrontIndex = i;
+			entityInFrontIndex = i;
 					break;
 				}
 				if(pointX-1 == (int)entPos.x && pointY == (int)entPos.y && pointZ == (int)entPos.z){
-                	entityInFrontIndex = i;
+			entityInFrontIndex = i;
 					break;
 				}
 				if(pointX == (int)entPos.x && pointY == (int)entPos.y && pointZ+1 == (int)entPos.z){
-                	entityInFrontIndex = i;
+			entityInFrontIndex = i;
 					break;
 				}
 				if(pointX == (int)entPos.x && pointY == (int)entPos.y && pointZ-1 == (int)entPos.z){
-                	entityInFrontIndex = i;
+			entityInFrontIndex = i;
 					break;
 				}
             }
@@ -25862,7 +25900,7 @@ void updateEntitys()
     {
         if(entityList[i].active == true)
         {
-			if(entityList[i].type == 1) //sheep ai
+			if(entityList[i].type == 1)//sheep ai
 			{
 				//state 0=standing still, 1=walking, 2=grazing, 3=following player, 4=running, 5=just hit
 				int objectIndex = entityList[i].locationOnAllObj;
@@ -25922,12 +25960,12 @@ void updateEntitys()
 					{
 						if(entityList[i].moveTimer < 0)
 						{
-							char randomNumber = generate_random(0+i, 6);
+							char randomNumber = generate_random(RTC_GetTicks()+i, 6);
 
 							if(randomNumber < 4)
 							{
 								entityList[i].state = 1;
-								entityList[i].moveTimer = generate_random(0+i+1, 4)+2;
+								entityList[i].moveTimer = generate_random(RTC_GetTicks()+i+1, 4)+2;
 
 								Vector3B        vd1[48] = {
                                     {-4, 7, -6}, {-4, 7, 6}, {-4, 13, -6}, {-4, 13, 6}, {4, 7, -6}, {4, 7, 6}, {4, 13, -6}, {4, 13, 6},
@@ -25939,11 +25977,11 @@ void updateEntitys()
                                 };
 
 								for (int j = 0; j < 48; j++)
-       							{
-       							    allObj[objectIndex].verticesIPC[j].x = vd1[j].x + allObj[objectIndex].position.x * 10;
-       							    allObj[objectIndex].verticesIPC[j].y = vd1[j].y + allObj[objectIndex].position.y * 10;
-       							    allObj[objectIndex].verticesIPC[j].z = vd1[j].z + allObj[objectIndex].position.z * 10;
-       							}
+							{
+							    allObj[objectIndex].verticesIPC[j].x = vd1[j].x + allObj[objectIndex].position.x * 10;
+							    allObj[objectIndex].verticesIPC[j].y = vd1[j].y + allObj[objectIndex].position.y * 10;
+							    allObj[objectIndex].verticesIPC[j].z = vd1[j].z + allObj[objectIndex].position.z * 10;
+							}
 
 								Vector3I center = {allObj[objectIndex].position.x*10, allObj[objectIndex].position.y*10+6, allObj[objectIndex].position.z*10};
 								addRotateObjectNS(objectIndex, objectIndex, center, 0, 90*(randomNumber-1));
@@ -25958,11 +25996,11 @@ void updateEntitys()
                                 };
 
 								for (int j = 0; j < 48; j++)
-        						{
-        						    allObj[objectIndex2].verticesIPC[j].x = vd2[j].x + allObj[objectIndex2].position.x * 10;
-        						    allObj[objectIndex2].verticesIPC[j].y = vd2[j].y + allObj[objectIndex2].position.y * 10;
-        						    allObj[objectIndex2].verticesIPC[j].z = vd2[j].z + allObj[objectIndex2].position.z * 10;
-        						}
+							{
+							    allObj[objectIndex2].verticesIPC[j].x = vd2[j].x + allObj[objectIndex2].position.x * 10;
+							    allObj[objectIndex2].verticesIPC[j].y = vd2[j].y + allObj[objectIndex2].position.y * 10;
+							    allObj[objectIndex2].verticesIPC[j].z = vd2[j].z + allObj[objectIndex2].position.z * 10;
+							}
 
 								addRotateObjectNS(objectIndex2, objectIndex2, center, 0, 90*(randomNumber-1));
 
@@ -25970,7 +26008,7 @@ void updateEntitys()
 							}
 							else
 							{
-								char randomNumber2 = generate_random(0+i, 4);
+								char randomNumber2 = generate_random(RTC_GetTicks()+i, 4);
 								if(randomNumber2 == 0)
 								{
 									entityList[i].state = 2;
@@ -25979,14 +26017,14 @@ void updateEntitys()
 								else
 								{
 									entityList[i].state = 0;
-									entityList[i].moveTimer = generate_random(0+i+1, 4)+2;
+									entityList[i].moveTimer = generate_random(RTC_GetTicks()+i+1, 4)+2;
 								}
 							}
 						}
 					}
 
 					int playerDistance = calculateDistance3D((int)allObj[objectIndex].position.x, (int)allObj[objectIndex].position.y, (int)allObj[objectIndex].position.z, (int)PPosX, (int)PPosY, (int)PPosZ);
-					if(playerDistance < 8) //player is in range
+					if(playerDistance < 8)//player is in range
 					{
 						if(blockSelected == 66)
                         entityList[i].state = 3;
@@ -26001,18 +26039,18 @@ void updateEntitys()
                             continue;
                         }
 
-                        if(entityList[i].isFed == true) //look for other fed sheeps around to breed with
+                        if(entityList[i].isFed == true)//look for other fed sheeps around to breed with
                         {
                             for (int j = 0; j < entityLength; j++)
                             {
                                 if(entityList[j].active == true)
                                 {
-	                        		if(entityList[j].type == 1 && entityList[j].isFed == true && i != j)
-	                        		{
+						if(entityList[j].type == 1 && entityList[j].isFed == true && i != j)
+						{
                                         float difX = allObj[entityList[j].locationOnAllObj].position.x-allObj[objectIndex].position.x;
                                         float difZ = allObj[entityList[j].locationOnAllObj].position.z-allObj[objectIndex].position.z;
 
-                                        float difTotal = mysqrt(difX * difX + difZ * difZ);  
+                                        float difTotal = mysqrt(difX * difX + difZ * difZ);
 
                                         if(difTotal < 3)
                                         {
@@ -26028,9 +26066,9 @@ void updateEntitys()
                         float difX = PPosX-allObj[objectIndex].position.x;
                         float difZ = PPosZ-allObj[objectIndex].position.z;
 
-                        float difTotal = mysqrt(difX * difX + difZ * difZ);  
-					    Vector2 rotationForw = {difX / difTotal, difZ / difTotal}; 
-                        
+                        float difTotal = mysqrt(difX * difX + difZ * difZ);
+					    Vector2 rotationForw = {difX/ difTotal, difZ/ difTotal};
+
                         float angle = arctan_approx(rotationForw.y, rotationForw.x);
 
                         Vector3B        vd1[48] = {
@@ -26082,80 +26120,80 @@ void updateEntitys()
 
 					        if(hasBlockOn == true)
 					        {
-					        	moveObject(objectIndex, 0, 1, 0);
-					        	moveObject(objectIndex2, 0, 1, 0);
+							moveObject(objectIndex, 0, 1, 0);
+							moveObject(objectIndex2, 0, 1, 0);
 					        }
 
 					        if(hasBlockInFont == false)
 					        {
-					        	moveObject(objectIndex, rotationForw.x*deltaTimeNoSlow, 0, rotationForw.y*deltaTimeNoSlow);
-					        	moveObject(objectIndex2, rotationForw.x*deltaTimeNoSlow, 0, rotationForw.y*deltaTimeNoSlow);
+							moveObject(objectIndex, rotationForw.x*deltaTimeNoSlow, 0, rotationForw.y*deltaTimeNoSlow);
+							moveObject(objectIndex2, rotationForw.x*deltaTimeNoSlow, 0, rotationForw.y*deltaTimeNoSlow);
 					        }
 					        else
 					        {
-					        	if(hasBlockInFontAbove == false)
-					        	{
-					        		moveObject(objectIndex, rotationForw.x*deltaTimeNoSlow, 0, rotationForw.y*deltaTimeNoSlow);
-					        		moveObject(objectIndex2, rotationForw.x*deltaTimeNoSlow, 0, rotationForw.y*deltaTimeNoSlow);
-					        	}
-					        	else
-					        	entityList[i].state = 0;
+							if(hasBlockInFontAbove == false)
+							{
+								moveObject(objectIndex, rotationForw.x*deltaTimeNoSlow, 0, rotationForw.y*deltaTimeNoSlow);
+								moveObject(objectIndex2, rotationForw.x*deltaTimeNoSlow, 0, rotationForw.y*deltaTimeNoSlow);
+							}
+							else
+							entityList[i].state = 0;
 					        }
 
 					        if(hasBlockBelow == false)
 					        {
-					        	if(isInWater == true)
-					        	{
-					        		entityList[i].fallingSince = allObj[objectIndex].position.y;
+							if(isInWater == true)
+							{
+								entityList[i].fallingSince = allObj[objectIndex].position.y;
 
-            		        		entityList[i].velocityY -= 2 * deltaTimeNoSlow;
+						entityList[i].velocityY -= 2 * deltaTimeNoSlow;
 
-            		        		if(entityList[i].velocityY < -2)
-            		        		entityList[i].velocityY = -2;
+						if(entityList[i].velocityY < -2)
+						entityList[i].velocityY = -2;
 
-					        		moveObject(objectIndex, 0, entityList[i].velocityY*deltaTime, 0);
-					        		moveObject(objectIndex2, 0, entityList[i].velocityY*deltaTime, 0);
-					        	}
-					        	else
-					        	{
-					        		entityList[i].fallingSince = allObj[objectIndex].position.y;
+								moveObject(objectIndex, 0, entityList[i].velocityY*deltaTime, 0);
+								moveObject(objectIndex2, 0, entityList[i].velocityY*deltaTime, 0);
+							}
+							else
+							{
+								entityList[i].fallingSince = allObj[objectIndex].position.y;
 
-            		        		entityList[i].velocityY -= 9.81f * deltaTimeNoSlow;
+						entityList[i].velocityY -= 9.81f * deltaTimeNoSlow;
 
-					        		moveObject(objectIndex, 0, entityList[i].velocityY*deltaTime, 0);
-					        		moveObject(objectIndex2, 0, entityList[i].velocityY*deltaTime, 0);
-					        	}
+								moveObject(objectIndex, 0, entityList[i].velocityY*deltaTime, 0);
+								moveObject(objectIndex2, 0, entityList[i].velocityY*deltaTime, 0);
+							}
 					        }
 					        else
 					        {
-					        	entityList[i].velocityY = 0;
-					        	if(entityList[i].fallingSince > allObj[objectIndex].position.y)
-					        	{
-					        		int fallDamage = (startFallY - PPosY) - 3;
-            		        		if(fallDamage > 0)
-            		        		entityList[i].health -= fallDamage;
-					        	}
-					        	entityList[i].fallingSince = allObj[objectIndex].position.y;
+							entityList[i].velocityY = 0;
+							if(entityList[i].fallingSince > allObj[objectIndex].position.y)
+							{
+								int fallDamage = (startFallY - PPosY) - 3;
+						if(fallDamage > 0)
+						entityList[i].health -= fallDamage;
+							}
+							entityList[i].fallingSince = allObj[objectIndex].position.y;
 					        }
                         }
 					}
 
-					if(entityList[i].state != 3) //is following player
+					if(entityList[i].state != 3)//is following player
 					entityList[i].moveTimer -= deltaTime;
 
 					if(entityList[i].state == 4)
 					{
 						if(entityList[i].moveTimer < 0)
 						{
-							char randomNumber = generate_random(0+i, 24);
+							char randomNumber = generate_random(RTC_GetTicks()+i, 24);
 
 							if(randomNumber == 0)
 							entityList[i].state = 0;
 							else
 							{
-								randomNumber = generate_random(0+i-32, 4);
+								randomNumber = generate_random(RTC_GetTicks()+i-32, 4);
 
-								entityList[i].moveTimer = (float)(generate_random(0+i+2, 10))/10+0.5f;
+								entityList[i].moveTimer = (float)(generate_random(RTC_GetTicks()+i+2, 10))/10+0.5f;
 
 								Vector3B        vd1[48] = {
                                     {-4, 7, -6}, {-4, 7, 6}, {-4, 13, -6}, {-4, 13, 6}, {4, 7, -6}, {4, 7, 6}, {4, 13, -6}, {4, 13, 6},
@@ -26167,11 +26205,11 @@ void updateEntitys()
                                 };
 
 								for (int j = 0; j < 48; j++)
-       							{
-       							    allObj[objectIndex].verticesIPC[j].x = vd1[j].x + allObj[objectIndex].position.x * 10;
-       							    allObj[objectIndex].verticesIPC[j].y = vd1[j].y + allObj[objectIndex].position.y * 10;
-       							    allObj[objectIndex].verticesIPC[j].z = vd1[j].z + allObj[objectIndex].position.z * 10;
-       							}
+							{
+							    allObj[objectIndex].verticesIPC[j].x = vd1[j].x + allObj[objectIndex].position.x * 10;
+							    allObj[objectIndex].verticesIPC[j].y = vd1[j].y + allObj[objectIndex].position.y * 10;
+							    allObj[objectIndex].verticesIPC[j].z = vd1[j].z + allObj[objectIndex].position.z * 10;
+							}
 
 								Vector3I center = {allObj[objectIndex].position.x*10, allObj[objectIndex].position.y*10+6, allObj[objectIndex].position.z*10};
 								addRotateObjectNS(objectIndex, objectIndex, center, 0, 90*(randomNumber-1));
@@ -26186,11 +26224,11 @@ void updateEntitys()
                                 };
 
 								for (int j = 0; j < 48; j++)
-        						{
-        						    allObj[objectIndex2].verticesIPC[j].x = vd2[j].x + allObj[objectIndex2].position.x * 10;
-        						    allObj[objectIndex2].verticesIPC[j].y = vd2[j].y + allObj[objectIndex2].position.y * 10;
-        						    allObj[objectIndex2].verticesIPC[j].z = vd2[j].z + allObj[objectIndex2].position.z * 10;
-        						}
+							{
+							    allObj[objectIndex2].verticesIPC[j].x = vd2[j].x + allObj[objectIndex2].position.x * 10;
+							    allObj[objectIndex2].verticesIPC[j].y = vd2[j].y + allObj[objectIndex2].position.y * 10;
+							    allObj[objectIndex2].verticesIPC[j].z = vd2[j].z + allObj[objectIndex2].position.z * 10;
+							}
 
 								addRotateObjectNS(objectIndex2, objectIndex2, center, 0, 90*(randomNumber-1));
 
@@ -26247,10 +26285,10 @@ void updateEntitys()
 							{
 								entityList[i].fallingSince = allObj[objectIndex].position.y;
 
-            		   			entityList[i].velocityY -= 2 * deltaTimeNoSlow;
+						entityList[i].velocityY -= 2 * deltaTimeNoSlow;
 
-            		   			if(entityList[i].velocityY < -2)
-            		   			entityList[i].velocityY = -2;
+						if(entityList[i].velocityY < -2)
+						entityList[i].velocityY = -2;
 
 								moveObject(objectIndex, 0, entityList[i].velocityY*deltaTime, 0);
 								moveObject(objectIndex2, 0, entityList[i].velocityY*deltaTime, 0);
@@ -26259,7 +26297,7 @@ void updateEntitys()
 							{
 								entityList[i].fallingSince = allObj[objectIndex].position.y;
 
-            		   			entityList[i].velocityY -= 9.81 * deltaTimeNoSlow;
+						entityList[i].velocityY -= 9.81 * deltaTimeNoSlow;
 
 								moveObject(objectIndex, 0, entityList[i].velocityY*deltaTime, 0);
 								moveObject(objectIndex2, 0, entityList[i].velocityY*deltaTime, 0);
@@ -26271,8 +26309,8 @@ void updateEntitys()
 							if(entityList[i].fallingSince > allObj[objectIndex].position.y)
 							{
 								int fallDamage = (startFallY - PPosY) - 3;
-            		    		if(fallDamage > 0)
-            		    		entityList[i].health -= fallDamage;
+					if(fallDamage > 0)
+					entityList[i].health -= fallDamage;
 							}
 							entityList[i].fallingSince = allObj[objectIndex].position.y;
 						}
@@ -26291,7 +26329,7 @@ void updateEntitys()
 							}
 						}
 					}
-					
+
                     if(entityList[i].state == 1)
 					{
 						Vector2I rotationForw[4] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
@@ -26344,10 +26382,10 @@ void updateEntitys()
 							{
 								entityList[i].fallingSince = allObj[objectIndex].position.y;
 
-            		   			entityList[i].velocityY -= 2 * deltaTimeNoSlow;
+						entityList[i].velocityY -= 2 * deltaTimeNoSlow;
 
-            		   			if(entityList[i].velocityY < -2)
-            		   			entityList[i].velocityY = -2;
+						if(entityList[i].velocityY < -2)
+						entityList[i].velocityY = -2;
 
 								moveObject(objectIndex, 0, entityList[i].velocityY*deltaTime, 0);
 								moveObject(objectIndex2, 0, entityList[i].velocityY*deltaTime, 0);
@@ -26356,7 +26394,7 @@ void updateEntitys()
 							{
 								entityList[i].fallingSince = allObj[objectIndex].position.y;
 
-            		   			entityList[i].velocityY -= 9.81f * deltaTimeNoSlow;
+						entityList[i].velocityY -= 9.81f * deltaTimeNoSlow;
 
 								moveObject(objectIndex, 0, entityList[i].velocityY*deltaTime, 0);
 								moveObject(objectIndex2, 0, entityList[i].velocityY*deltaTime, 0);
@@ -26368,8 +26406,8 @@ void updateEntitys()
 							if(entityList[i].fallingSince > allObj[objectIndex].position.y)
 							{
 								int fallDamage = (startFallY - PPosY) - 3;
-            		    		if(fallDamage > 0)
-            		    		entityList[i].health -= fallDamage;
+					if(fallDamage > 0)
+					entityList[i].health -= fallDamage;
 							}
 							entityList[i].fallingSince = allObj[objectIndex].position.y;
 						}
@@ -26414,7 +26452,7 @@ void updateEntitys()
 					allObj[objectIndex2].active = false;
 				}
 			}
-            if(entityList[i].type == 2) //pig ai
+            if(entityList[i].type == 2)//pig ai
 			{
 				//state 0=standing still, 1=walking, 3=following player, 4=running, 5=just hit
 				int objectIndex = entityList[i].locationOnAllObj;
@@ -26440,7 +26478,7 @@ void updateEntitys()
                             0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2,
                             0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2,
                             0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2,
-                            0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 
+                            0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2,
                         };
 
 						for (int j = 0; j < 28; j++)
@@ -26453,12 +26491,12 @@ void updateEntitys()
 					{
 						if(entityList[i].moveTimer < 0)
 						{
-							char randomNumber = generate_random(0+i, 6);
+							char randomNumber = generate_random(RTC_GetTicks()+i, 6);
 
 							if(randomNumber < 4)
 							{
 								entityList[i].state = 1;
-								entityList[i].moveTimer = generate_random(0+i+1, 4)+2;
+								entityList[i].moveTimer = generate_random(RTC_GetTicks()+i+1, 4)+2;
 
 								Vector3B        vd[48] = {
                                     {-3, 6, 10}, {3, 6, 10}, {-3, 6, 4}, {3, 6, 4}, {-3, 11, 10}, {3, 11, 10}, {-3, 11, 4}, {3, 11, 4},
@@ -26470,11 +26508,11 @@ void updateEntitys()
                                 };
 
 								for (int j = 0; j < 48; j++)
-       							{
-       							    allObj[objectIndex].verticesIPC[j].x = vd[j].x + allObj[objectIndex].position.x * 10;
-       							    allObj[objectIndex].verticesIPC[j].y = vd[j].y + allObj[objectIndex].position.y * 10;
-       							    allObj[objectIndex].verticesIPC[j].z = vd[j].z + allObj[objectIndex].position.z * 10;
-       							}
+							{
+							    allObj[objectIndex].verticesIPC[j].x = vd[j].x + allObj[objectIndex].position.x * 10;
+							    allObj[objectIndex].verticesIPC[j].y = vd[j].y + allObj[objectIndex].position.y * 10;
+							    allObj[objectIndex].verticesIPC[j].z = vd[j].z + allObj[objectIndex].position.z * 10;
+							}
 
 								Vector3I center = {allObj[objectIndex].position.x*10, allObj[objectIndex].position.y*10+6, allObj[objectIndex].position.z*10};
 								addRotateObjectNS(objectIndex, objectIndex, center, 0, 90*(randomNumber-1));
@@ -26484,13 +26522,13 @@ void updateEntitys()
 							else
 							{
 								entityList[i].state = 0;
-								entityList[i].moveTimer = generate_random(0+i+1, 4)+2;
+								entityList[i].moveTimer = generate_random(RTC_GetTicks()+i+1, 4)+2;
 							}
 						}
 					}
 
 					int playerDistance = calculateDistance3D((int)allObj[objectIndex].position.x, (int)allObj[objectIndex].position.y, (int)allObj[objectIndex].position.z, (int)PPosX, (int)PPosY, (int)PPosZ);
-					if(playerDistance < 8) //player is in range
+					if(playerDistance < 8)//player is in range
 					{
 						if(blockSelected == 66)
                         entityList[i].state = 3;
@@ -26505,18 +26543,18 @@ void updateEntitys()
                             continue;
                         }
 
-                        if(entityList[i].isFed == true) //look for other fed sheeps around to breed with
+                        if(entityList[i].isFed == true)//look for other fed sheeps around to breed with
                         {
                             for (int j = 0; j < entityLength; j++)
                             {
                                 if(entityList[j].active == true)
                                 {
-	                        		if(entityList[j].type == 2 && entityList[j].isFed == true && i != j)
-	                        		{
+						if(entityList[j].type == 2 && entityList[j].isFed == true && i != j)
+						{
                                         float difX = allObj[entityList[j].locationOnAllObj].position.x-allObj[objectIndex].position.x;
                                         float difZ = allObj[entityList[j].locationOnAllObj].position.z-allObj[objectIndex].position.z;
 
-                                        float difTotal = mysqrt(difX * difX + difZ * difZ);  
+                                        float difTotal = mysqrt(difX * difX + difZ * difZ);
 
                                         if(difTotal < 3)
                                         {
@@ -26532,9 +26570,9 @@ void updateEntitys()
                         float difX = PPosX-allObj[objectIndex].position.x;
                         float difZ = PPosZ-allObj[objectIndex].position.z;
 
-                        float difTotal = mysqrt(difX * difX + difZ * difZ);  
-					    Vector2 rotationForw = {difX / difTotal, difZ / difTotal}; 
-                        
+                        float difTotal = mysqrt(difX * difX + difZ * difZ);
+					    Vector2 rotationForw = {difX/ difTotal, difZ/ difTotal};
+
                         float angle = arctan_approx(rotationForw.y, rotationForw.x);
 
                         Vector3B        vd[48] = {
@@ -26573,64 +26611,64 @@ void updateEntitys()
 					        moveObject(objectIndex, rotationForw.x*deltaTimeNoSlow, 0, rotationForw.y*deltaTimeNoSlow);
 					        else
 					        {
-					        	if(hasBlockInFontAbove == false)
-					        	moveObject(objectIndex, rotationForw.x*deltaTimeNoSlow, 0, rotationForw.y*deltaTimeNoSlow);
-					        	else
-					        	entityList[i].state = 0;
+							if(hasBlockInFontAbove == false)
+							moveObject(objectIndex, rotationForw.x*deltaTimeNoSlow, 0, rotationForw.y*deltaTimeNoSlow);
+							else
+							entityList[i].state = 0;
 					        }
 
 					        if(hasBlockBelow == false)
 					        {
-					        	if(isInWater == true)
-					        	{
-					        		entityList[i].fallingSince = allObj[objectIndex].position.y;
+							if(isInWater == true)
+							{
+								entityList[i].fallingSince = allObj[objectIndex].position.y;
 
-            		        		entityList[i].velocityY -= 2 * deltaTimeNoSlow;
+						entityList[i].velocityY -= 2 * deltaTimeNoSlow;
 
-            		        		if(entityList[i].velocityY < -2)
-            		        		entityList[i].velocityY = -2;
+						if(entityList[i].velocityY < -2)
+						entityList[i].velocityY = -2;
 
-					        		moveObject(objectIndex, 0, entityList[i].velocityY*deltaTime, 0);
-					        	}
-					        	else
-					        	{
-					        		entityList[i].fallingSince = allObj[objectIndex].position.y;
+								moveObject(objectIndex, 0, entityList[i].velocityY*deltaTime, 0);
+							}
+							else
+							{
+								entityList[i].fallingSince = allObj[objectIndex].position.y;
 
-            		        		entityList[i].velocityY -= 9.81f * deltaTimeNoSlow;
+						entityList[i].velocityY -= 9.81f * deltaTimeNoSlow;
 
-					        		moveObject(objectIndex, 0, entityList[i].velocityY*deltaTime, 0);
-					        	}
+								moveObject(objectIndex, 0, entityList[i].velocityY*deltaTime, 0);
+							}
 					        }
 					        else
 					        {
-					        	entityList[i].velocityY = 0;
-					        	if(entityList[i].fallingSince > allObj[objectIndex].position.y)
-					        	{
-					        		int fallDamage = (startFallY - PPosY) - 3;
-            		        		if(fallDamage > 0)
-            		        		entityList[i].health -= fallDamage;
-					        	}
-					        	entityList[i].fallingSince = allObj[objectIndex].position.y;
+							entityList[i].velocityY = 0;
+							if(entityList[i].fallingSince > allObj[objectIndex].position.y)
+							{
+								int fallDamage = (startFallY - PPosY) - 3;
+						if(fallDamage > 0)
+						entityList[i].health -= fallDamage;
+							}
+							entityList[i].fallingSince = allObj[objectIndex].position.y;
 					        }
                         }
 					}
 
-					if(entityList[i].state != 3) //is not following player
+					if(entityList[i].state != 3)//is not following player
 					entityList[i].moveTimer -= deltaTime;
 
 					if(entityList[i].state == 4)
 					{
 						if(entityList[i].moveTimer < 0)
 						{
-							char randomNumber = generate_random(0+i, 24);
+							char randomNumber = generate_random(RTC_GetTicks()+i, 24);
 
 							if(randomNumber == 0)
 							entityList[i].state = 0;
 							else
 							{
-								randomNumber = generate_random(0+i-32, 4);
+								randomNumber = generate_random(RTC_GetTicks()+i-32, 4);
 
-								entityList[i].moveTimer = (float)(generate_random(0+i+2, 10))/10+0.5f;
+								entityList[i].moveTimer = (float)(generate_random(RTC_GetTicks()+i+2, 10))/10+0.5f;
 
 								Vector3B        vd[48] = {
                                     {-3, 6, 10}, {3, 6, 10}, {-3, 6, 4}, {3, 6, 4}, {-3, 11, 10}, {3, 11, 10}, {-3, 11, 4}, {3, 11, 4},
@@ -26642,11 +26680,11 @@ void updateEntitys()
                                 };
 
 								for (int j = 0; j < 48; j++)
-       							{
-       							    allObj[objectIndex].verticesIPC[j].x = vd[j].x + allObj[objectIndex].position.x * 10;
-       							    allObj[objectIndex].verticesIPC[j].y = vd[j].y + allObj[objectIndex].position.y * 10;
-       							    allObj[objectIndex].verticesIPC[j].z = vd[j].z + allObj[objectIndex].position.z * 10;
-       							}
+							{
+							    allObj[objectIndex].verticesIPC[j].x = vd[j].x + allObj[objectIndex].position.x * 10;
+							    allObj[objectIndex].verticesIPC[j].y = vd[j].y + allObj[objectIndex].position.y * 10;
+							    allObj[objectIndex].verticesIPC[j].z = vd[j].z + allObj[objectIndex].position.z * 10;
+							}
 
 								Vector3I center = {allObj[objectIndex].position.x*10, allObj[objectIndex].position.y*10+6, allObj[objectIndex].position.z*10};
 								addRotateObjectNS(objectIndex, objectIndex, center, 0, 90*(randomNumber-1));
@@ -26695,10 +26733,10 @@ void updateEntitys()
 							{
 								entityList[i].fallingSince = allObj[objectIndex].position.y;
 
-            		   			entityList[i].velocityY -= 2 * deltaTimeNoSlow;
+						entityList[i].velocityY -= 2 * deltaTimeNoSlow;
 
-            		   			if(entityList[i].velocityY < -2)
-            		   			entityList[i].velocityY = -2;
+						if(entityList[i].velocityY < -2)
+						entityList[i].velocityY = -2;
 
 								moveObject(objectIndex, 0, entityList[i].velocityY*deltaTime, 0);
 							}
@@ -26706,7 +26744,7 @@ void updateEntitys()
 							{
 								entityList[i].fallingSince = allObj[objectIndex].position.y;
 
-            		   			entityList[i].velocityY -= 9.81 * deltaTimeNoSlow;
+						entityList[i].velocityY -= 9.81 * deltaTimeNoSlow;
 
 								moveObject(objectIndex, 0, entityList[i].velocityY*deltaTime, 0);
 							}
@@ -26717,13 +26755,13 @@ void updateEntitys()
 							if(entityList[i].fallingSince > allObj[objectIndex].position.y)
 							{
 								int fallDamage = (startFallY - PPosY) - 3;
-            		    		if(fallDamage > 0)
-            		    		entityList[i].health -= fallDamage;
+					if(fallDamage > 0)
+					entityList[i].health -= fallDamage;
 							}
 							entityList[i].fallingSince = allObj[objectIndex].position.y;
 						}
 					}
-					
+
                     if(entityList[i].state == 1)
 					{
 						Vector2I rotationForw[4] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
@@ -26767,10 +26805,10 @@ void updateEntitys()
 							{
 								entityList[i].fallingSince = allObj[objectIndex].position.y;
 
-            		   			entityList[i].velocityY -= 2 * deltaTimeNoSlow;
+						entityList[i].velocityY -= 2 * deltaTimeNoSlow;
 
-            		   			if(entityList[i].velocityY < -2)
-            		   			entityList[i].velocityY = -2;
+						if(entityList[i].velocityY < -2)
+						entityList[i].velocityY = -2;
 
 								moveObject(objectIndex, 0, entityList[i].velocityY*deltaTime, 0);
 							}
@@ -26778,7 +26816,7 @@ void updateEntitys()
 							{
 								entityList[i].fallingSince = allObj[objectIndex].position.y;
 
-            		   			entityList[i].velocityY -= 9.81f * deltaTimeNoSlow;
+						entityList[i].velocityY -= 9.81f * deltaTimeNoSlow;
 
 								moveObject(objectIndex, 0, entityList[i].velocityY*deltaTime, 0);
 							}
@@ -26789,8 +26827,8 @@ void updateEntitys()
 							if(entityList[i].fallingSince > allObj[objectIndex].position.y)
 							{
 								int fallDamage = (startFallY - PPosY) - 3;
-            		    		if(fallDamage > 0)
-            		    		entityList[i].health -= fallDamage;
+					if(fallDamage > 0)
+					entityList[i].health -= fallDamage;
 							}
 							entityList[i].fallingSince = allObj[objectIndex].position.y;
 						}
@@ -26799,7 +26837,7 @@ void updateEntitys()
 					if(entityList[i].health < 1)
 					{
                         makeItem((int)(allObj[objectIndex].position.x*10), (int)(allObj[objectIndex].position.y*10), (int)(allObj[objectIndex].position.z*10), 0, 0, 0, 98);
-                        if(generate_random(0+i, 4) == 0)
+                        if(generate_random(RTC_GetTicks()+i, 4) == 0)
                         makeItem((int)(allObj[objectIndex].position.x*10+1), (int)(allObj[objectIndex].position.y*10), (int)(allObj[objectIndex].position.z*10+1), 0, 0, 0, 98);
 
 						entityList[i].active = false;
@@ -26823,7 +26861,7 @@ void updateEntitys()
 				else
 				allObj[objectIndex].active = false;
 			}
-            if(entityList[i].type == 3) //item 
+            if(entityList[i].type == 3)//item
             {
                 Vector3I itemPosI = allObj[entityList[i].locationOnAllObj].actualPosition;
                 Vector3 itemPos = allObj[entityList[i].locationOnAllObj].position;
@@ -26838,9 +26876,9 @@ void updateEntitys()
 					int newPposXI = pposXI+aroundItem[j].x;
 					int newPposZI = pposZI+aroundItem[j].y;
 
-					if(itemPosI.x / 10 == newPposXI && itemPosI.y / 10 == pposYI && itemPosI.z / 10 == newPposZI)
-               		{
-               		    addItemToHotbarInventory(entityList[i].state, 1);
+					if(itemPosI.x/ 10 == newPposXI && itemPosI.y/ 10 == pposYI && itemPosI.z/ 10 == newPposZI)
+			{
+			    addItemToHotbarInventory(entityList[i].state, 1);
 
                         allObj[entityList[i].locationOnAllObj].active = false;
 
@@ -26849,13 +26887,13 @@ void updateEntitys()
 
                         allObj[entityList[i].locationOnAllObj].sizeV = 0;
                         allObj[entityList[i].locationOnAllObj].sizeT = 0;
-                        
+
                         tlsf_free(tlsf, allObj[entityList[i].locationOnAllObj].verticesIPC);
                         tlsf_free(tlsf, allObj[entityList[i].locationOnAllObj].triangles  );
                         tlsf_free(tlsf, allObj[entityList[i].locationOnAllObj].color      );
                         tlsf_free(tlsf, allObj[entityList[i].locationOnAllObj].normal     );
                         tlsf_free(tlsf, allObj[entityList[i].locationOnAllObj].textureSize);
-                        
+
                         entityList[i].state = 0;
                         entityList[i].type = 0;
                         entityList[i].active = false;
@@ -26863,9 +26901,9 @@ void updateEntitys()
                         usedEntitys--;
 
 						break;
-               		}
+			}
 				}
-                
+
                 entityList[i].velocityY -= 10 * deltaTimeNoSlow;
                 bool isGroundedBlock = checkCollision(itemPos.x, itemPos.y + entityList[i].velocityY*deltaTime, itemPos.z);
 
@@ -26878,7 +26916,7 @@ void updateEntitys()
 
                     entityList[i].velocityY = 0;
                 }
-                
+
                 if(allObj[entityList[i].locationOnAllObj].sizeT == 1)
                 {
                     Vector3I voxelVertices4[4] = {
@@ -26891,7 +26929,7 @@ void updateEntitys()
                         allObj[entityList[i].locationOnAllObj].verticesIPC[j].y = voxelVertices4[j].y * 6 + itemPosI.y;
                         allObj[entityList[i].locationOnAllObj].verticesIPC[j].z = voxelVertices4[j].z * 6 + itemPosI.z;
                     }
-                    
+
                     entityList[i].rotation.y += deltaTimeNoSlow * 90;
                     Vector3I center = {3 + itemPosI.x, 3 + itemPosI.y, 3 + itemPosI.z};
 
@@ -26903,11 +26941,11 @@ void updateEntitys()
 
 					for (int j = 0; j < allObj[entityList[i].locationOnAllObj].sizeV; j++)
                     {
-                        allObj[entityList[i].locationOnAllObj].verticesIPC[j].x = blockTypes[currentBlockType].vertices[0][j].x / 5 + itemPosI.x;
-                        allObj[entityList[i].locationOnAllObj].verticesIPC[j].y = blockTypes[currentBlockType].vertices[0][j].y / 5 + itemPosI.y;
-                        allObj[entityList[i].locationOnAllObj].verticesIPC[j].z = blockTypes[currentBlockType].vertices[0][j].z / 5 + itemPosI.z;
+                        allObj[entityList[i].locationOnAllObj].verticesIPC[j].x = blockTypes[currentBlockType].vertices[0][j].x/ 5 + itemPosI.x;
+                        allObj[entityList[i].locationOnAllObj].verticesIPC[j].y = blockTypes[currentBlockType].vertices[0][j].y/ 5 + itemPosI.y;
+                        allObj[entityList[i].locationOnAllObj].verticesIPC[j].z = blockTypes[currentBlockType].vertices[0][j].z/ 5 + itemPosI.z;
                     }
-                    
+
                     entityList[i].rotation.y += deltaTimeNoSlow * 90;
                     Vector3I center = {1 + itemPosI.x, 1 + itemPosI.y, 1 + itemPosI.z};
 
@@ -26957,9 +26995,9 @@ void makeItem(int posX, int posY, int posZ, float velocityX, float velocityY, fl
 
             for (int i = 0; i < blockTypes[currentBlockType].verticesLength; i++)
             {
-                allObj[index].verticesIPC[i].x = blockTypes[currentBlockType].vertices[0][i].x / 5 + posX;
-                allObj[index].verticesIPC[i].y = blockTypes[currentBlockType].vertices[0][i].y / 5 + posY;
-                allObj[index].verticesIPC[i].z = blockTypes[currentBlockType].vertices[0][i].z / 5 + posZ;
+                allObj[index].verticesIPC[i].x = blockTypes[currentBlockType].vertices[0][i].x/ 5 + posX;
+                allObj[index].verticesIPC[i].y = blockTypes[currentBlockType].vertices[0][i].y/ 5 + posY;
+                allObj[index].verticesIPC[i].z = blockTypes[currentBlockType].vertices[0][i].z/ 5 + posZ;
             }
 
             for (int i = 0; i < blockTypes[currentBlockType].facesLength; i++)
@@ -27017,9 +27055,9 @@ void makeItem(int posX, int posY, int posZ, float velocityX, float velocityY, fl
             allObj[index].sizeV = 4;
         }
 
-        allObj[index].position.x = (float)(posX) / 10;
-        allObj[index].position.y = (float)(posY) / 10;
-        allObj[index].position.z = (float)(posZ) / 10;
+        allObj[index].position.x = (float)(posX)/ 10;
+        allObj[index].position.y = (float)(posY)/ 10;
+        allObj[index].position.z = (float)(posZ)/ 10;
 
         allObj[index].actualPosition.x = posX;
         allObj[index].actualPosition.y = posY;
@@ -27303,9 +27341,9 @@ void makePig(int posX, int posY, int posZ)
             0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2,
             0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2,
             0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2,
-            0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 
+            0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2,
         };
-        
+
         allObj[index].verticesIPC = tlsf_malloc(tlsf, sizeof(Vector3S) * 48     );
         allObj[index].triangles   = tlsf_malloc(tlsf, sizeof(Vector4S) * 28     );
         allObj[index].color       = tlsf_malloc(tlsf, sizeof(unsigned char) * 28);
@@ -27322,9 +27360,9 @@ void makePig(int posX, int posY, int posZ)
         for (int i = 0; i < 28; i++)
         {
             allObj[index].triangles[i].x = td[i].x;
-        	allObj[index].triangles[i].y = td[i].y;
-        	allObj[index].triangles[i].z = td[i].z;
-        	allObj[index].triangles[i].w = td[i].w;
+		allObj[index].triangles[i].y = td[i].y;
+		allObj[index].triangles[i].z = td[i].z;
+		allObj[index].triangles[i].w = td[i].w;
 
             allObj[index].color[i] = textureIndex[i];
             allObj[index].solidColor[i] = color[i];
@@ -27577,9 +27615,9 @@ void makeItemLoad(int posX, int posY, int posZ, float velocityX, float velocityY
 
         for (int i = 0; i < blockTypes[currentBlockType].verticesLength; i++)
         {
-            allObj[index].verticesIPC[i].x = blockTypes[currentBlockType].vertices[0][i].x / 5 + posX;
-            allObj[index].verticesIPC[i].y = blockTypes[currentBlockType].vertices[0][i].y / 5 + posY;
-            allObj[index].verticesIPC[i].z = blockTypes[currentBlockType].vertices[0][i].z / 5 + posZ;
+            allObj[index].verticesIPC[i].x = blockTypes[currentBlockType].vertices[0][i].x/ 5 + posX;
+            allObj[index].verticesIPC[i].y = blockTypes[currentBlockType].vertices[0][i].y/ 5 + posY;
+            allObj[index].verticesIPC[i].z = blockTypes[currentBlockType].vertices[0][i].z/ 5 + posZ;
         }
 
         for (int i = 0; i < blockTypes[currentBlockType].facesLength; i++)
@@ -27637,9 +27675,9 @@ void makeItemLoad(int posX, int posY, int posZ, float velocityX, float velocityY
         allObj[index].sizeV = 4;
     }
 
-    allObj[index].position.x = (float)(posX) / 10;
-    allObj[index].position.y = (float)(posY) / 10;
-    allObj[index].position.z = (float)(posZ) / 10;
+    allObj[index].position.x = (float)(posX)/ 10;
+    allObj[index].position.y = (float)(posY)/ 10;
+    allObj[index].position.z = (float)(posZ)/ 10;
 
     allObj[index].actualPosition.x = posX;
     allObj[index].actualPosition.y = posY;
@@ -27701,9 +27739,9 @@ void makePigLoad(int posX, int posY, int posZ, int slot)
         0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2,
         0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2,
         0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2,
-        0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 
+        0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2, 0xd4b2,
     };
-    
+
     allObj[index].verticesIPC = tlsf_malloc(tlsf, sizeof(Vector3S) * 48     );
     allObj[index].triangles   = tlsf_malloc(tlsf, sizeof(Vector4S) * 28     );
     allObj[index].color       = tlsf_malloc(tlsf, sizeof(unsigned char) * 28);
@@ -27763,7 +27801,7 @@ void createChestData(int x, int y, int z)
         }
     }
 
-    if(chestIndex != -1) //chest does not exist exit
+    if(chestIndex != -1)//chest does not exist exit
     {
         for (int i = 0; i < 27; i++)
         {
@@ -27789,24 +27827,24 @@ void useBlock()
 
     if(removeBlock.x != -1)
     {
-        int chunkX = removeBlock.x / width;
-        int chunkY = removeBlock.z / width;
+        int chunkX = removeBlock.x/ width;
+        int chunkY = removeBlock.z/ width;
         int chunkIndex = chunkX + chunkY * totalChunkWidth;
         int blockIndex = (removeBlock.x % width) + (removeBlock.z % width) * width + (removeBlock.y) * width * width;
         int blockType = blocks[chunkIndex][blockIndex];
 
-        if(blockType == 19) //open crafting table
+        if(blockType == 19)//open crafting table
         {
             isInCraftingTable = true;
             UIState = 16;
             return;
         }
-        if(blockType == 18 && blockSelected == -1) //explode the tnt
+        if(blockType == 18 && blockSelected == -1)//explode the tnt
         {
             makeExplosion(10, removeBlock.x, removeBlock.y, removeBlock.z);
             return;
         }
-        if(blockType == 20) //cook item in furnace
+        if(blockType == 20)//cook item in furnace
         {
             int con = -1;
             for (int i = 0; i < furnaceRecipeAmount; i++)
@@ -27830,12 +27868,12 @@ void useBlock()
             }
             return;
         }
-        if(blockType == 26) //open chest
+        if(blockType == 26)//open chest
         {
             UIState = 18;
             return;
         }
-        if(blockType == 1 || blockType == 2) //use hoe to make soil
+        if(blockType == 1 || blockType == 2)//use hoe to make soil
         {
             if(allItem[blockSelected].toolType == 5)
             {
@@ -27845,21 +27883,21 @@ void useBlock()
                 if(survival == true)
                 {
 			        hotbarBlockHp[currentSlot]--;
-                    
+
                     if(hotbarBlockHp[currentSlot] == 0)
 			        {
-			        	hotbarBlockAmount[currentSlot] = 0;
-			        	hotbarBlockTypes[currentSlot] = -1;
+					hotbarBlockAmount[currentSlot] = 0;
+					hotbarBlockTypes[currentSlot] = -1;
 
-                    	blockSelected = -1;
+			blockSelected = -1;
 
-			        	return; //tool is brokey 
+					return;//tool is brokey
 			        }
                 }
                 return;
             }
         }
-		if(allBlock[blockType].blockType == 17) //lever
+		if(allBlock[blockType].blockType == 17)//lever
         {
 			if((blockData[chunkIndex*width*width*height + blockIndex]&0b00000001) == 0b00000000)
 			blockData[chunkIndex*width*width*height + blockIndex]++;
@@ -27870,19 +27908,19 @@ void useBlock()
 
             return;
         }
-		if(allBlock[blockType].blockType == 18) //botton presses
+		if(allBlock[blockType].blockType == 18)//botton presses
         {
 			if(blockType == 64)
-			blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11001110)|0b00110001); //leave on for 4 redstone ticks
+			blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11001110)|0b00110001);//leave on for 4 redstone ticks
 			if(blockType == 65)
-			blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11001110)|0b00100001); //leave on for 3 redstone ticks
+			blockData[chunkIndex*width*width*height + blockIndex] = ((blockData[chunkIndex*width*width*height + blockIndex]&0b11001110)|0b00100001);//leave on for 3 redstone ticks
 
 			updateChunkV2(chunkX, chunkY);
 
             return;
         }
 
-        if(blockType == 49) //open via top door
+        if(blockType == 49)//open via top door
         {
             if(((blockData[chunkIndex*width*width*height + blockIndex]&0b00000100)>>2) == 0)
             {
@@ -27918,7 +27956,7 @@ void useBlock()
             updateChunkV2(chunkX, chunkY);
             return;
         }
-        if(blockType == 50) //open via bottom door
+        if(blockType == 50)//open via bottom door
         {
             if(((blockData[chunkIndex*width*width*height + blockIndex]&0b00000100)>>2) == 0)
             {
@@ -27954,7 +27992,7 @@ void useBlock()
             updateChunkV2(chunkX, chunkY);
             return;
         }
-        if(blockType == 51 || blockType == 52) //sleep in bed
+        if(blockType == 51 || blockType == 52)//sleep in bed
         {
             if(dayNightCycle == true)
             {
@@ -27969,7 +28007,7 @@ void useBlock()
             }
         }
 
-		if(blockSelected == 94) //shear a sheep
+		if(blockSelected == 94)//shear a sheep
 		{
 			if(entityInFrontIndex > -1)
 			{
@@ -27980,7 +28018,7 @@ void useBlock()
 						entityList[entityInFrontIndex].hasFur = false;
 					    allObj[entityList[entityList[entityInFrontIndex].extraEntity].locationOnAllObj].active = false;
 						makeItem((int)(allObj[entityList[entityInFrontIndex].locationOnAllObj].position.x*10), (int)(allObj[entityList[entityInFrontIndex].locationOnAllObj].position.y*10), (int)(allObj[entityList[entityInFrontIndex].locationOnAllObj].position.z*10), 0, 0, 0, 95);
-                        
+
                         if(survival == true)
                         {
                             hotbarBlockHp[currentSlot]--;
@@ -27998,7 +28036,7 @@ void useBlock()
 			}
 		}
 
-        if(blockSelected == 66) //feed a feedable mob
+        if(blockSelected == 66)//feed a feedable mob
         {
             if(entityInFrontIndex > -1)
 			{
@@ -28021,7 +28059,7 @@ void useBlock()
 			}
         }
 
-        if(allItem[blockSelected].toolType == 7) //eating
+        if(allItem[blockSelected].toolType == 7)//eating
         {
             if(hotbarBlockAmount[currentSlot] > 0)
             {
@@ -28036,7 +28074,7 @@ void useBlock()
             }
         }
 
-        if(allItem[blockSelected].toolType == 9) //placing spawn egg
+        if(allItem[blockSelected].toolType == 9)//placing spawn egg
         {
             if(hotbarBlockAmount[currentSlot] > 0)
             {
@@ -28058,12 +28096,12 @@ void useBlock()
                 }
             }
         }
-        
+
         if(allItem[blockSelected].toolType == 0 && blockSelected != -1 && hotbarBlockAmount[currentSlot] > 0)
         {
             if(blockSelected == 65)
             {
-                if(blockType != 30 && blockType != 31) //seeds only on soil
+                if(blockType != 30 && blockType != 31)//seeds only on soil
                 return;
             }
 
@@ -28085,12 +28123,12 @@ void start_program()
 	if(isOncCG50 == false)
     pixelSize = 2;
 
-	resXZBuffer = resX / pixelSize;
-    resYZBuffer = resY / pixelSize;
+	resXZBuffer = resX/ pixelSize;
+    resYZBuffer = resY/ pixelSize;
 
     makeStartFolder();
 
-    for (int x = 0; x < 8; x++) //replace later with infinite terrain
+    for (int x = 0; x < 8; x++)//replace later with infinite terrain
     {
         for (int y = 0; y < 8; y++)
         {
@@ -28111,16 +28149,16 @@ void update()
 
     if(stopChunkLoading == false)
     {
-        int pChunkX = PPosX / width;
-        int pChunkY = PPosZ / width;
+        int pChunkX = PPosX/ width;
+        int pChunkY = PPosZ/ width;
 
         currentChunkUpdateTimer += deltaTime;
 
         while(currentChunkUpdateTimer > 0.015625f*((float)currentChunkUpdated+1))
         {
-        	if(currentChunkUpdated < totalChunkWidth*totalChunkWidth)
-        	{
-        		if(abs_int(chunk2DPos[currentChunkUpdated].x - pChunkX) + abs_int(chunk2DPos[currentChunkUpdated].y - pChunkY) > renderDistance || chunk2DReset[currentChunkUpdated] == true)
+		if(currentChunkUpdated < totalChunkWidth*totalChunkWidth)
+		{
+			if(abs_int(chunk2DPos[currentChunkUpdated].x - pChunkX) + abs_int(chunk2DPos[currentChunkUpdated].y - pChunkY) > renderDistance || chunk2DReset[currentChunkUpdated] == true)
                 {
                     if(chunk2DActive[currentChunkUpdated] == true)
                     {
@@ -28148,7 +28186,7 @@ void update()
                         activeChunks--;
                     }
                 }
-    
+
                 if(abs_int(chunk2DPos[currentChunkUpdated].x - pChunkX) + abs_int(chunk2DPos[currentChunkUpdated].y - pChunkY) <= renderDistance)
                 {
                     if(chunk2DActive[currentChunkUpdated] == false)
@@ -28165,16 +28203,16 @@ void update()
                     }
                 }
 
-        		currentChunkUpdated++;
-        	}
-        	else
-        	break;
+			currentChunkUpdated++;
+		}
+		else
+		break;
         }
 
         if(currentChunkUpdateTimer > 1.0f)
         {
-        	currentChunkUpdated = 0;
-        	currentChunkUpdateTimer = 0;
+		currentChunkUpdated = 0;
+		currentChunkUpdateTimer = 0;
         }
     }
 }
@@ -28202,8 +28240,8 @@ void renderObject()
     start_program();
 
     while(ExitLoop == false)
-    { 
-		performanceTime1 = 0;
+    {
+		performanceTime1 = RTC_GetTicks();
         deltaTimeCalculate();
         number++;
         time += deltaTimeNoSlow;
@@ -28231,38 +28269,38 @@ void renderObject()
 					chunksToUpdate++;
 				}
 			}
-			
+
 			if(chunksToUpdate > 0)
 			{
-		 		while(redstoneUpdateTimer1 > (float)((0.25/(float)chunksToUpdate)*((float)currentRedstoneChunk+1)))
-		 		{
-		 			if(currentRedstoneChunk < chunksToUpdate)
-		 			{
-		 				updateMap();
-		 				currentRedstoneChunk++;
-		 			}
-		 			else
-		 			break;
-		 		}
+				while(redstoneUpdateTimer1 > (float)((0.25/(float)chunksToUpdate)*((float)currentRedstoneChunk+1)))
+				{
+					if(currentRedstoneChunk < chunksToUpdate)
+					{
+						updateMap();
+						currentRedstoneChunk++;
+					}
+					else
+					break;
+				}
 			}
-            
-		 	if(redstoneUpdateTimer1 > 0.25)
-		 	{
-		 		currentRedstoneChunk = 0;
-		 		redstoneUpdateTimer1 = 0;
-		 	}
-			
-            performanceTime2 = 0;
+
+			if(redstoneUpdateTimer1 > 0.25)
+			{
+				currentRedstoneChunk = 0;
+				redstoneUpdateTimer1 = 0;
+			}
+
+            performanceTime2 = RTC_GetTicks();
             performace[0] += performanceTime2-performanceTime1;
 
-            performanceTime1 = 0;
+            performanceTime1 = RTC_GetTicks();
 
             if(time > 1)
             {
                 fps = number;
                 number = 0;
                 time = 0;
-                
+
                 if(dayNightCycle == true)
                 {
                     dayTime++;
@@ -28299,7 +28337,7 @@ void renderObject()
                             loadLighting2();
 
                             updateAllChunkLighting();
-                            
+
                             for (int i = 0; i < 16; i++)
                             screenColor[i] = skyColors[skyBrightness-1];
                         }
@@ -28318,14 +28356,14 @@ void renderObject()
                         updateAllChunkLighting();
 
                         for (int i = 0; i < 16; i++)
-                        screenColor[i] = skyColors[skyBrightness-1];    
+                        screenColor[i] = skyColors[skyBrightness-1];
                     }
                 }
 
                 if(checkIfInLava(PPosX, PPosY-1, PPosZ) == true && survival == true)
                 health -= 3;
             }
-            
+
             if(health < 1)
             {
                 for (int i = 0; i < 27; i++)
@@ -28342,7 +28380,7 @@ void renderObject()
                 }
                 health = 20;
                 updateItemSlected();
-                
+
                 int seedExtra_ = 0;
                 PPosY = 0;
 
@@ -28408,12 +28446,12 @@ void renderObject()
                 if(PPosY + velocityY * deltaTime > 0)
                 PPosY += velocityY * deltaTime;
             }
-            
-            
-            performanceTime2 = 0;
+
+
+            performanceTime2 = RTC_GetTicks();
             performace[1] += performanceTime2-performanceTime1;
 
-            performanceTime1 = 0;
+            performanceTime1 = RTC_GetTicks();
 
             update();
 
@@ -28499,7 +28537,7 @@ void renderObject()
                 }
                 if(keydownlast(KEY_PRGM_EXIT) && !keydownhold(KEY_PRGM_EXIT))
                 {
-                    ((void)0);
+                    DmaWaitNext();
                     break;
                 }
                 if(keydownlast(KEY_PRGM_MENU) && !keydownhold(KEY_PRGM_MENU))
@@ -28549,38 +28587,38 @@ void renderObject()
 							        if(blockSelected > -1)
 							        damage = allItem[blockSelected].damage;
 
-							        if(entityList[entityInFrontIndex].type == 1) //sheep
+							        if(entityList[entityInFrontIndex].type == 1)//sheep
 							        {
                                         entityList[entityInFrontIndex].health -= damage;
 
-							        	int objectIndex = entityList[entityInFrontIndex].locationOnAllObj;
-							        	int objectIndex2 = entityList[entityList[entityInFrontIndex].extraEntity].locationOnAllObj;
+									int objectIndex = entityList[entityInFrontIndex].locationOnAllObj;
+									int objectIndex2 = entityList[entityList[entityInFrontIndex].extraEntity].locationOnAllObj;
 
-							        	for (int i = 0; i < allObj[objectIndex].sizeT; i++)
-							        	allObj[objectIndex].solidColor[i] = combineColors(allObj[objectIndex].solidColor[i], 0xfa8a, 50);
+									for (int i = 0; i < allObj[objectIndex].sizeT; i++)
+									allObj[objectIndex].solidColor[i] = combineColors(allObj[objectIndex].solidColor[i], 0xfa8a, 50);
 
-							        	for (int i = 0; i < allObj[objectIndex2].sizeT; i++)
-							        	allObj[objectIndex2].solidColor[i] = combineColors(allObj[objectIndex2].solidColor[i], 0xfa8a, 50);
+									for (int i = 0; i < allObj[objectIndex2].sizeT; i++)
+									allObj[objectIndex2].solidColor[i] = combineColors(allObj[objectIndex2].solidColor[i], 0xfa8a, 50);
 
                                         entityList[entityInFrontIndex].renderTextured = false;
                                         entityList[entityList[entityInFrontIndex].extraEntity].renderTextured = false;
-                                    
-							        	entityList[entityInFrontIndex].state = 5;
+
+									entityList[entityInFrontIndex].state = 5;
 							        }
-                                    if(entityList[entityInFrontIndex].type == 2) //pig
+                                    if(entityList[entityInFrontIndex].type == 2)//pig
 							        {
                                         entityList[entityInFrontIndex].health -= damage;
 
-							        	int objectIndex = entityList[entityInFrontIndex].locationOnAllObj;
+									int objectIndex = entityList[entityInFrontIndex].locationOnAllObj;
 
-							        	for (int i = 0; i < allObj[objectIndex].sizeT; i++)
-							        	allObj[objectIndex].solidColor[i] = combineColors(allObj[objectIndex].solidColor[i], 0xfa8a, 50);
+									for (int i = 0; i < allObj[objectIndex].sizeT; i++)
+									allObj[objectIndex].solidColor[i] = combineColors(allObj[objectIndex].solidColor[i], 0xfa8a, 50);
 
                                         entityList[entityInFrontIndex].renderTextured = false;
-                                    
-							        	entityList[entityInFrontIndex].state = 5;
+
+									entityList[entityInFrontIndex].state = 5;
 							        }
-                                    
+
                                     justPressedHitButton = true;
                                 }
 
@@ -28593,10 +28631,10 @@ void renderObject()
                             destructionTimer += deltaTime;
                             updateBlockReach();
 
-                            int currentChunk = (removeBlock.x / width) + (removeBlock.z / width) * totalChunkWidth;
+                            int currentChunk = (removeBlock.x/ width) + (removeBlock.z/ width) * totalChunkWidth;
                             int blockIndex = (removeBlock.x % width) + (removeBlock.z % width) * width + (removeBlock.y) * width * width;
 
-							if(destructionBlockIndex != blockIndex) //reset if looking at diffrent block
+							if(destructionBlockIndex != blockIndex)//reset if looking at diffrent block
 							{
 								totalDestructionTimer = 0;
                                 destructionTimer = 0;
@@ -28641,7 +28679,7 @@ void renderObject()
 								if(blockSelected > -1)
 								damage = allItem[blockSelected].damage;
 
-								if(entityList[entityInFrontIndex].type == 1) //sheep
+								if(entityList[entityInFrontIndex].type == 1)//sheep
 								{
                                     entityList[entityInFrontIndex].health -= damage;
 
@@ -28653,18 +28691,18 @@ void renderObject()
 
 									for (int i = 0; i < allObj[objectIndex2].sizeT; i++)
 									allObj[objectIndex2].solidColor[i] = combineColors(allObj[objectIndex2].solidColor[i], 0xfa8a, 50);
-									
+
 									entityList[entityInFrontIndex].state = 5;
 								}
-                                if(entityList[entityInFrontIndex].type == 2) //pig
+                                if(entityList[entityInFrontIndex].type == 2)//pig
 								{
                                     entityList[entityInFrontIndex].health -= damage;
-                                    
+
 									int objectIndex = entityList[entityInFrontIndex].locationOnAllObj;
 
 									for (int i = 0; i < allObj[objectIndex].sizeT; i++)
 									allObj[objectIndex].solidColor[i] = combineColors(allObj[objectIndex].solidColor[i], 0xfa8a, 50);
-									
+
 									entityList[entityInFrontIndex].state = 5;
 								}
 
@@ -28673,7 +28711,7 @@ void renderObject()
                         }
 
 						if(hasEntityInFront == false)
-                    	destroyBlock();
+			destroyBlock();
 					}
                 }
                 if(keydownlast(KEY_PRGM_9) && !keydownhold(KEY_PRGM_9))
@@ -28713,7 +28751,7 @@ void renderObject()
                     skyBrightness = 16;
                     else
                     {
-                        //changeBrightnessAllTriangles(1);
+                       //changeBrightnessAllTriangles(1);
 
                         loadLighting2();
                         updateAllChunkLighting();
@@ -28728,7 +28766,7 @@ void renderObject()
                     skyBrightness = 1;
                     else
                     {
-                        //changeBrightnessAllTriangles(-1);
+                       //changeBrightnessAllTriangles(-1);
 
                         loadLighting2();
                         updateAllChunkLighting();
@@ -28738,18 +28776,18 @@ void renderObject()
                 }
             }
 
-            performanceTime2 = 0;
+            performanceTime2 = RTC_GetTicks();
             performace[2] += performanceTime2-performanceTime1;
 
-            performanceTime1 = 0;
+            performanceTime1 = RTC_GetTicks();
 
-			cameraRotationX = ToRadians_game(rotationX); //recalculate because we just moved the camera
+			cameraRotationX = ToRadians_game(rotationX);//recalculate because we just moved the camera
             cameraRotationY = ToRadians_game(rotationY);
 			forward = CalculateForwardVector(cameraRotationX, cameraRotationY);
             right = CalculateRightVector(cameraRotationX, cameraRotationY);
 
-            //screenPoint calculatedSPos[verticesLength]; //cg10/20
-            screenPoint *calculatedSPos = malloc(verticesLength * sizeof(screenPoint)); //cg50
+           //screenPoint calculatedSPos[verticesLength];//cg10/20
+            screenPoint *calculatedSPos = 0x8C2DC800 + ALLOC_OFFSET;//cg50
 
             renderdV = 0;
             int cosRotX = fastCosine(cameraRotationX) * 1000;
@@ -28762,19 +28800,19 @@ void renderObject()
             if(cosRotY == 0) cosRotY = 1;
             if(sinRotY == 0) sinRotY = 1;
 
-            //pre-calculating values
-            int cosXSinY = cosRotX * sinRotY / 1000;
-            int cosXcosY = cosRotX * cosRotY / 1000;
-            int sinXsinY = sinRotX * sinRotY / 1000;
-            int cosYSinX = cosRotY * sinRotX / 1000;
+           //pre-calculating values
+            int cosXSinY = cosRotX * sinRotY/ 1000;
+            int cosXcosY = cosRotX * cosRotY/ 1000;
+            int sinXsinY = sinRotX * sinRotY/ 1000;
+            int cosYSinX = cosRotY * sinRotX/ 1000;
 
             if(cosXSinY == 0) cosXSinY = 1;
             if(cosXcosY == 0) cosXcosY = 1;
             if(sinXsinY == 0) sinXsinY = 1;
             if(cosYSinX == 0) cosYSinX = 1;
 
-            int resX_ = (resX - 1) / 2;
-            int resY_ = (resY - 1) / 2;
+            int resX_ = (resX - 1)/ 2;
+            int resY_ = (resY - 1)/ 2;
 
             int PPosXI = PPosX * 1000;
             int PPosYI = PPosY * 1000;
@@ -28804,7 +28842,7 @@ void renderObject()
                         int y3D = (allObj[obj].verticesIPC[allVert].y * 100 - PPosYI);
                         int z3D = (PPosZI - allObj[obj].verticesIPC[allVert].z * 100);
 
-                        int z = (x3D * cosXSinY - y3D * sinRotX + z3D * cosXcosY) / 1000;
+                        int z = (x3D * cosXSinY - y3D * sinRotX + z3D * cosXcosY)/ 1000;
 
 						if(z < 1)
 						z = 1;
@@ -28819,18 +28857,18 @@ void renderObject()
 
                             if(z >= 1000)
                             {
-                                xOnScreen = ((x / z + 1000) * resX_) / 1000;
-                                yOnScreen = (((1000 - y / z) * 2) * resY_) / 1000 - 100;
+                                xOnScreen = ((x/ z + 1000) * resX_)/ 1000;
+                                yOnScreen = (((1000 - y/ z) * 2) * resY_)/ 1000 - 100;
                             }
                             else
                             {
-                                int zNew = 10000 / z;
+                                int zNew = 10000/ z;
 
-                                x = x / 10000;
-                                y = y / 10000;
+                                x = x/ 10000;
+                                y = y/ 10000;
 
-                                xOnScreen = ((x * zNew + 1000) * resX_) / 1000;
-                                yOnScreen = (((1000 - y * zNew) * 2) * resY_) / 1000 - 100;
+                                xOnScreen = ((x * zNew + 1000) * resX_)/ 1000;
+                                yOnScreen = (((1000 - y * zNew) * 2) * resY_)/ 1000 - 100;
                             }
 
                             if(xOnScreen < 4096 && xOnScreen > -4096 && yOnScreen < 4096 && yOnScreen > -4096)
@@ -28851,28 +28889,28 @@ void renderObject()
                 }
             }
 
-            performanceTime2 = 0;
+            performanceTime2 = RTC_GetTicks();
             performace[3] += performanceTime2-performanceTime1;
 
-            performanceTime1 = 0;
+            performanceTime1 = RTC_GetTicks();
 
             if((renderingMode == 2) || (renderingMode != 2 && clearScreen == true))
             {
                 if(beautifulSky == false)
                 {
-                    dmaStartFill_old((int)screenColor, (int)(LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) & 0x1FFFFFFF, 320*180*2);
-                    ((void)0);
+                    dmaStartFill((int)screenColor, (int)(LCD_GetVRAMAddress()) & 0x1FFFFFFF, 165888);
+                    DmaWaitNextC0();
                 }
                 else
                 makeSkyBox();
             }
 
-            performanceTime2 = 0;
+            performanceTime2 = RTC_GetTicks();
             performace[4] += performanceTime2-performanceTime1;
 
-            performanceTime1 = 0;
+            performanceTime1 = RTC_GetTicks();
 
-            //rasterization draw loop
+           //rasterization draw loop
             renderdT = 0;
 
             short currentWaterQuadLocation = 0;
@@ -28953,7 +28991,7 @@ void renderObject()
                                     {
                                         renderdT++;
 
-                                        if(renderingMode == 0 || renderingMode == 2) //normal mode
+                                        if(renderingMode == 0 || renderingMode == 2)//normal mode
                                         {
                                             int Depth = (v1.z + v2.z + v3.z + v4.z) >> 2;
 
@@ -28997,7 +29035,7 @@ void renderObject()
                                             }
                                             else
                                             {
-                                                
+
                                                 Vector2S AT = {0, 0};
                                                 Vector2S BT = {10, 0};
                                                 Vector2S CT = {10, 10};
@@ -29037,7 +29075,7 @@ void renderObject()
                                                 }
                                             }
                                         }
-                                        if(renderingMode == 1 || renderingMode == 2) //wireframe
+                                        if(renderingMode == 1 || renderingMode == 2)//wireframe
                                         {
                                             renderLine(v1.x, v2.x, v1.y, v2.y);
                                             renderLine(v2.x, v3.x, v2.y, v3.y);
@@ -29074,7 +29112,7 @@ void renderObject()
                                 {
                                     renderdT++;
 
-                                    if(renderingMode == 0 || renderingMode == 2) //normal mode
+                                    if(renderingMode == 0 || renderingMode == 2)//normal mode
                                     {
                                         int Depth = (v1.z + v2.z + v3.z + v4.z) >> 2;
 
@@ -29094,7 +29132,7 @@ void renderObject()
                                             int px = pos.x % width;
                                             int pz = pos.z % width;
 
-                                            int chunkIndex = (pos.x / width) + (pos.z / width) * totalChunkWidth;
+                                            int chunkIndex = (pos.x/ width) + (pos.z/ width) * totalChunkWidth;
                                             int blockIndex = px + pz * width + pos.y * width * width;
                                             int lightIndex = blockIndex + chunkIndex * width * width * height;
 
@@ -29174,7 +29212,7 @@ void renderObject()
                                             }
                                         }
                                     }
-                                    if(renderingMode == 1 || renderingMode == 2) //wireframe
+                                    if(renderingMode == 1 || renderingMode == 2)//wireframe
                                     {
                                         renderLine(v1.x, v2.x, v1.y, v2.y);
                                         renderLine(v2.x, v3.x, v2.y, v3.y);
@@ -29209,7 +29247,7 @@ void renderObject()
                 screenPoint v3 = calculatedSPos[totalAmountTrans + indexes1.z];
                 screenPoint v4 = calculatedSPos[totalAmountTrans + indexes1.w];
 
-                if(renderingMode == 0 || renderingMode == 2) //normal mode
+                if(renderingMode == 0 || renderingMode == 2)//normal mode
                 {
                     int Depth = (v1.z + v2.z + v3.z + v4.z) >> 2;
 
@@ -29262,7 +29300,7 @@ void renderObject()
                         }
                     }
                 }
-                if(renderingMode == 1 || renderingMode == 2) //wireframe
+                if(renderingMode == 1 || renderingMode == 2)//wireframe
                 {
                     renderLine(v1.x, v2.x, v1.y, v2.y);
                     renderLine(v2.x, v3.x, v2.y, v3.y);
@@ -29291,7 +29329,7 @@ void renderObject()
                 screenPoint v3 = calculatedSPos[totalAmountWater + indexes1.z];
                 screenPoint v4 = calculatedSPos[totalAmountWater + indexes1.w];
 
-                if(renderingMode == 0 || renderingMode == 2) //normal mode
+                if(renderingMode == 0 || renderingMode == 2)//normal mode
                 {
                     int Depth = (v1.z + v2.z + v3.z + v4.z) >> 2;
 
@@ -29376,7 +29414,7 @@ void renderObject()
                         }
                     }
                 }
-                if(renderingMode == 1 || renderingMode == 2) //wireframe
+                if(renderingMode == 1 || renderingMode == 2)//wireframe
                 {
                     renderLine(v1.x, v2.x, v1.y, v2.y);
                     renderLine(v2.x, v3.x, v2.y, v3.y);
@@ -29385,7 +29423,7 @@ void renderObject()
                 }
             }
 
-            performanceTime2 = 0;
+            performanceTime2 = RTC_GetTicks();
             performace[5] += performanceTime2-performanceTime1;
 
             for (int allparti = 0; allparti < partiLength; allparti++)
@@ -29399,7 +29437,7 @@ void renderObject()
                     int y3D = (currentParti.position.y * 1000 - PPosYI);
                     int z3D = (PPosZI - currentParti.position.z * 1000);
 
-                    int z = (x3D * cosXSinY - y3D * sinRotX + z3D * cosXcosY) / 1000;
+                    int z = (x3D * cosXSinY - y3D * sinRotX + z3D * cosXcosY)/ 1000;
 
                     if(z > 10 && z < 65000)
                     {
@@ -29411,18 +29449,18 @@ void renderObject()
 
                         if(z >= 1000)
                         {
-                            xOnScreen = ((x / z + 1000) * resX_) / 1000;
-                            yOnScreen = (((1000 - y / z) * 2) * resY_) / 1000 - 100;
+                            xOnScreen = ((x/ z + 1000) * resX_)/ 1000;
+                            yOnScreen = (((1000 - y/ z) * 2) * resY_)/ 1000 - 100;
                         }
                         else
                         {
-                            int zNew = 10000 / z;
+                            int zNew = 10000/ z;
 
-                            x = x / 10000;
-                            y = y / 10000;
+                            x = x/ 10000;
+                            y = y/ 10000;
 
-                            xOnScreen = ((x * zNew + 1000) * resX_) / 1000;
-                            yOnScreen = (((1000 - y * zNew) * 2) * resY_) / 1000 - 100;
+                            xOnScreen = ((x * zNew + 1000) * resX_)/ 1000;
+                            yOnScreen = (((1000 - y * zNew) * 2) * resY_)/ 1000 - 100;
                         }
 
                         if(xOnScreen < 32768 && xOnScreen > -32768 && yOnScreen < 32768 && yOnScreen > -32768)
@@ -29450,7 +29488,7 @@ void renderObject()
                 }
             }
 
-            performanceTime1 = 0;
+            performanceTime1 = RTC_GetTicks();
 
             if(checkIfInWater(PPosX, PPosY, PPosZ) == true)
             renderUnderWaterEffect();
@@ -29458,17 +29496,17 @@ void renderObject()
             if(destructionTimer != 0)
 			renderBlockDestruction(destructionTimer, totalDestructionTimer);
 
-            performanceTime2 = 0;
+            performanceTime2 = RTC_GetTicks();
             performace[6] += performanceTime2-performanceTime1;
 
-            performanceTime1 = 0;
-			
+            performanceTime1 = RTC_GetTicks();
+
             memset(ZBuffer, 255, resXZBuffer * resYZBuffer * 2);
 
-            performanceTime2 = 0;
+            performanceTime2 = RTC_GetTicks();
             performace[7] += performanceTime2-performanceTime1;
 
-            performanceTime1 = 0;
+            performanceTime1 = RTC_GetTicks();
 
             renderCorsAir(renderBlockOutline);
         }
@@ -29478,8 +29516,8 @@ void renderObject()
             {
                 if(beautifulSky == false)
                 {
-                    dmaStartFill_old((int)screenColor, (int)(LCD_Get((unsigned short*)LCD_GetVRAMAddress())()) & 0x1FFFFFFF, 320*180*2);
-                    ((void)0);
+                    dmaStartFill((int)screenColor, (int)(LCD_GetVRAMAddress()) & 0x1FFFFFFF, 165888);
+                    DmaWaitNextC0();
                 }
                 else
                 makeSkyBox();
@@ -29488,17 +29526,16 @@ void renderObject()
 
         makeUI();
 
-        performanceTime2 = 0;
+        performanceTime2 = RTC_GetTicks();
         performace[8] += performanceTime2-performanceTime1;
 
-        performanceTime1 = 0;
+        performanceTime1 = RTC_GetTicks();
 
-        LCD_Refresh();
-        ((void)0);
+        DoDMAlcdNonblock();
+        DmaWaitNext();
 
-        performanceTime2 = 0;
-            free(calculatedSPos);
+        performanceTime2 = RTC_GetTicks();
         performace[9] += performanceTime2-performanceTime1;
     }
-    ((void)0);
+    DmaWaitNext();
 }

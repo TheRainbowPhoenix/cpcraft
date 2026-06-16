@@ -1,4 +1,4 @@
-#include <fxcg/display.h>
+#include <sdk/os/lcd.h>
 
 // DMA Base Addresses
 #define DMA0_SAR_0  (volatile unsigned*)0xFE008020
@@ -32,6 +32,7 @@ int DmaWaitNextC0() {
     SYNCO();
     *DMA0_CHCR_0 &= ~1; // Disable DMA on channel 0
     //*DMA0_DMAOR = 0; // Disable all DMA
+    return 0;
 }
 
 void dmaStart(unsigned src_addr, unsigned dest_addr, unsigned size)
@@ -63,7 +64,7 @@ void dmaStartFill_old(unsigned src_addr, unsigned dest_addr, unsigned size)
     *DMA0_SAR_0=(((int)src_addr));//Source address is VRAM
     *DMA0_DAR_0=(((int)dest_addr));//Destination is LCD
     *DMA0_TCR_0=(int)(size/32);//Transfer count bytes/32
-    *DMA0_CHCR_0=0b00000000000100000100010000100000;//0x00104400
+    *DMA0_CHCR_0=0x00104420;//0x00104400
     *DMA0_DMAOR|=1;//Enable DMA on all channels
     *DMA0_DMAOR&=~6;//Clear flags
     *DMA0_CHCR_0|=1;//Enable channel0 DMA
@@ -86,10 +87,14 @@ void dmaStartFill_old2B(unsigned src_addr, unsigned dest_addr, unsigned size)
 
 int dmaIsBussy()
 {
-    return ((*DMA0_CHCR_0) & 0b01);
+    return ((*DMA0_CHCR_0) & 0x01);
 }
 
 int dmaError()
 {
-    return ((*DMA0_DMAOR)&4 == 4);
+    return (((*DMA0_DMAOR)&4) == 4);
+}
+
+void dmaStartFill(unsigned src_addr, unsigned dest_addr, unsigned size) {
+    dmaStart(src_addr, dest_addr, size);
 }

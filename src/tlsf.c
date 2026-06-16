@@ -3,7 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
+//#include <assert.h>
+#define assert(x) ((void)0)
 
 #include "tlsf.h"
 
