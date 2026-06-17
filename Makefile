@@ -9,20 +9,20 @@ AS_FLAGS:=-gdwarf-5
 SDK_DIR?=/sdk
 
 DEPFLAGS=-MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
-WARNINGS=-Wall -Wextra -pedantic -Werror -pedantic-errors
-INCLUDES=-I$(SDK_DIR)/include -Iinclude
+WARNINGS=-Wall -Wextra -pedantic -Wno-unused-parameter -Wno-unused-variable -Wno-binary-constant -Werror -pedantic-errors
+INCLUDES=-Iinclude_shim -I$(SDK_DIR)/include -I$(SOURCEDIR)
 DEFINES=-DALLOC_OFFSET=0
 FUNCTION_FLAGS=-fno-builtin -ffunction-sections -fdata-sections -gdwarf-5 -O2
 COMMON_FLAGS=$(FUNCTION_FLAGS) $(INCLUDES) $(WARNINGS) $(DEFINES)
 
 CC:=sh4a_nofpueb-elf-gcc
-CC_FLAGS=-std=gnu11 $(COMMON_FLAGS)
+CC_FLAGS=-std=c11 $(COMMON_FLAGS)
 
 CXX:=sh4a_nofpueb-elf-g++
-CXX_FLAGS=-std=gnu++20 -fno-exceptions -fno-rtti $(COMMON_FLAGS)
+CXX_FLAGS=-std=c++20 $(COMMON_FLAGS)
 
 LD:=sh4a_nofpueb-elf-g++
-LD_FLAGS:=$(COMMON_FLAGS) -Wl,-Ttext-segment,0x8C052800 -Wl,--section-start,.end_mem=8cfefffc -Wno-undef -Wl,--gc-sections -fno-lto
+LD_FLAGS:=$(COMMON_FLAGS) $(WARNINGS) -Wl,-Ttext-segment,0x8C052800 -Wl,--section-start,.end_mem=8cfefffc -Wno-undef -Wl,--gc-sections -fno-lto
 LIBS:=-L$(SDK_DIR) -lsdk
 
 READELF:=sh4a_nofpueb-elf-readelf
@@ -38,8 +38,6 @@ CXX_SOURCES:=$(shell find $(SOURCEDIR) -name '*.cpp')
 OBJECTS := $(addprefix $(BUILDDIR)/,$(AS_SOURCES:.S=.o)) \
 	$(addprefix $(BUILDDIR)/,$(CC_SOURCES:.c=.o)) \
 	$(addprefix $(BUILDDIR)/,$(CXX_SOURCES:.cpp=.o))
-
-NOLTOOBJS := $(foreach obj, $(OBJECTS), $(if $(findstring /nolto/, $(obj)), $(obj)))
 
 DEPFILES := $(OBJECTS:$(BUILDDIR)/%.o=$(DEPDIR)/%.d)
 
@@ -61,8 +59,6 @@ $(APP_ELF): $(OBJECTS)
 	@mkdir -p $(dir $@)
 	$(LD) -Wl,-Map $@.map -o $@ $(LD_FLAGS) $^ $(LIBS)
 
-$(NOLTOOBJS): FUNCTION_FLAGS+=-fno-lto
-
 $(BUILDDIR)/%.o: %.S
 	@mkdir -p $(dir $@)
 	$(AS) -c $< -o $@ $(AS_FLAGS)
@@ -77,10 +73,6 @@ $(BUILDDIR)/%.o: %.cpp
 	@mkdir -p $(dir $(DEPDIR)/$<)
 	+$(CXX) -c $< -o $@ $(CXX_FLAGS) $(DEPFLAGS)
 
-compile_commands.json:
-	$(MAKE) $(MAKEFLAGS) clean
-	bear -- sh -c "$(MAKE) $(MAKEFLAGS) --keep-going all || exit 0"
-
-.PHONY: elf hh3 all clean compile_commands.json
+.PHONY: elf hh3 all clean
 
 -include $(DEPFILES)
