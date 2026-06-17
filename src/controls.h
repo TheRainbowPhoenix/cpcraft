@@ -1,4 +1,4 @@
-// // // // // // // // // // // // #include "config.h"
+// // // #include "config.h"
 
 #if MPM
 # define _(cg,cw) cw

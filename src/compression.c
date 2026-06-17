@@ -17,10 +17,7 @@ unsigned int lz77_compress(unsigned char *uncompressed_text, unsigned int uncomp
             *(compressed_text + output_pointer) = (unsigned char)((match_distance >> 4) & 0xFF);
             *(compressed_text + output_pointer + 1) = (unsigned char)(((match_distance & 0xF) << 4) | (match_length & 0xF));
             output_pointer += 2; input_pointer += match_length;
-        } else {
-            *(compressed_text + output_pointer) = uncompressed_text[input_pointer];
-            output_pointer++; input_pointer++;
-        }
+        } else { *(compressed_text + output_pointer) = uncompressed_text[input_pointer]; output_pointer++; input_pointer++; }
     }
     return output_pointer;
 }

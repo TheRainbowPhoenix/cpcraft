@@ -1,11 +1,13 @@
 #include <stddef.h>
-#ifndef assert
-#define assert(x) ((void)0)
-#endif
 #include <limits.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef assert
+#define assert(x) ((void)0)
+#endif
+//#include <assert.h>
 
 #include "tlsf.h"
 
@@ -13,8 +15,9 @@
 #define tlsf_decl inline
 #else
 #define tlsf_decl static
+#endif
 
-// typedef long ptrdiff_t;
+// // typedef long ptrdiff_t;
 
 /*
 ** Architecture-specific bit manipulation routines.
@@ -41,6 +44,7 @@
 #if defined (__alpha__) || defined (__ia64__) || defined (__x86_64__) \
 	|| defined (_WIN64) || defined (__LP64__) || defined (__LLP64__)
 #define TLSF_64BIT
+#endif
 
 /*
 ** gcc 3.4 and above have builtin support, specialized for architecture.
@@ -66,6 +70,7 @@ tlsf_decl int tlsf_ffs(unsigned int word)
 	return __builtin_ffs(word) - 1;
 }
 
+#endif
 
 tlsf_decl int tlsf_fls(unsigned int word)
 {
@@ -173,6 +178,7 @@ tlsf_decl int tlsf_fls(unsigned int word)
 	return tlsf_fls_generic(word) - 1;
 }
 
+#endif
 
 /* Possibly 64-bit version of tlsf_fls. */
 #if defined (TLSF_64BIT)
@@ -193,6 +199,7 @@ tlsf_decl int tlsf_fls_sizet(size_t size)
 }
 #else
 #define tlsf_fls_sizet tlsf_fls
+#endif
 
 #undef tlsf_decl
 
@@ -219,6 +226,7 @@ enum tlsf_private
 #else
 	/* All allocation sizes and addresses are aligned to 4 bytes. */
 	ALIGN_SIZE_LOG2 = 2,
+#endif
 	ALIGN_SIZE = (1 << ALIGN_SIZE_LOG2),
 
 	/*
@@ -240,6 +248,7 @@ enum tlsf_private
 	FL_INDEX_MAX = 32,
 #else
 	FL_INDEX_MAX = 30,
+#endif
 	SL_INDEX_COUNT = (1 << SL_INDEX_COUNT_LOG2),
 	FL_INDEX_SHIFT = (SL_INDEX_COUNT_LOG2 + ALIGN_SIZE_LOG2),
 	FL_INDEX_COUNT = (FL_INDEX_MAX - FL_INDEX_SHIFT + 1),
@@ -260,6 +269,7 @@ enum tlsf_private
 */
 #if !defined (tlsf_assert)
 #define tlsf_assert assert
+#endif
 
 /*
 ** Static assertion mechanism.
@@ -998,6 +1008,7 @@ pool_t tlsf_add_pool(tlsf_t tlsf, void* mem, size_t bytes)
 		printf("tlsf_add_pool: Memory size must be between %u and %u bytes.\n",
 			(unsigned int)(pool_overhead + block_size_min),
 			(unsigned int)(pool_overhead + block_size_max));
+#endif
 		return 0;
 	}
 
@@ -1058,6 +1069,7 @@ int test_ffs_fls()
 	rv += (tlsf_fls_sizet(0x80000000) == 31) ? 0 : 0x100;
 	rv += (tlsf_fls_sizet(0x100000000) == 32) ? 0 : 0x200;
 	rv += (tlsf_fls_sizet(0xffffffffffffffff) == 63) ? 0 : 0x400;
+#endif
 
 	if (rv)
 	{
@@ -1065,6 +1077,7 @@ int test_ffs_fls()
 	}
 	return rv;
 }
+#endif
 
 tlsf_t tlsf_create(void* mem)
 {
@@ -1073,6 +1086,7 @@ tlsf_t tlsf_create(void* mem)
 	{
 		return 0;
 	}
+#endif
 
 	if (((tlsfptr_t)mem % ALIGN_SIZE) != 0)
 	{
