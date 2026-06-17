@@ -1,5 +1,12 @@
 #include "compression.h"
 
+unsigned int pow_(unsigned int base, unsigned int exp) {
+    (void)base;
+    unsigned int res = 1;
+    for (unsigned int i = 0; i < exp; i++) res *= 10;
+    return res;
+}
+
 void lz77_compress(unsigned char *uncompressed_text, unsigned int uncompressed_size, unsigned char *compressed_text, unsigned int *compressed_size) {
     *(compressed_text + 0) = (uncompressed_size >> 24) & 0xFF;
     *(compressed_text + 1) = (uncompressed_size >> 16) & 0xFF;

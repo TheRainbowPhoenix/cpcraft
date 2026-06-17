@@ -10,7 +10,6 @@ APP_DESCRIPTION("A Minecraft clone ported to ClassPad")
 APP_VERSION("1.0.0")
 
 int main(int argc, char **argv) {
-    (void)argc; (void)argv;
     game_main();
     return 0;
 }

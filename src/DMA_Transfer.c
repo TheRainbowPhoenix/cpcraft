@@ -1,4 +1,4 @@
-#include <sdk/os/lcd.h>
+#include <fxcg/display.h>
 
 // DMA Base Addresses
 #define DMA0_SAR_0  (volatile unsigned*)0xFE008020
