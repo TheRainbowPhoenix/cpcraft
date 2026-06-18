@@ -1,13 +1,11 @@
 #include <stddef.h>
-#include <limits.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #ifndef assert
 #define assert(x) ((void)0)
 #endif
-//#include <assert.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "tlsf.h"
 
@@ -17,7 +15,7 @@
 #define tlsf_decl static
 #endif
 
-// // typedef long ptrdiff_t;
+// typedef long ptrdiff_t;
 
 /*
 ** Architecture-specific bit manipulation routines.

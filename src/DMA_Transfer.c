@@ -5,7 +5,7 @@
 #define DMA0_CHCR_0 (volatile unsigned*)0xFE00802C
 #define DMA0_DMAOR (volatile unsigned short*)0xFE008060
 #define MSTPCR0 (volatile unsigned*)0xA4150030
-#define SYNCO() __asm__ volatile(\"SYNCO\n\t\":::\"memory\");
+#define SYNCO() __asm__ volatile("SYNCO\n\t":::"memory");
 int DmaWaitNextC0() {
     while(1) { if((*DMA0_DMAOR)&4) break; if((*DMA0_CHCR_0)&2) break; }
     SYNCO(); *DMA0_CHCR_0 &= ~1; return 0;

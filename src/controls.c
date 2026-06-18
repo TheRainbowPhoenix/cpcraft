@@ -1,9 +1,11 @@
 #include <sdk/os/input.h>
 #include <string.h>
-#include \"controls.h\"
+#include "controls.h"
+
 #define KEY_STATE_SIZE 256
 static uint8_t key_states[KEY_STATE_SIZE];
 static uint8_t last_key_states[KEY_STATE_SIZE];
+
 static enum Input_Scancode map_to_scancode(int basic_keycode) {
     switch (basic_keycode) {
         case KEY_EXE: return ScancodeEXE;
@@ -38,10 +40,18 @@ static enum Input_Scancode map_to_scancode(int basic_keycode) {
         default: return (enum Input_Scancode)0;
     }
 }
+
 void keyupdate(void) {
     memcpy(last_key_states, key_states, KEY_STATE_SIZE);
-    const int keys_to_track[] = { KEY_EXE, KEY_PLUS, KEY_MINUS, KEY_VARS, KEY_PRGM_0, KEY_PRGM_1, KEY_PRGM_2, KEY_PRGM_3, KEY_PRGM_4, KEY_PRGM_5, KEY_PRGM_6, KEY_PRGM_7, KEY_PRGM_8, KEY_PRGM_9, KEY_PRGM_UP, KEY_PRGM_DOWN, KEY_PRGM_LEFT, KEY_PRGM_RIGHT, KEY_PRGM_EXIT, KEY_PRGM_MENU, KEY_PRGM_SHIFT, KEY_PRGM_OPTN, KEY_PRGM_ALPHA, KEY_PRGM_F1, KEY_PRGM_F2, KEY_PRGM_F3, KEY_PRGM_F4, KEY_PRGM_F5, KEY_PRGM_F6 };
-    for (size_t i = 0; i < sizeof(keys_to_track)/sizeof(keys_to_track[0]); i++) {
+    const int keys_to_track[] = {
+        KEY_EXE, KEY_PLUS, KEY_MINUS, KEY_VARS,
+        KEY_PRGM_0, KEY_PRGM_1, KEY_PRGM_2, KEY_PRGM_3, KEY_PRGM_4,
+        KEY_PRGM_5, KEY_PRGM_6, KEY_PRGM_7, KEY_PRGM_8, KEY_PRGM_9,
+        KEY_PRGM_UP, KEY_PRGM_DOWN, KEY_PRGM_LEFT, KEY_PRGM_RIGHT,
+        KEY_PRGM_EXIT, KEY_PRGM_MENU, KEY_PRGM_SHIFT, KEY_PRGM_OPTN, KEY_PRGM_ALPHA,
+        KEY_PRGM_F1, KEY_PRGM_F2, KEY_PRGM_F3, KEY_PRGM_F4, KEY_PRGM_F5, KEY_PRGM_F6
+    };
+    for (size_t i = 0; i < (sizeof(keys_to_track)/sizeof(keys_to_track[0])); i++) {
         int k = keys_to_track[i];
         if (k >= 0 && k < KEY_STATE_SIZE) {
             enum Input_Scancode sc = map_to_scancode(k);
@@ -49,5 +59,13 @@ void keyupdate(void) {
         }
     }
 }
-int keydownlast(int basic_keycode) { if (basic_keycode < 0 || basic_keycode >= KEY_STATE_SIZE) return 0; return key_states[basic_keycode]; }
-int keydownhold(int basic_keycode) { if (basic_keycode < 0 || basic_keycode >= KEY_STATE_SIZE) return 0; return last_key_states[basic_keycode]; }
+
+int keydownlast(int basic_keycode) {
+    if (basic_keycode < 0 || basic_keycode >= KEY_STATE_SIZE) return 0;
+    return key_states[basic_keycode];
+}
+
+int keydownhold(int basic_keycode) {
+    if (basic_keycode < 0 || basic_keycode >= KEY_STATE_SIZE) return 0;
+    return last_key_states[basic_keycode];
+}
