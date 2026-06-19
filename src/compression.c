@@ -1,36 +1,92 @@
-#include "compression.h"
-unsigned int lz77_compress(unsigned char *uncompressed_text, unsigned int uncompressed_size, unsigned char *compressed_text, unsigned char pointer_length_width) {
-    (void)pointer_length_width;
-    *(compressed_text + 0) = (unsigned char)((uncompressed_size & 0xFF000000) >> 24);
-    *(compressed_text + 1) = (unsigned char)((uncompressed_size & 0x00FF0000) >> 16);
-    *(compressed_text + 2) = (unsigned char)((uncompressed_size & 0x0000FF00) >> 8);
-    *(compressed_text + 3) = (unsigned char)(uncompressed_size & 0x000000FF);
-    unsigned int output_pointer = 4, input_pointer = 0;
-    while (input_pointer < uncompressed_size) {
-        unsigned int match_length = 0, match_distance = 0;
-        for (unsigned int distance = 1; distance <= 4095 && distance <= input_pointer; distance++) {
-            unsigned int length = 0;
-            while (length < 15 && input_pointer + length < uncompressed_size && uncompressed_text[input_pointer + length] == uncompressed_text[input_pointer - distance + length]) length++;
-            if (length > match_length) { match_length = length; match_distance = distance; }
-        }
-        if (match_length >= 3) {
-            *(compressed_text + output_pointer) = (unsigned char)((match_distance >> 4) & 0xFF);
-            *(compressed_text + output_pointer + 1) = (unsigned char)(((match_distance & 0xF) << 4) | (match_length & 0xF));
-            output_pointer += 2; input_pointer += match_length;
-        } else { *(compressed_text + output_pointer) = uncompressed_text[input_pointer]; output_pointer++; input_pointer++; }
-    }
-    return output_pointer;
+//https://github.com/andyherbert/lz1/blob/master/lz.c
+
+unsigned int pow_(unsigned int base, unsigned int exp) {
+    if (exp == 0) return 1;
+    return 1 << exp;
 }
-unsigned int lz77_decompress(unsigned char *compressed_text, unsigned char *uncompressed_text) {
-    unsigned int uncompressed_size = (compressed_text[0] << 24) | (compressed_text[1] << 16) | (compressed_text[2] << 8) | compressed_text[3];
-    unsigned int input_pointer = 4, output_pointer = 0;
-    while (output_pointer < uncompressed_size) {
-        unsigned char byte1 = compressed_text[input_pointer], byte2 = compressed_text[input_pointer + 1];
-        unsigned int distance = (byte1 << 4) | (byte2 >> 4), length = byte2 & 0xF;
-        if (distance > 0 && length >= 3) {
-            for (unsigned int i = 0; i < length; i++) { uncompressed_text[output_pointer] = uncompressed_text[output_pointer - distance]; output_pointer++; }
-            input_pointer += 2;
-        } else { uncompressed_text[output_pointer] = compressed_text[input_pointer]; output_pointer++; input_pointer++; }
+
+unsigned int lz77_compress (unsigned char *uncompressed_text, unsigned int uncompressed_size, unsigned char *compressed_text, unsigned char pointer_length_width)
+{
+    unsigned short pointer_pos, temp_pointer_pos, output_pointer, pointer_length, temp_pointer_length;
+    unsigned int compressed_pointer, output_size, coding_pos, output_lookahead_ref, look_behind, look_ahead;
+    unsigned short pointer_pos_max, pointer_length_max;
+    pointer_pos_max = pow_(2, 16 - pointer_length_width);
+    pointer_length_max = pow_(2, pointer_length_width);
+
+    *(compressed_text + 0) = ((uncompressed_size&0xFF000000)>>24);
+    *(compressed_text + 1) = ((uncompressed_size&0x00FF0000)>>16);
+    *(compressed_text + 2) = ((uncompressed_size&0x0000FF00)>>8);
+    *(compressed_text + 3) = ((uncompressed_size&0x000000FF));
+
+    *(compressed_text + 4) = pointer_length_width;
+    compressed_pointer = output_size = 5;
+
+    for(coding_pos = 0; coding_pos < uncompressed_size; ++coding_pos)
+    {
+        pointer_pos = 0;
+        pointer_length = 0;
+        for(temp_pointer_pos = 1; (temp_pointer_pos < pointer_pos_max) && (temp_pointer_pos <= coding_pos); ++temp_pointer_pos)
+        {
+            look_behind = coding_pos - temp_pointer_pos;
+            look_ahead = coding_pos;
+            for(temp_pointer_length = 0; uncompressed_text[look_ahead++] == uncompressed_text[look_behind++]; ++temp_pointer_length)
+                if(temp_pointer_length == pointer_length_max)
+                    break;
+            if(temp_pointer_length > pointer_length)
+            {
+                pointer_pos = temp_pointer_pos;
+                pointer_length = temp_pointer_length;
+                if(pointer_length == pointer_length_max)
+                    break;
+            }
+        }
+        coding_pos += pointer_length;
+        if((coding_pos == uncompressed_size) && pointer_length)
+        {
+            output_pointer = (pointer_length == 1) ? 0 : ((pointer_pos << pointer_length_width) | (pointer_length - 2));
+            output_lookahead_ref = coding_pos - 1;
+        }
+        else
+        {
+            output_pointer = (pointer_pos << pointer_length_width) | (pointer_length ? (pointer_length - 1) : 0);
+            output_lookahead_ref = coding_pos;
+        }
+        *(compressed_text + compressed_pointer + 0) = ((output_pointer&0xFF00)>>8);
+        *(compressed_text + compressed_pointer + 1) = ((output_pointer&0x00FF));
+
+        compressed_pointer += 2;
+        *(compressed_text + compressed_pointer++) = *(uncompressed_text + output_lookahead_ref);
+        output_size += 3;
     }
-    return output_pointer;
+
+    return output_size;
+}
+
+unsigned int lz77_decompress (unsigned char *compressed_text, unsigned char *uncompressed_text)
+{
+    unsigned char pointer_length_width;
+    unsigned short input_pointer, pointer_length, pointer_pos, pointer_length_mask;
+    unsigned int compressed_pointer, coding_pos, pointer_offset, uncompressed_size;
+
+    //uncompressed_size = *((unsigned int *) compressed_text);
+    uncompressed_size = ((*(compressed_text + 0) << 24) | (*(compressed_text + 1) << 16) | (*(compressed_text + 2) << 8) | *(compressed_text + 3));
+    pointer_length_width = *(compressed_text + 4);
+    compressed_pointer = 5;
+
+    pointer_length_mask = pow_(2, pointer_length_width) - 1;
+
+    for(coding_pos = 0; coding_pos < uncompressed_size; ++coding_pos)
+    {
+        //input_pointer = *((unsigned short *) (compressed_text + compressed_pointer));
+        input_pointer = ((*(compressed_text + compressed_pointer + 0) << 8) | (*(compressed_text + compressed_pointer + 1)));
+        compressed_pointer += 2;
+        pointer_pos = input_pointer >> pointer_length_width;
+        pointer_length = pointer_pos ? ((input_pointer & pointer_length_mask) + 1) : 0;
+        if(pointer_pos)
+            for(pointer_offset = coding_pos - pointer_pos; pointer_length > 0; --pointer_length)
+                uncompressed_text[coding_pos++] = uncompressed_text[pointer_offset++];
+        *(uncompressed_text + coding_pos) = *(compressed_text + compressed_pointer++);
+    }
+
+    return coding_pos;
 }

@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "eninge.h"
+#define PrintMiniMini(...) ((void)0)
+
 
 static int File_GetSize_Helper(int fd) { struct File_Stat st; if (File_Fstat(fd, &st) == 0) return st.fileSize; return 0; }
 #define File_GetSize(fd) File_GetSize_Helper(fd)
@@ -46,6 +48,10 @@ static int File_Create_Helper(const char* path, int type, size_t* size) { if (ty
 #define Bfile_FindClose(handle) File_FindClose(handle)
 
 #define swap(a, b) do { __typeof__(*(a)) temp = *(a); *(a) = *(b); *(b) = temp; } while (0)
+#include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include "fastBdisp.h"
 #include "controls.h"
 #include "DMA_Transfer.h"
@@ -55,7 +61,7 @@ static int File_Create_Helper(const char* path, int type, size_t* size) { if (ty
 
 typedef unsigned int uintptr_t;
 
-#define FILE_PATH "\\\\fls0\\File.txt"
+#define FILE_PATH "\\fls0/File.txt"
 #define M_PI 3.14159265358979323846
 #define TABLE_SIZE 1024
 #define TABLE_MASK (TABLE_SIZE - 1)
@@ -71,24 +77,56 @@ typedef unsigned short color_t;
 
 
 
-typedef struct {
-    volatile bool active;
 
-    volatile int start;
-    volatile int end;
-    volatile int size;
 
-    volatile int **variable;
-} customHeapBlock;
 
-typedef struct {
-    bool used;
-    Vector3I position;
 
-    short chestBlockTypes[27];
-    short chestBlockAmount[27];
-	short chestBlockHp[27];
-} chestData;
+
+
+
+
+
+
+
+
+
+
+
+
+typedef struct{
+    char name[20];
+    char stackSize;
+    short breaksIn; //how long the tool will last set to -1 if no tool
+
+    bool isBlock;
+    unsigned char blockId;
+
+    char toolType;
+    char toolLevel;
+
+    short burnTime; //in ticks
+    short textureIfNoBlock; //item that returns when item is put into furnace
+
+    unsigned char damage;
+
+    short iconIndex;
+} item;
+
+typedef struct{
+
+    short itemIndex;
+    short fullBlockIndex;
+    float destroyTime[6];
+    unsigned char noTextureColorIndex[2][10];
+    unsigned char textureIndex[10];
+    short drops;
+    char toolToBeak;
+    char toolLevelToGetItem;
+    unsigned char blockType; //0=full, 1=transparent
+    char brightness;
+} block;
+
+
 
 typedef struct
 {
@@ -124,7 +162,11 @@ typedef struct
 } file_type_t;
 
 //180x384
-
+void swap_func(Vector2I** a, Vector2I** b) {
+    Vector2I* temp = *a;
+    *a = *b;
+    *b = temp;
+}
 
 #define resX 320
 #define resY 180
@@ -6229,7 +6271,7 @@ void game_main()
 
 
 
-    VRAMAddress = (void*)LCD_GetVRAMAddress();
+    VRAMAddress = (unsigned short*)LCD_GetVRAMAddress();
 
     //ZBuffer = (unsigned short *)((uintptr_t)GetSecondaryVRAMAddress() & ~1);
 
@@ -6513,7 +6555,7 @@ float crossVec2(Vector2 a, Vector2 b)
 {
     return (a.x * b.y - a.y * b.x);
 }
-float dotVec4(Vector4 a, Vector4 b)
+float dotVec4(Vector4I a, Vector4I b)
 {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
@@ -6760,7 +6802,7 @@ void makeSkyBox() //brokey
 {
 	screenPoint calculatedSPos[21]; //cg50
 
-	Vector3B        vd[21] = {
+	Vector3         vd[21] = {
 		{10, 10, -10}, {10, -10, -10}, {10, 10, 10}, {10, -10, 10}, {-10, 10, -10}, {-10, -10, -10}, {-10, 10, 10}, {-10, -10, 10},
 		{-10, -10, 0}, {0, -10, -10}, {10, 0, -10}, {10, 0, 10}, {0, 10, 10}, {10, 10, 0}, {0, -10, 10}, {-10, 10, 0},
 		{0, 10, -10}, {10, -10, 0}, {10, 0, 0}, {0, -10, 0}, {0, 10, 0},
@@ -6851,12 +6893,12 @@ void makeSkyBox() //brokey
 
     for (int alltri = 0; alltri < 12; alltri++)
     {
-        Vector4B indexes1 = td[alltri];
+        Vector4I indexes1 = td[alltri];
 
-        screenPoint v1 = calculatedSPos[(int)indexes1.x];
-        screenPoint v2 = calculatedSPos[(int)indexes1.y];
-        screenPoint v3 = calculatedSPos[(int)indexes1.z];
-        screenPoint v4 = calculatedSPos[(int)indexes1.w];
+        screenPoint v1 = calculatedSPos[indexes1.x];
+        screenPoint v2 = calculatedSPos[indexes1.y];
+        screenPoint v3 = calculatedSPos[indexes1.z];
+        screenPoint v4 = calculatedSPos[indexes1.w];
 
         if(v1.z != 65001 && v2.z != 65001 && v3.z != 65001 && v4.z != 65001)
         {
@@ -6864,10 +6906,10 @@ void makeSkyBox() //brokey
             {
                 if((v1.y > 0 && v1.y < resY) || (v2.y > 0 && v2.y < resY) || (v3.y > 0 && v3.y < resY) || (v4.y > 0 && v4.y < resY))
                 {
-                    Vector2S V1_ = {v1.x, v1.y};
-                    Vector2S V2_ = {v2.x, v2.y};
-                    Vector2S V3_ = {v3.x, v3.y};
-                    Vector2S V4_ = {v4.x, v4.y};
+                    Vector2I V1_ = {v1.x, v1.y};
+                    Vector2I V2_ = {v2.x, v2.y};
+                    Vector2I V3_ = {v3.x, v3.y};
+                    Vector2I V4_ = {v4.x, v4.y};
 
                     Vector2S AT = {5, uvd[alltri].x};
                     Vector2S BT = {5, uvd[alltri].y};
@@ -11114,7 +11156,7 @@ void replaceOldWater()
 //file operations
 void makeStartFolder()
 {
-    char dirLocation1[50] = "\\\\fls0\\fxcraft";
+    char dirLocation1[50] = "\\fls0/fxcraft";
 
     unsigned short pDir1[sizeof(dirLocation1)*2]; // Make buffer
     Bfile_StrToName_ncpy(pDir1, (unsigned char*)dirLocation1, sizeof(dirLocation1));
@@ -11123,7 +11165,7 @@ void makeStartFolder()
 void saveWorldData(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\worldData", world);
+    sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\worldData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -11164,7 +11206,7 @@ void saveWorldData(int world)
 void loadWorldData(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\worldData", world);
+    sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\worldData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -11204,7 +11246,7 @@ void loadWorldData(int world)
 void saveChestData(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chestData", world);
+    sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\chestData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -11259,7 +11301,7 @@ void saveChestData(int world)
 void loadChestData(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chestData", world);
+    sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\chestData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -11321,7 +11363,7 @@ void loadChestData(int world)
 void loadChestDataV4(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chestData", world);
+    sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\chestData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -11375,7 +11417,7 @@ void loadChestDataV4(int world)
 }
 void savegameData()
 {
-    char fileLocation[50] = "\\\\fls0\\fxcraft\\gameData";
+    char fileLocation[50] = "\\fls0/fxcraft\\gameData";
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -11408,7 +11450,7 @@ void savegameData()
 }
 void loadgameData()
 {
-    char fileLocation[50] = "\\\\fls0\\fxcraft\\gameData";
+    char fileLocation[50] = "\\fls0/fxcraft\\gameData";
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -11438,7 +11480,7 @@ void loadgameData()
 }
 void saveSettings()
 {
-    char fileLocation[50] = "\\\\fls0\\fxcraft\\settings";
+    char fileLocation[50] = "\\fls0/fxcraft\\settings";
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -11478,7 +11520,7 @@ void saveSettings()
 }
 void loadSettings()
 {
-    char fileLocation[50] = "\\\\fls0\\fxcraft\\settings";
+    char fileLocation[50] = "\\fls0/fxcraft\\settings";
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -11522,7 +11564,7 @@ void loadSettings()
 }
 void loadSettingsO()
 {
-    char fileLocation[50] = "\\\\fls0\\fxcraft\\settings";
+    char fileLocation[50] = "\\fls0/fxcraft\\settings";
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -11555,7 +11597,7 @@ void loadSettingsO()
 void saveChunk(int index, int world, bool exists)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chunk%d", world, index);
+    sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\chunk%d", world, index);
 
     //getting entry for chunkFile
     unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
@@ -11586,8 +11628,8 @@ void loadChunk(int index, int world)
     char worldString[5];
     sprintf(worldString, "%d", world);
 
-    char fileLocation[50] = "\\\\fls0\\fxcraft\\world";
-    char dirLocation[50] = "\\\\fls0\\fxcraft\\world";
+    char fileLocation[50] = "\\fls0/fxcraft\\world";
+    char dirLocation[50] = "\\fls0/fxcraft\\world";
 
     strcat(dirLocation, worldString);
     strcat(fileLocation, worldString);
@@ -11636,7 +11678,7 @@ void loadChunk(int index, int world)
 void saveChunkExtraData(int index, int world, bool exists)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chunkED%d", world, index);
+    sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\chunkED%d", world, index);
 
     //getting entry for chunkFile
     unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
@@ -11669,8 +11711,8 @@ void loadChunkExtraData(int index, int world)
     char worldString[5];
     sprintf(worldString, "%d", world);
 
-    char fileLocation[50] = "\\\\fls0\\fxcraft\\world";
-    char dirLocation[50] = "\\\\fls0\\fxcraft\\world";
+    char fileLocation[50] = "\\fls0/fxcraft\\world";
+    char dirLocation[50] = "\\fls0/fxcraft\\world";
 
     strcat(dirLocation, worldString);
     strcat(fileLocation, worldString);
@@ -11706,7 +11748,7 @@ void loadChunkExtraData(int index, int world)
 void saveCompressedChunk(int index, int world, bool exists)
 {
 	char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chunk%d", world, index);
+    sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\chunk%d", world, index);
 
     //getting entry for chunkFile
     unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
@@ -11756,7 +11798,7 @@ void saveCompressedChunk(int index, int world, bool exists)
 void loadCompressedChunk(int index, int world)
 {
 	char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chunk%d", world, index);
+    sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\chunk%d", world, index);
 
     unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -11789,7 +11831,7 @@ void loadCompressedChunk(int index, int world)
 void saveChestDataCompressed(int world, int exists)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chestData", world);
+    sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\chestData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -11856,7 +11898,7 @@ void saveChestDataCompressed(int world, int exists)
 void loadChestDataCompressed(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chestData", world);
+    sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\chestData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -11914,7 +11956,7 @@ void loadChestDataCompressed(int world)
 void saveEntityData(int world, int exists)
 {
 	char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\entityData", world);
+    sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\entityData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -11975,7 +12017,7 @@ void saveEntityData(int world, int exists)
 void loadEntityData(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\entityData", world);
+    sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\entityData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -12026,7 +12068,7 @@ void deleteOldWorld(int world)
 	for (int i = 0; i < totalChunkWidth*totalChunkWidth; i++)
 	{
 		char fileLocation[50];
-		sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chunk%d", world, i);
+		sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\chunk%d", world, i);
 
 		//getting entry for chunkFile
 		unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
@@ -12039,9 +12081,9 @@ void deleteOldWorld(int world)
 	for (int i = 0; i < totalChunkWidth*totalChunkWidth; i++)
 	{
 		char fileLocation[50];
-		sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chunkED%d", world, i);
+		sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\chunkED%d", world, i);
 
-		//getting entry for chunkFile"\\\\fls0\\fxcraft\\world%d\\chunkED%d", world, i
+		//getting entry for chunkFile"\\fls0/fxcraft\\world%d\\chunkED%d", world, i
 		unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
 		Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 		Bfile_DeleteEntry(pFile);
@@ -12052,7 +12094,7 @@ void deleteOldWorld(int world)
     //for (int i = 0; i < 1; i++)
     //{
     //    char fileLocation[50];
-	//	sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\chestData", world);
+	//	sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\chestData", world);
 
 	//	//getting entry for chunkFile
 	//	unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
@@ -12066,7 +12108,7 @@ void deleteOldWorld(int world)
 void savePlayerData(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\playerData", world);
+    sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\playerData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -12125,7 +12167,7 @@ void savePlayerData(int world)
 void loadPlayerData(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\playerData", world);
+    sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\playerData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -12193,7 +12235,7 @@ void loadPlayerData(int world)
 void loadPlayerDataV4(int world)
 {
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\world%d\\playerData", world);
+    sprintf(fileLocation, "\\fls0/fxcraft\\world%d\\playerData", world);
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -12258,7 +12300,7 @@ void saveAllChunk(int world, bool exists)
 
     if(exists == false) //cleating dir
     {
-        char dirLocation1[50] = "\\\\fls0\\fxcraft";
+        char dirLocation1[50] = "\\fls0/fxcraft";
 
         unsigned short pDir1[sizeof(dirLocation1)*2]; // Make buffer
         Bfile_StrToName_ncpy(pDir1, (unsigned char*)dirLocation1, sizeof(dirLocation1));
@@ -12267,7 +12309,7 @@ void saveAllChunk(int world, bool exists)
         char worldString[5];
         sprintf(worldString, "%d", world);
 
-        char dirLocation2[50] = "\\\\fls0\\fxcraft\\world";
+        char dirLocation2[50] = "\\fls0/fxcraft\\world";
         strcat(dirLocation2, worldString);
 
         unsigned short pDir[sizeof(dirLocation2)*2]; // Make buffer
@@ -12359,14 +12401,14 @@ void loadAllChunk(int world)
 		if(worldVersion[world-1] < 5) //save the health of tools
         {
 		char fileLocation1[50];
-			sprintf(fileLocation1, "\\\\fls0\\fxcraft\\world%d\\playerData", world);
+			sprintf(fileLocation1, "\\fls0/fxcraft\\world%d\\playerData", world);
 
 			unsigned short pFile1[sizeof(fileLocation1)*2];
 			Bfile_StrToName_ncpy(pFile1, (unsigned char*)fileLocation1, sizeof(fileLocation1));
 			Bfile_DeleteEntry(pFile1);
 
             char fileLocation2[50];
-			sprintf(fileLocation2, "\\\\fls0\\fxcraft\\world%d\\chestData", world);
+			sprintf(fileLocation2, "\\fls0/fxcraft\\world%d\\chestData", world);
 
 			unsigned short pFile2[sizeof(fileLocation2)*2];
 			Bfile_StrToName_ncpy(pFile2, (unsigned char*)fileLocation2, sizeof(fileLocation2));
@@ -12400,7 +12442,7 @@ int maxTextureIndex = 0;
 void loadTextureAssets()
 {
     char fileLocation[50] = "";
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\assets\\%s\\textures", texturePackTotalPath[currentTexturePackIndex]);
+    sprintf(fileLocation, "\\fls0/fxcraft\\assets\\%s\\textures", texturePackTotalPath[currentTexturePackIndex]);
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -12429,7 +12471,7 @@ void loadTextureAssets()
 void loadIconAssets()
 {
     char fileLocation[50] = "";
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\assets\\%s\\icons", texturePackTotalPath[currentTexturePackIndex]);
+    sprintf(fileLocation, "\\fls0/fxcraft\\assets\\%s\\icons", texturePackTotalPath[currentTexturePackIndex]);
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -12458,7 +12500,7 @@ void loadIconAssets()
 void loadTexturePackData(char *texturePackPath, char *creator, char *name, int* version)
 {
     char fileLocation[100];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\assets\\%s\\info", texturePackPath);
+    sprintf(fileLocation, "\\fls0/fxcraft\\assets\\%s\\info", texturePackPath);
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -12501,7 +12543,7 @@ void loadTexturePackData(char *texturePackPath, char *creator, char *name, int* 
 void loadTexturePackIcon(char *texturePackPath, color_t *icon)
 {
     char fileLocation[100];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\assets\\%s\\icon", texturePackPath);
+    sprintf(fileLocation, "\\fls0/fxcraft\\assets\\%s\\icon", texturePackPath);
 
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
@@ -12524,7 +12566,7 @@ void loadTexturePackIcon(char *texturePackPath, color_t *icon)
 }
 void loadAvailableTexturePacks()
 {
-    char fileLocation[50] = "\\\\fls0\\fxcraft\\assets\\tex_*";
+    char fileLocation[50] = "\\fls0/fxcraft\\assets\\tex_*";
 
     unsigned short found[100];
     unsigned short pFile[sizeof(fileLocation)*2];
@@ -12658,7 +12700,7 @@ void convertToBitmap16bit()
 	int amount = 1;
 	int fileSizeSize = 1;
 
-	char fileLocationSize[50] = "\\\\fls0\\fxcraft\\screenshots\\amount";
+	char fileLocationSize[50] = "\\fls0/fxcraft\\screenshots\\amount";
     unsigned short pFileSize[sizeof(fileLocationSize)*2];
     Bfile_StrToName_ncpy(pFileSize, (unsigned char*)fileLocationSize, sizeof(fileLocationSize));
 
@@ -12683,9 +12725,9 @@ void convertToBitmap16bit()
 
 	//save the actual screenshot
     char fileLocation[50];
-    sprintf(fileLocation, "\\\\fls0\\fxcraft\\screenshots\\image%d.bmp", amount);
+    sprintf(fileLocation, "\\fls0/fxcraft\\screenshots\\image%d.bmp", amount);
 
-    char fileLocation2[50] = "\\\\fls0\\fxcraft\\screenshots";
+    char fileLocation2[50] = "\\fls0/fxcraft\\screenshots";
 
     unsigned short pFile1[sizeof(fileLocation2)*2]; // Make buffer
     Bfile_StrToName_ncpy(pFile1, (unsigned char*)fileLocation2, sizeof(fileLocation2));
@@ -13347,10 +13389,10 @@ void renderBlockDestruction(float timeDone, float totalTime)
                         {
 							int Depth = ((v1.z + v2.z + v3.z + v4.z) >> 2) - 1;
 
-					Vector2S V1_ = {v1.x, v1.y};
-					Vector2S V2_ = {v2.x, v2.y};
-					Vector2S V3_ = {v3.x, v3.y};
-					Vector2S V4_ = {v4.x, v4.y};
+					Vector2I V1_ = {v1.x, v1.y};
+					Vector2I V2_ = {v2.x, v2.y};
+					Vector2I V3_ = {v3.x, v3.y};
+					Vector2I V4_ = {v4.x, v4.y};
 
 					Vector2S AT = {0, 0};
 					Vector2S BT = {10, 0};
@@ -22938,10 +22980,10 @@ void renderObject()
                                         {
                                             int Depth = (v1.z + v2.z + v3.z + v4.z) >> 2;
 
-                                            Vector2S V1_ = {v1.x, v1.y};
-                                            Vector2S V2_ = {v2.x, v2.y};
-                                            Vector2S V3_ = {v3.x, v3.y};
-                                            Vector2S V4_ = {v4.x, v4.y};
+                                            Vector2I V1_ = {v1.x, v1.y};
+                                            Vector2I V2_ = {v2.x, v2.y};
+                                            Vector2I V3_ = {v3.x, v3.y};
+                                            Vector2I V4_ = {v4.x, v4.y};
 
                                             int brightness = allObj[obj].brightnes[alltri];
                                             if(brightness < 1)
@@ -23059,10 +23101,10 @@ void renderObject()
                                     {
                                         int Depth = (v1.z + v2.z + v3.z + v4.z) >> 2;
 
-                                        Vector2S V1_ = {v1.x, v1.y};
-                                        Vector2S V2_ = {v2.x, v2.y};
-                                        Vector2S V3_ = {v3.x, v3.y};
-                                        Vector2S V4_ = {v4.x, v4.y};
+                                        Vector2I V1_ = {v1.x, v1.y};
+                                        Vector2I V2_ = {v2.x, v2.y};
+                                        Vector2I V3_ = {v3.x, v3.y};
+                                        Vector2I V4_ = {v4.x, v4.y};
 
                                         int brightness = 16;
                                         if(lighting == true)
@@ -23194,10 +23236,10 @@ void renderObject()
                 {
                     int Depth = (v1.z + v2.z + v3.z + v4.z) >> 2;
 
-                    Vector2S V1_ = {v1.x, v1.y};
-                    Vector2S V2_ = {v2.x, v2.y};
-                    Vector2S V3_ = {v3.x, v3.y};
-                    Vector2S V4_ = {v4.x, v4.y};
+                    Vector2I V1_ = {v1.x, v1.y};
+                    Vector2I V2_ = {v2.x, v2.y};
+                    Vector2I V3_ = {v3.x, v3.y};
+                    Vector2I V4_ = {v4.x, v4.y};
 
                     int brightness = allObj[obj].brightnes[alltri];
                     if(brightness < 1)
@@ -23276,10 +23318,10 @@ void renderObject()
                 {
                     int Depth = (v1.z + v2.z + v3.z + v4.z) >> 2;
 
-                    Vector2S V1_ = {v1.x, v1.y};
-                    Vector2S V2_ = {v2.x, v2.y};
-                    Vector2S V3_ = {v3.x, v3.y};
-                    Vector2S V4_ = {v4.x, v4.y};
+                    Vector2I V1_ = {v1.x, v1.y};
+                    Vector2I V2_ = {v2.x, v2.y};
+                    Vector2I V3_ = {v3.x, v3.y};
+                    Vector2I V4_ = {v4.x, v4.y};
 
                     int brightness = allObj[obj].brightnes[alltri];
                     if(brightness < 1)
