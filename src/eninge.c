@@ -59,7 +59,6 @@ static int File_Create_Helper(const char* path, int type, size_t* size) { if (ty
 #include "tlsf.h"
 #include "lz4.h"
 
-typedef unsigned int uintptr_t;
 
 #define FILE_PATH "\\fls0/File.txt"
 #define M_PI 3.14159265358979323846
@@ -71,7 +70,6 @@ typedef unsigned int uintptr_t;
 #define LCD_HEIGHT_PX 180
 #define LCD_WIDTH_PX_HALF 160
 
-typedef unsigned short color_t;
 
 
 
@@ -92,74 +90,6 @@ typedef unsigned short color_t;
 
 
 
-
-typedef struct{
-    char name[20];
-    char stackSize;
-    short breaksIn; //how long the tool will last set to -1 if no tool
-
-    bool isBlock;
-    unsigned char blockId;
-
-    char toolType;
-    char toolLevel;
-
-    short burnTime; //in ticks
-    short textureIfNoBlock; //item that returns when item is put into furnace
-
-    unsigned char damage;
-
-    short iconIndex;
-} item;
-
-typedef struct{
-
-    short itemIndex;
-    short fullBlockIndex;
-    float destroyTime[6];
-    unsigned char noTextureColorIndex[2][10];
-    unsigned char textureIndex[10];
-    short drops;
-    char toolToBeak;
-    char toolLevelToGetItem;
-    unsigned char blockType; //0=full, 1=transparent
-    char brightness;
-} block;
-
-
-
-typedef struct
-{
-    short inputItem;
-    short outputItem;
-} furnaceRecipe;
-
-typedef struct
-{
-    bool needsCraftingTable;
-
-    char diffrentItemAmount;
-    short inputItem[4];
-    short inputItemAmount[4];
-
-    short outputItem;
-    char outputItemAmount;
-} craftingRecipe;
-
-typedef struct{
-	Vector4I UV1;
-	Vector4I UV2;
-	Vector4I UV3;
-	Vector4I UV4;
-} quadUV;
-
-typedef struct
-{
-  unsigned short id, type;
-  unsigned long fsize, dsize;
-  unsigned int property;
-  unsigned long address;
-} file_type_t;
 
 //180x384
 void swap_func(Vector2I** a, Vector2I** b) {
@@ -255,7 +185,7 @@ char skyBrightness = 8;
 int blockSelected = 1;
 int totalBlockAmount = 8;
 
-unsigned short *screenColor = (unsigned short*)0xE5200000;
+unsigned short *screenColor;
 
 float destructionTimer = 0;
 float totalDestructionTimer = 0;
@@ -6261,6 +6191,7 @@ tlsf_t tlsf;
 void game_main()
 {
     ZBuffer = (unsigned short*)malloc(320 * 528 * 2);
+    screenColor = (unsigned short*)malloc(320 * 180 * 2);
     lightmap = (char*)malloc(128 * 1024);
     blockData = (char*)malloc(128 * 1024);
     textures2 = (color_t*)malloc(256 * 256 * 2);
@@ -7185,8 +7116,8 @@ void renderTriangleFast(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Ve
 			x1 = (x1 < LCD_WIDTH_PX) ? x1 : LCD_WIDTH_PX;
 
 			unsigned short *ZBufferLocation = &ZBuffer[y*LCD_WIDTH_PX_HALF + x0];
-			unsigned int *VRAMLcation1 = &VRAMAddress[y * LCD_WIDTH_PX + x0];
-			unsigned int *VRAMLcation2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + x0];
+			unsigned int *VRAMLcation1 = (unsigned int *)&VRAMAddress[y * LCD_WIDTH_PX + x0];
+			unsigned int *VRAMLcation2 = (unsigned int *)&VRAMAddress[(y + 1) * LCD_WIDTH_PX + x0];
 
 			for (int x = x0; x < x1; x++)
 			{
@@ -7245,8 +7176,8 @@ void renderTriangleFast(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Ve
 			x1 = (x1 < LCD_WIDTH_PX) ? x1 : LCD_WIDTH_PX;
 
 			unsigned short *ZBufferLocation = &ZBuffer[y*LCD_WIDTH_PX_HALF + x0];
-			unsigned int *VRAMLcation1 = &VRAMAddress[y * LCD_WIDTH_PX + (x0 << 1)];
-			unsigned int *VRAMLcation2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (x0 << 1)];
+			unsigned int *VRAMLcation1 = (unsigned int *)&VRAMAddress[y * LCD_WIDTH_PX + (x0 << 1)];
+			unsigned int *VRAMLcation2 = (unsigned int *)&VRAMAddress[(y + 1) * LCD_WIDTH_PX + (x0 << 1)];
 
 			for (int x = x0; x < x1; x++)
 			{
@@ -7406,7 +7337,7 @@ void renderTrianglePX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, 
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = (y >> 1) * resXZBuffer;
-            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + VRAMAddress;
+            unsigned int *yOnScreen  = (unsigned int *)(VRAMAddress + y * LCD_WIDTH_PX);
             unsigned int *yOnScreen2 = yOnScreen + LCD_WIDTH_PXH;
             for (int x = x0; x < x1; x++)
             {
@@ -7434,7 +7365,7 @@ void renderTrianglePX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC, 
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = (y >> 1) * resXZBuffer;
-            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + VRAMAddress;
+            unsigned int *yOnScreen  = (unsigned int *)(VRAMAddress + y * LCD_WIDTH_PX);
             unsigned int *yOnScreen2 = yOnScreen + LCD_WIDTH_PXH;
             for (int x = x0; x < x1; x++)
             {
@@ -7557,9 +7488,9 @@ void renderTriangleNBPX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
     endB = (vertexB->y % 2 == 1) ? endB+1 : endB;
     endC = (vertexC->y % 2 == 1) ? endC+1 : endC;
 
-    unsigned int *endColor = 0xE5200040;
+    unsigned int endColor;
 
-    *endColor = ((int)color << 16) + color;
+    endColor = ((int)color << 16) + color;
     int LCD_WIDTH_PXH = LCD_WIDTH_PX >> 1;
 
     //unsigned int *endColor = 0xE5017000;
@@ -7578,7 +7509,7 @@ void renderTriangleNBPX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = (y >> 1) * resXZBuffer;
-            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + VRAMAddress;
+            unsigned int *yOnScreen  = (unsigned int *)(VRAMAddress + y * LCD_WIDTH_PX);
             unsigned int *yOnScreen2 = yOnScreen + LCD_WIDTH_PXH;
             for (int x = x0; x < x1; x++)
             {
@@ -7606,7 +7537,7 @@ void renderTriangleNBPX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = (y >> 1) * resXZBuffer;
-            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + VRAMAddress;
+            unsigned int *yOnScreen  = (unsigned int *)(VRAMAddress + y * LCD_WIDTH_PX);
             unsigned int *yOnScreen2 = yOnScreen + LCD_WIDTH_PXH;
             for (int x = x0; x < x1; x++)
             {
@@ -8123,8 +8054,8 @@ void renderTriangleTexturedNBPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S v
                 int yIndex = (y >> 1) * LCD_WIDTH_PX_HALF;
 
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex + minXClamp];
-                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen1 = (unsigned int *)&VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = (unsigned int *)&VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
 
                 for (int x = x0; x < x1; x++)
                 {
@@ -8179,8 +8110,8 @@ void renderTriangleTexturedNBPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S v
                 int yIndex = (y >> 1) * LCD_WIDTH_PX_HALF;
 
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex + minXClamp];
-                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen1 = (unsigned int *)&VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = (unsigned int *)&VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
 
                 for (int x = x0; x < x1; x++)
                 {
@@ -8330,8 +8261,8 @@ void renderTriangleTexturedPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S ver
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
                 unsigned short* yOnZbuffer = &ZBuffer[(y >> 1) * LCD_WIDTH_PX_HALF + minXClamp];
-                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen1 = (unsigned int *)&VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = (unsigned int *)&VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
 
                 for (int x = x0; x < x1; x++)
                 {
@@ -8387,8 +8318,8 @@ void renderTriangleTexturedPX2T(Vector2S vertexA, Vector2S vertexB, Vector2S ver
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
                 unsigned short* yOnZbuffer = &ZBuffer[(y >> 1) * LCD_WIDTH_PX_HALF + minXClamp];
-                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen1 = (unsigned int *)&VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = (unsigned int *)&VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
 
                 for (int x = x0; x < x1; x++)
                 {
@@ -8927,8 +8858,8 @@ void renderTriangleTexturedBlackTransNBPX2T(Vector2S vertexA, Vector2S vertexB, 
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
                 unsigned short* yOnZbuffer = &ZBuffer[(y >> 1) * LCD_WIDTH_PX_HALF + minXClamp];
-                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen1 = (unsigned int *)&VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = (unsigned int *)&VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
 
                 for (int x = x0; x < x1; x++)
                 {
@@ -8986,8 +8917,8 @@ void renderTriangleTexturedBlackTransNBPX2T(Vector2S vertexA, Vector2S vertexB, 
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
                 unsigned short* yOnZbuffer = &ZBuffer[(y >> 1) * LCD_WIDTH_PX_HALF + minXClamp];
-                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen1 = (unsigned int *)&VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = (unsigned int *)&VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
 
                 for (int x = x0; x < x1; x++)
                 {
@@ -9141,8 +9072,8 @@ void renderTriangleTexturedBlackTransPX2T(Vector2S vertexA, Vector2S vertexB, Ve
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
                 unsigned short* yOnZbuffer = &ZBuffer[(y >> 1) * LCD_WIDTH_PX_HALF + minXClamp];
-                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen1 = (unsigned int *)&VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = (unsigned int *)&VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
 
                 for (int x = x0; x < x1; x++)
                 {
@@ -9201,8 +9132,8 @@ void renderTriangleTexturedBlackTransPX2T(Vector2S vertexA, Vector2S vertexB, Ve
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
                 unsigned short* yOnZbuffer = &ZBuffer[(y >> 1) * LCD_WIDTH_PX_HALF + minXClamp];
-                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen1 = (unsigned int *)&VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = (unsigned int *)&VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
 
                 for (int x = x0; x < x1; x++)
                 {
@@ -9555,8 +9486,8 @@ void renderTriangleTexturedNBPX2TransT(Vector2S vertexA, Vector2S vertexB, Vecto
                 int yIndex = (y >> 1) * LCD_WIDTH_PX_HALF;
 
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex + minXClamp];
-                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen1 = (unsigned int *)&VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = (unsigned int *)&VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
 
                 for (int x = x0; x < x1; x++)
                 {
@@ -9611,8 +9542,8 @@ void renderTriangleTexturedNBPX2TransT(Vector2S vertexA, Vector2S vertexB, Vecto
                 int yIndex = (y >> 1) * LCD_WIDTH_PX_HALF;
 
                 unsigned short* yOnZbuffer = &ZBuffer[yIndex + minXClamp];
-                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen1 = (unsigned int *)&VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = (unsigned int *)&VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
 
                 for (int x = x0; x < x1; x++)
                 {
@@ -9762,8 +9693,8 @@ void renderTriangleTexturedPX2TransT(Vector2S vertexA, Vector2S vertexB, Vector2
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
                 unsigned short* yOnZbuffer = &ZBuffer[(y >> 1) * LCD_WIDTH_PX_HALF + minXClamp];
-                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen1 = (unsigned int *)&VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = (unsigned int *)&VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
 
                 for (int x = x0; x < x1; x++)
                 {
@@ -9817,8 +9748,8 @@ void renderTriangleTexturedPX2TransT(Vector2S vertexA, Vector2S vertexB, Vector2
                 int minXClamp = (x0 > 1) ? x0 : 1;
 
                 unsigned short* yOnZbuffer = &ZBuffer[(y >> 1) * LCD_WIDTH_PX_HALF + minXClamp];
-                unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
-                unsigned int *yOnScreen2 = &VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen1 = (unsigned int *)&VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+                unsigned int *yOnScreen2 = (unsigned int *)&VRAMAddress[(y + 1) * LCD_WIDTH_PX + (minXClamp << 1)];
 
                 for (int x = x0; x < x1; x++)
                 {
@@ -9946,7 +9877,7 @@ void renderSkybox(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Vector2S
 
 			int texCoord_i_y = texCoord_y + texCoord_x_y * x0;
             int minXClamp = (x0 > 1) ? x0 : 1;
-            unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+            unsigned int *yOnScreen1 = (unsigned int *)&VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
 
             for (int x = x0; x < x1; x++)
             {
@@ -9980,7 +9911,7 @@ void renderSkybox(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Vector2S
 
             int texCoord_i_y = texCoord_y + texCoord_x_y * x0;
             int minXClamp = (x0 > 1) ? x0 : 1;
-            unsigned int *yOnScreen1 = &VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
+            unsigned int *yOnScreen1 = (unsigned int *)&VRAMAddress[y * LCD_WIDTH_PX + (minXClamp << 1)];
 
             for (int x = x0; x < x1; x++)
             {
@@ -10049,7 +9980,7 @@ void renderTrianglePX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vert
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = (y >> 1) * resXZBuffer;
-            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + VRAMAddress;
+            unsigned int *yOnScreen  = (unsigned int *)(VRAMAddress + y * LCD_WIDTH_PX);
             unsigned int *yOnScreen2 = yOnScreen + LCD_WIDTH_PXH;
             for (int x = x0; x < x1; x++)
             {
@@ -10086,7 +10017,7 @@ void renderTrianglePX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vert
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = (y >> 1) * resXZBuffer;
-            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + VRAMAddress;
+            unsigned int *yOnScreen  = (unsigned int *)(VRAMAddress + y * LCD_WIDTH_PX);
             unsigned int *yOnScreen2 = yOnScreen + LCD_WIDTH_PXH;
             for (int x = x0; x < x1; x++)
             {
@@ -10153,7 +10084,7 @@ void renderTriangleNBPX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* ve
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = (y >> 1) * resXZBuffer;
-            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + VRAMAddress;
+            unsigned int *yOnScreen  = (unsigned int *)(VRAMAddress + y * LCD_WIDTH_PX);
             unsigned int *yOnScreen2 = yOnScreen + LCD_WIDTH_PXH;
             for (int x = x0; x < x1; x++)
             {
@@ -10190,7 +10121,7 @@ void renderTriangleNBPX2Trans(Vector2S* vertexA, Vector2S* vertexB, Vector2S* ve
             if (x0 > x1) swap(&x0, &x1);
 
             int yIndex = (y >> 1) * resXZBuffer;
-            unsigned int *yOnScreen  = y * LCD_WIDTH_PX + VRAMAddress;
+            unsigned int *yOnScreen  = (unsigned int *)(VRAMAddress + y * LCD_WIDTH_PX);
             unsigned int *yOnScreen2 = yOnScreen + LCD_WIDTH_PXH;
             for (int x = x0; x < x1; x++)
             {
