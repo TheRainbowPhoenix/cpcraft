@@ -17,8 +17,12 @@
 
 
 static int File_GetSize_Helper(int fd) { struct File_Stat st; if (File_Fstat(fd, &st) == 0) return st.fileSize; return 0; }
+void renderSkybox(Vector2S vertexA, Vector2S vertexB, Vector2S vertexC, Vector2S texA, Vector2S texB, Vector2S texC);
+void savegameData();
+void renderText(int x, int y, const char *text);
+void renderTextUpdate(int x, int y, int stop, const char *text);
 #define File_GetSize(fd) File_GetSize_Helper(fd)
-static int File_Create_Helper(const char* path, int type, size_t* size) { if (type == 5) return File_Mkdir(path); int fd = File_Open(path, 2 | 4); if (fd >= 0) File_Close(fd); return 0; }
+static int File_Create_Helper(const char* path, int type, void* size) { if (type == 5) return File_Mkdir(path); int fd = File_Open(path, 2 | 4); if (fd >= 0) File_Close(fd); (void)size; return 0; }
 #define File_Create(path, type, size) File_Create_Helper(path, type, size)
 
 #define PrintMini(...) ((void)0)
@@ -35,14 +39,11 @@ static int File_Create_Helper(const char* path, int type, size_t* size) { if (ty
 #define Sleep(...) ((void)0)
 #define GetSecondaryVRAMAddress() LCD_GetVRAMAddress()
 #define Bdisp_EnableColor(...) ((void)0)
-#define renderTextUpdate(...) ((void)0)
-#define renderObject(...) ((void)0)
-#define renderText(...) ((void)0)
 #define OS_InnerWait_ms(...) ((void)0)
 #define Bfile_StrToName_ncpy(dest, src, n) strcpy((char*)dest, (const char*)src)
 #define Bfile_NameToStr_ncpy(dest, src, n) strcpy((char*)dest, (const char*)src)
 #define Bfile_DeleteEntry(path) File_Remove((const char*)path)
-#define Bfile_FindFirst(path, handle, name, info) File_FindFirst((const char*)path, handle, (char_const16_t*)name, (struct File_FindInfo*)info)
+#define Bfile_FindFirst(path, handle, name, info) File_FindFirst((const char_const16_t*)path, handle, (char_const16_t*)name, (struct File_FindInfo*)info)
 #define Bfile_FindNext(handle, name, info) File_FindNext(handle, (char_const16_t*)name, (struct File_FindInfo*)info)
 #define Bfile_FindClose(handle) File_FindClose(handle)
 
@@ -11090,7 +11091,7 @@ void makeStartFolder()
 
     unsigned short pDir1[sizeof(dirLocation1)*2]; // Make buffer
     Bfile_StrToName_ncpy(pDir1, (unsigned char*)dirLocation1, sizeof(dirLocation1));
-    File_Create(pDir1, 5, NULL);
+    File_Create(dirLocation1, 5, NULL);
 }
 void saveWorldData(int world)
 {
@@ -11119,9 +11120,9 @@ void saveWorldData(int world)
     worlData[14] = dayTimeChange;
     worlData[15] = skyBrightness;
 
-    File_Create(pFile, 1, &size);
+    File_Create(fileLocation, 1, &size);
 
-    int hFile = File_Open(pFile, 3, NULL);
+    int hFile = File_Open(fileLocation, 3);
 (void)File_Write(hFile, worlData, size);
     File_Close(hFile);
 
@@ -11144,12 +11145,12 @@ void loadWorldData(int world)
     int size = 16;
     char worlData[16] = {0};
 
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
 
-        (void)File_Read(hFile, worlData, length, 0);
+        (void)File_Read(hFile, worlData, length);
         File_Close(hFile);
 
         SEED = 0;
@@ -11214,9 +11215,9 @@ void saveChestData(int world)
         }
     }
 
-    File_Create(pFile, 1, &size);
+    File_Create(fileLocation, 1, &size);
 
-    int hFile = File_Open(pFile, 3, NULL);
+    int hFile = File_Open(fileLocation, 3);
 (void)File_Write(hFile, chestData_, size);
     File_Close(hFile);
 
@@ -11236,14 +11237,14 @@ void loadChestData(int world)
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
 
         char chestData_[length];
 
-        (void)File_Read(hFile, chestData_, length, 0);
+        (void)File_Read(hFile, chestData_, length);
         File_Close(hFile);
 
         for (int chestI = 0; chestI < chestAmount; chestI++)
@@ -11298,14 +11299,14 @@ void loadChestDataV4(int world)
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
 
         char chestData_[length];
 
-        (void)File_Read(hFile, chestData_, length, 0);
+        (void)File_Read(hFile, chestData_, length);
         File_Close(hFile);
 
         for (int chestI = 0; chestI < chestAmount; chestI++)
@@ -11364,9 +11365,9 @@ void savegameData()
     for (int i = 0; i < 5; i++)
     playerData[20+i] = worldExists[i];
 
-    File_Create(pFile, 1, &size);
+    File_Create(fileLocation, 1, &size);
 
-    int hFile = File_Open(pFile, 3, NULL);
+    int hFile = File_Open(fileLocation, 3);
 (void)File_Write(hFile, playerData, size);
     File_Close(hFile);
 
@@ -11388,12 +11389,12 @@ void loadgameData()
     int size = 25;
     char playerData[25] = {0};
 
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
 
-        (void)File_Read(hFile, playerData, length, 0);
+        (void)File_Read(hFile, playerData, length);
         File_Close(hFile);
 
         for (int i = 0; i < 5; i++)
@@ -11434,9 +11435,9 @@ void saveSettings()
 	settingData[10] = (char)beautifulSky;
     settingData[11] = (char)currentTexturePackIndex;
 
-    File_Create(pFile, 1, &size);
+    File_Create(fileLocation, 1, &size);
 
-    int hFile = File_Open(pFile, 3, NULL);
+    int hFile = File_Open(fileLocation, 3);
 (void)File_Write(hFile, settingData, size);
     File_Close(hFile);
 
@@ -11457,7 +11458,7 @@ void loadSettings()
 
     char settingData[64] = {0};
 
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
@@ -11467,12 +11468,12 @@ void loadSettings()
 			File_Close(hFile);
 
 			loadSettingsO();
-			Bfile_DeleteEntry(pFile);
+			File_Remove(fileLocation);
 			saveSettings();
 		}
 		else
 		{
-		File_Read(hFile, settingData, length, 0);
+(void)File_Read(hFile, settingData, length);
 		File_Close(hFile);
 
 			renderDistance = 		    settingData[0];
@@ -11502,12 +11503,12 @@ void loadSettingsO()
     int size = 10;
     char settingData[10] = {0};
 
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
 
-        (void)File_Read(hFile, settingData, length, 0);
+        (void)File_Read(hFile, settingData, length);
         File_Close(hFile);
 
 		renderDistance = 		 settingData[0];
@@ -11535,10 +11536,10 @@ void saveChunk(int index, int world, bool exists)
 
     //make file
     if(exists == false)
-    File_Create(pFile, 1, sizeof(blocks[index]));
+    File_Create(fileLocation, 1, sizeof(blocks[index]));
 
     //writing data to file
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
 (void)File_Write(hFile, blocks[index], sizeof(blocks[index]));
     File_Close(hFile);
 
@@ -11573,10 +11574,10 @@ void loadChunk(int index, int world)
     unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     int length = File_GetSize(hFile);
 
-(void)File_Read(hFile, blocks[index], length, 0);
+(void)File_Read(hFile, blocks[index], length);
     File_Close(hFile);
 
     //for (int x = 0; x < width; x++)
@@ -11618,10 +11619,10 @@ void saveChunkExtraData(int index, int world, bool exists)
 
     //make file
     if(exists == false)
-    File_Create(pFile, 1, &sizeOfFile);
+    File_Create(fileLocation, 1, &sizeOfFile);
 
     //writing data to file
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
 (void)File_Write(hFile, &blockData[index*width*width*height], sizeOfFile);
     File_Close(hFile);
 
@@ -11656,12 +11657,12 @@ void loadChunkExtraData(int index, int world)
     unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     int length = File_GetSize(hFile);
 
     //unsigned char buffer[length];
 
-(void)File_Read(hFile, &blockData[index*width*width*height], length, 0);
+(void)File_Read(hFile, &blockData[index*width*width*height], length);
     File_Close(hFile);
 
     if(hFile < 0)
@@ -11694,10 +11695,10 @@ void saveCompressedChunk(int index, int world, bool exists)
 
     //make file
     if(exists == false)
-    File_Create(pFile, 1, &compressedSize);
+    File_Create(fileLocation, 1, &compressedSize);
 
     //writing data to file
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
 
     if(exists == true)
     {
@@ -11705,9 +11706,9 @@ void saveCompressedChunk(int index, int world, bool exists)
         if(length != compressedSize)
         {
             File_Close(hFile);
-            Bfile_DeleteEntry(pFile);
-            File_Create(pFile, 1, &compressedSize);
-            hFile = File_Open(pFile, 3, NULL);
+            File_Remove(fileLocation);
+            File_Create(fileLocation, 1, &compressedSize);
+            hFile = File_Open(fileLocation, 3);
         }
     }
 
@@ -11733,12 +11734,12 @@ void loadCompressedChunk(int index, int world)
     unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     int length = File_GetSize(hFile);
 
 	char data[length];
 
-(void)File_Read(hFile, data, length, 0);
+(void)File_Read(hFile, data, length);
     File_Close(hFile);
 
 	char decompressedData[width*width*height*3];
@@ -11798,9 +11799,9 @@ void saveChestDataCompressed(int world, int exists)
     int compressedSize = lz77_compress(chestData_, size, compressedData, 8);
 
     if(exists == false)
-    File_Create(pFile, 1, &compressedSize);
+    File_Create(fileLocation, 1, &compressedSize);
 
-    int hFile = File_Open(pFile, 3, NULL);
+    int hFile = File_Open(fileLocation, 3);
 
     if(exists == true)
     {
@@ -11808,9 +11809,9 @@ void saveChestDataCompressed(int world, int exists)
         if(length != compressedSize)
         {
             File_Close(hFile);
-            Bfile_DeleteEntry(pFile);
-            File_Create(pFile, 1, &compressedSize);
-            hFile = File_Open(pFile, 3, NULL);
+            File_Remove(fileLocation);
+            File_Create(fileLocation, 1, &compressedSize);
+            hFile = File_Open(fileLocation, 3);
         }
     }
 
@@ -11833,14 +11834,14 @@ void loadChestDataCompressed(int world)
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
 
         char chestData_[length];
 
-        (void)File_Read(hFile, chestData_, length, 0);
+        (void)File_Read(hFile, chestData_, length);
         File_Close(hFile);
 
         char decompressedData[121*chestAmount];
@@ -11929,9 +11930,9 @@ void saveEntityData(int world, int exists)
 	}
 
     if(exists == false)
-    File_Create(pFile, 1, &size);
+    File_Create(fileLocation, 1, &size);
 
-    int hFile = File_Open(pFile, 3, NULL);
+    int hFile = File_Open(fileLocation, 3);
 
 (void)File_Write(hFile, entityData_, size);
     File_Close(hFile);
@@ -11952,14 +11953,14 @@ void loadEntityData(int world)
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
 
         char entityData_[length];
 
-        (void)File_Read(hFile, entityData_, length, 0);
+        (void)File_Read(hFile, entityData_, length);
         File_Close(hFile);
 
 		for (int i = 0; i < entityLength; i++)
@@ -12003,7 +12004,7 @@ void deleteOldWorld(int world)
 		//getting entry for chunkFile
 		unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
 		Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
-		Bfile_DeleteEntry(pFile);
+		File_Remove(fileLocation);
 
 		loadingScreen(i + 1, 129, "converting...", 13);
 	}
@@ -12016,7 +12017,7 @@ void deleteOldWorld(int world)
 		//getting entry for chunkFile"\\fls0/fxcraft\\world%d\\chunkED%d", world, i
 		unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
 		Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
-		Bfile_DeleteEntry(pFile);
+		File_Remove(fileLocation);
 
 		loadingScreen(i + 65, 129, "converting...", 13);
 	}
@@ -12029,7 +12030,7 @@ void deleteOldWorld(int world)
 	//	//getting entry for chunkFile
 	//	unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
 	//	Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
-	//	Bfile_DeleteEntry(pFile);
+	//	File_Remove(fileLocation);
 
 	//	loadingScreen(i + 128, 129, "converting...", 13);
     //}
@@ -12080,9 +12081,9 @@ void savePlayerData(int world)
     }
 
 
-    File_Create(pFile, 1, &size);
+    File_Create(fileLocation, 1, &size);
 
-    int hFile = File_Open(pFile, 3, NULL);
+    int hFile = File_Open(fileLocation, 3);
 (void)File_Write(hFile, playerData, size);
     File_Close(hFile);
 
@@ -12105,14 +12106,14 @@ void loadPlayerData(int world)
     int size = 236;
     char playerData[236] = {0};
 
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
 
         //unsigned char buffer[length];
 
-        (void)File_Read(hFile, playerData, length, 0);
+        (void)File_Read(hFile, playerData, length);
         File_Close(hFile);
 
         int pPosI[5] = {0};
@@ -12173,14 +12174,14 @@ void loadPlayerDataV4(int world)
     int size = 164;
     char playerData[164] = {0};
 
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
 
         //unsigned char buffer[length];
 
-        (void)File_Read(hFile, playerData, length, 0);
+        (void)File_Read(hFile, playerData, length);
         File_Close(hFile);
 
         int pPosI[5] = {0};
@@ -12234,7 +12235,7 @@ void saveAllChunk(int world, bool exists)
 
         unsigned short pDir1[sizeof(dirLocation1)*2]; // Make buffer
         Bfile_StrToName_ncpy(pDir1, (unsigned char*)dirLocation1, sizeof(dirLocation1));
-        File_Create(pDir1, 5, NULL);
+        File_Create(dirLocation1, 5, NULL);
 
         char worldString[5];
         sprintf(worldString, "%d", world);
@@ -12244,7 +12245,7 @@ void saveAllChunk(int world, bool exists)
 
         unsigned short pDir[sizeof(dirLocation2)*2]; // Make buffer
         Bfile_StrToName_ncpy(pDir, (unsigned char*)dirLocation2, sizeof(dirLocation2));
-        File_Create(pDir, 5, NULL);
+        File_Create(dirLocation2, 5, NULL);
     }
 
     savePlayerData(world);
@@ -12335,14 +12336,14 @@ void loadAllChunk(int world)
 
 			unsigned short pFile1[sizeof(fileLocation1)*2];
 			Bfile_StrToName_ncpy(pFile1, (unsigned char*)fileLocation1, sizeof(fileLocation1));
-			Bfile_DeleteEntry(pFile1);
+			File_Remove(fileLocation1);
 
             char fileLocation2[50];
 			sprintf(fileLocation2, "\\fls0/fxcraft\\world%d\\chestData", world);
 
 			unsigned short pFile2[sizeof(fileLocation2)*2];
 			Bfile_StrToName_ncpy(pFile2, (unsigned char*)fileLocation2, sizeof(fileLocation2));
-			Bfile_DeleteEntry(pFile2);
+			File_Remove(fileLocation2);
 
             saveChestData(world);
 			savePlayerData(world);
@@ -12385,12 +12386,12 @@ void loadTextureAssets()
         textures2[i*256+j] = missingTexture[j];
     }
 
-    int hFile = File_Open(pFile, 3, NULL);
+    int hFile = File_Open(fileLocation, 3);
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
 
-        (void)File_Read(hFile, assetsInputBuffer, length, 0);
+        (void)File_Read(hFile, assetsInputBuffer, length);
         File_Close(hFile);
 
         LZ4_decompress_safe(assetsInputBuffer, textures2, length, 0x40000);
@@ -12414,12 +12415,12 @@ void loadIconAssets()
         itemIcons2[i*676+j] = missingIcon[j];
     }
 
-    int hFile = File_Open(pFile, 3, NULL);
+    int hFile = File_Open(fileLocation, 3);
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
 
-        (void)File_Read(hFile, assetsInputBuffer, length, 0);
+        (void)File_Read(hFile, assetsInputBuffer, length);
         File_Close(hFile);
 
         LZ4_decompress_safe(assetsInputBuffer, itemIcons2, length, 0x40000);
@@ -12438,12 +12439,12 @@ void loadTexturePackData(char *texturePackPath, char *creator, char *name, int* 
     int size = 52;
     char data[size];
 
-    int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
+    int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
 
-        (void)File_Read(hFile, data, length, 0);
+        (void)File_Read(hFile, data, length);
         File_Close(hFile);
 
         int ver = 0;
@@ -12478,12 +12479,12 @@ void loadTexturePackIcon(char *texturePackPath, color_t *icon)
     unsigned short pFile[sizeof(fileLocation)*2];
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
 
-    int hFile = File_Open(pFile, 3, NULL);
+    int hFile = File_Open(fileLocation, 3);
     if(hFile > 0)
     {
         int length = File_GetSize(hFile);
 
-        (void)File_Read(hFile, (unsigned char*)icon, 2048, 0);
+        (void)File_Read(hFile, (unsigned char*)icon, 2048);
         File_Close(hFile);
     }
     else
@@ -12502,7 +12503,7 @@ void loadAvailableTexturePacks()
     unsigned short pFile[sizeof(fileLocation)*2];
 
     int ret, handle;
-    file_type_t info;
+    struct File_FindInfo info;
     char location[50] = "";
     maxTextureIndex = 0;
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); // Overkill
@@ -12634,22 +12635,22 @@ void convertToBitmap16bit()
     unsigned short pFileSize[sizeof(fileLocationSize)*2];
     Bfile_StrToName_ncpy(pFileSize, (unsigned char*)fileLocationSize, sizeof(fileLocationSize));
 
-    int hFile2 = File_Open(pFileSize, 3, NULL);
+    int hFile2 = File_Open(fileLocationSize, 3);
     if(hFile2 > 0)
     {
         int length = File_GetSize(hFile2);
         char fileData[length];
 
-        (void)File_Read(hFile2, fileData, length, 0);
+        (void)File_Read(hFile2, fileData, length);
         File_Close(hFile2);
 		amount = fileData[0];
 	}
 	else
-    File_Create(pFileSize, 1, &fileSizeSize);
+    File_Create(fileLocationSize, 1, &fileSizeSize);
 
 	char fileData[1];
 	fileData[0] = amount+1;
-    int hFile3 = File_Open(pFileSize, 3, NULL);
+    int hFile3 = File_Open(fileLocationSize, 3);
 (void)File_Write(hFile3, fileData, fileSizeSize);
     File_Close(hFile3);
 
@@ -12662,14 +12663,14 @@ void convertToBitmap16bit()
     unsigned short pFile1[sizeof(fileLocation2)*2]; // Make buffer
     Bfile_StrToName_ncpy(pFile1, (unsigned char*)fileLocation2, sizeof(fileLocation2));
 
-    File_Create(pFile1, 5, NULL);
+    File_Create(fileLocation1, 5, NULL);
 
 
     unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
-    File_Create(pFile, 1, &file_size);
+    File_Create(fileLocation, 1, &file_size);
 
-    int hFile = File_Open(pFile, 3, NULL);
+    int hFile = File_Open(fileLocation, 3);
 (void)File_Write(hFile, bitmap_image, file_size);
     File_Close(hFile);
 
