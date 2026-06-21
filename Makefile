@@ -9,7 +9,7 @@ AS_FLAGS:=-gdwarf-5
 SDK_DIR?=/sdk
 
 DEPFLAGS=-MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
-WARNINGS=-Wall -Wextra -pedantic -Wno-unused-parameter -Wno-unused-variable -Wno-binary-constant -Werror -pedantic-errors
+WARNINGS=-Wall -Wextra -pedantic -Wno-unused-parameter -Wno-unused-variable  -Werror -pedantic-errors
 INCLUDES=-Iinclude_shim -I$(SDK_DIR)/include -I$(SOURCEDIR)
 DEFINES=-DALLOC_OFFSET=0
 FUNCTION_FLAGS=-fno-builtin -ffunction-sections -fdata-sections -gdwarf-5 -O2

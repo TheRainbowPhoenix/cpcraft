@@ -3089,12 +3089,12 @@ const color_t allColors[42] = {
 const blockType blockTypes[19] = {
     { //air
         .verticesLength = 0,
-        .vertices = {0, 0, 0},
+        .vertices = {{{0, 0, 0}}},
 
         .diffrentRotationAmount = 1,
 
         .facesLength = 0,
-        .faces = {0, 0, 0, 0},
+        .faces = {{0, 0, 0, 0}},
 
         .isFullBlock = false,
         .isTransprent = false,
@@ -3110,8 +3110,8 @@ const blockType blockTypes[19] = {
 		.canHaveGrassBelow = true,
 
         .texureSize = {255},
-        .dir = {0, 0, 0},
-        .normal = {{0, 0, 0}},
+        .dir = {{{0, 0, 0}}},
+        .normal = {{{0, 0, 0}}},
         .doSideCheck = {0},
 
         .otherBlocksRenderFace = {{0},},

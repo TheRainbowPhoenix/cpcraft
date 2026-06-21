@@ -38,7 +38,6 @@ static int File_Create_Helper(const char* path, int type, size_t* size) { if (ty
 #define renderTextUpdate(...) ((void)0)
 #define renderObject(...) ((void)0)
 #define renderText(...) ((void)0)
-#define renderSkybox(...) ((void)0)
 #define OS_InnerWait_ms(...) ((void)0)
 #define Bfile_StrToName_ncpy(dest, src, n) strcpy((char*)dest, (const char*)src)
 #define Bfile_NameToStr_ncpy(dest, src, n) strcpy((char*)dest, (const char*)src)
@@ -6824,7 +6823,7 @@ void makeSkyBox() //brokey
 
     for (int alltri = 0; alltri < 12; alltri++)
     {
-        Vector4I indexes1 = td[alltri];
+        Vector4I indexes1 = {td[alltri].x, td[alltri].y, td[alltri].z, td[alltri].w};
 
         screenPoint v1 = calculatedSPos[indexes1.x];
         screenPoint v2 = calculatedSPos[indexes1.y];
@@ -7493,8 +7492,8 @@ void renderTriangleNBPX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
     endColor = ((int)color << 16) + color;
     int LCD_WIDTH_PXH = LCD_WIDTH_PX >> 1;
 
-    //unsigned int *endColor = 0xE5017000;
-    //*endColor = ((int)color << 16) + color;
+    //unsigned int endColor = 0xE5017000;
+    //endColor = ((int)color << 16) + color;
 
     if(endA != endB)
     {
@@ -7516,8 +7515,8 @@ void renderTriangleNBPX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
                 int depthIndex = yIndex + x;
                 if (depth < ZBuffer[depthIndex])
                 {
-                    *(yOnScreen  + x) = *endColor;
-                    *(yOnScreen2 + x) = *endColor;
+                    *(yOnScreen  + x) = endColor;
+                    *(yOnScreen2 + x) = endColor;
                     ZBuffer[depthIndex] = depth;
                 }
             }
@@ -7544,8 +7543,8 @@ void renderTriangleNBPX2(Vector2S* vertexA, Vector2S* vertexB, Vector2S* vertexC
                 int depthIndex = yIndex + x;
                 if (depth < ZBuffer[depthIndex])
                 {
-                    *(yOnScreen  + x) = *endColor;
-                    *(yOnScreen2 + x) = *endColor;
+                    *(yOnScreen  + x) = endColor;
+                    *(yOnScreen2 + x) = endColor;
                     ZBuffer[depthIndex] = depth;
                 }
             }
@@ -11123,7 +11122,7 @@ void saveWorldData(int world)
     File_Create(pFile, 1, &size);
 
     int hFile = File_Open(pFile, 3, NULL);
-    File_Write(hFile, worlData, size);
+(void)File_Write(hFile, worlData, size);
     File_Close(hFile);
 
     if(hFile < 0)
@@ -11150,7 +11149,7 @@ void loadWorldData(int world)
     {
         int length = File_GetSize(hFile);
 
-        File_Read(hFile, worlData, length, 0);
+        (void)File_Read(hFile, worlData, length, 0);
         File_Close(hFile);
 
         SEED = 0;
@@ -11218,7 +11217,7 @@ void saveChestData(int world)
     File_Create(pFile, 1, &size);
 
     int hFile = File_Open(pFile, 3, NULL);
-    File_Write(hFile, chestData_, size);
+(void)File_Write(hFile, chestData_, size);
     File_Close(hFile);
 
     if(hFile < 0)
@@ -11244,7 +11243,7 @@ void loadChestData(int world)
 
         char chestData_[length];
 
-        File_Read(hFile, chestData_, length, 0);
+        (void)File_Read(hFile, chestData_, length, 0);
         File_Close(hFile);
 
         for (int chestI = 0; chestI < chestAmount; chestI++)
@@ -11306,7 +11305,7 @@ void loadChestDataV4(int world)
 
         char chestData_[length];
 
-        File_Read(hFile, chestData_, length, 0);
+        (void)File_Read(hFile, chestData_, length, 0);
         File_Close(hFile);
 
         for (int chestI = 0; chestI < chestAmount; chestI++)
@@ -11368,7 +11367,7 @@ void savegameData()
     File_Create(pFile, 1, &size);
 
     int hFile = File_Open(pFile, 3, NULL);
-    File_Write(hFile, playerData, size);
+(void)File_Write(hFile, playerData, size);
     File_Close(hFile);
 
     if(hFile < 0)
@@ -11394,7 +11393,7 @@ void loadgameData()
     {
         int length = File_GetSize(hFile);
 
-        File_Read(hFile, playerData, length, 0);
+        (void)File_Read(hFile, playerData, length, 0);
         File_Close(hFile);
 
         for (int i = 0; i < 5; i++)
@@ -11438,7 +11437,7 @@ void saveSettings()
     File_Create(pFile, 1, &size);
 
     int hFile = File_Open(pFile, 3, NULL);
-    File_Write(hFile, settingData, size);
+(void)File_Write(hFile, settingData, size);
     File_Close(hFile);
 
     if(hFile < 0)
@@ -11508,7 +11507,7 @@ void loadSettingsO()
     {
         int length = File_GetSize(hFile);
 
-        File_Read(hFile, settingData, length, 0);
+        (void)File_Read(hFile, settingData, length, 0);
         File_Close(hFile);
 
 		renderDistance = 		 settingData[0];
@@ -11540,7 +11539,7 @@ void saveChunk(int index, int world, bool exists)
 
     //writing data to file
     int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
-    File_Write(hFile, blocks[index], sizeof(blocks[index]));
+(void)File_Write(hFile, blocks[index], sizeof(blocks[index]));
     File_Close(hFile);
 
     if(hFile < 0)
@@ -11577,7 +11576,7 @@ void loadChunk(int index, int world)
     int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     int length = File_GetSize(hFile);
 
-    File_Read(hFile, blocks[index], length, 0);
+(void)File_Read(hFile, blocks[index], length, 0);
     File_Close(hFile);
 
     //for (int x = 0; x < width; x++)
@@ -11623,7 +11622,7 @@ void saveChunkExtraData(int index, int world, bool exists)
 
     //writing data to file
     int hFile = File_Open(pFile, 3, NULL); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
-    File_Write(hFile, &blockData[index*width*width*height], sizeOfFile);
+(void)File_Write(hFile, &blockData[index*width*width*height], sizeOfFile);
     File_Close(hFile);
 
     if(hFile < 0)
@@ -11662,7 +11661,7 @@ void loadChunkExtraData(int index, int world)
 
     //unsigned char buffer[length];
 
-    File_Read(hFile, &blockData[index*width*width*height], length, 0);
+(void)File_Read(hFile, &blockData[index*width*width*height], length, 0);
     File_Close(hFile);
 
     if(hFile < 0)
@@ -11712,7 +11711,7 @@ void saveCompressedChunk(int index, int world, bool exists)
         }
     }
 
-    File_Write(hFile, compressedData, compressedSize);
+(void)File_Write(hFile, compressedData, compressedSize);
     File_Close(hFile);
 
     if(hFile < 0)
@@ -11739,7 +11738,7 @@ void loadCompressedChunk(int index, int world)
 
 	char data[length];
 
-    File_Read(hFile, data, length, 0);
+(void)File_Read(hFile, data, length, 0);
     File_Close(hFile);
 
 	char decompressedData[width*width*height*3];
@@ -11815,7 +11814,7 @@ void saveChestDataCompressed(int world, int exists)
         }
     }
 
-    File_Write(hFile, compressedData, compressedSize);
+(void)File_Write(hFile, compressedData, compressedSize);
     File_Close(hFile);
 
     if(hFile < 0)
@@ -11841,7 +11840,7 @@ void loadChestDataCompressed(int world)
 
         char chestData_[length];
 
-        File_Read(hFile, chestData_, length, 0);
+        (void)File_Read(hFile, chestData_, length, 0);
         File_Close(hFile);
 
         char decompressedData[121*chestAmount];
@@ -11934,7 +11933,7 @@ void saveEntityData(int world, int exists)
 
     int hFile = File_Open(pFile, 3, NULL);
 
-    File_Write(hFile, entityData_, size);
+(void)File_Write(hFile, entityData_, size);
     File_Close(hFile);
 
     if(hFile < 0)
@@ -11960,7 +11959,7 @@ void loadEntityData(int world)
 
         char entityData_[length];
 
-        File_Read(hFile, entityData_, length, 0);
+        (void)File_Read(hFile, entityData_, length, 0);
         File_Close(hFile);
 
 		for (int i = 0; i < entityLength; i++)
@@ -12084,7 +12083,7 @@ void savePlayerData(int world)
     File_Create(pFile, 1, &size);
 
     int hFile = File_Open(pFile, 3, NULL);
-    File_Write(hFile, playerData, size);
+(void)File_Write(hFile, playerData, size);
     File_Close(hFile);
 
     if(hFile < 0)
@@ -12113,7 +12112,7 @@ void loadPlayerData(int world)
 
         //unsigned char buffer[length];
 
-        File_Read(hFile, playerData, length, 0);
+        (void)File_Read(hFile, playerData, length, 0);
         File_Close(hFile);
 
         int pPosI[5] = {0};
@@ -12181,7 +12180,7 @@ void loadPlayerDataV4(int world)
 
         //unsigned char buffer[length];
 
-        File_Read(hFile, playerData, length, 0);
+        (void)File_Read(hFile, playerData, length, 0);
         File_Close(hFile);
 
         int pPosI[5] = {0};
@@ -12391,7 +12390,7 @@ void loadTextureAssets()
     {
         int length = File_GetSize(hFile);
 
-        File_Read(hFile, assetsInputBuffer, length, 0);
+        (void)File_Read(hFile, assetsInputBuffer, length, 0);
         File_Close(hFile);
 
         LZ4_decompress_safe(assetsInputBuffer, textures2, length, 0x40000);
@@ -12420,7 +12419,7 @@ void loadIconAssets()
     {
         int length = File_GetSize(hFile);
 
-        File_Read(hFile, assetsInputBuffer, length, 0);
+        (void)File_Read(hFile, assetsInputBuffer, length, 0);
         File_Close(hFile);
 
         LZ4_decompress_safe(assetsInputBuffer, itemIcons2, length, 0x40000);
@@ -12444,7 +12443,7 @@ void loadTexturePackData(char *texturePackPath, char *creator, char *name, int* 
     {
         int length = File_GetSize(hFile);
 
-        File_Read(hFile, data, length, 0);
+        (void)File_Read(hFile, data, length, 0);
         File_Close(hFile);
 
         int ver = 0;
@@ -12484,7 +12483,7 @@ void loadTexturePackIcon(char *texturePackPath, color_t *icon)
     {
         int length = File_GetSize(hFile);
 
-        File_Read(hFile, (unsigned char*)icon, 2048, 0);
+        (void)File_Read(hFile, (unsigned char*)icon, 2048, 0);
         File_Close(hFile);
     }
     else
@@ -12641,7 +12640,7 @@ void convertToBitmap16bit()
         int length = File_GetSize(hFile2);
         char fileData[length];
 
-        File_Read(hFile2, fileData, length, 0);
+        (void)File_Read(hFile2, fileData, length, 0);
         File_Close(hFile2);
 		amount = fileData[0];
 	}
@@ -12651,7 +12650,7 @@ void convertToBitmap16bit()
 	char fileData[1];
 	fileData[0] = amount+1;
     int hFile3 = File_Open(pFileSize, 3, NULL);
-    File_Write(hFile3, fileData, fileSizeSize);
+(void)File_Write(hFile3, fileData, fileSizeSize);
     File_Close(hFile3);
 
 	//save the actual screenshot
@@ -12671,7 +12670,7 @@ void convertToBitmap16bit()
     File_Create(pFile, 1, &file_size);
 
     int hFile = File_Open(pFile, 3, NULL);
-    File_Write(hFile, bitmap_image, file_size);
+(void)File_Write(hFile, bitmap_image, file_size);
     File_Close(hFile);
 
     if(hFile < 0)

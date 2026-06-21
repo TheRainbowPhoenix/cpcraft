@@ -17,6 +17,7 @@ typedef struct { signed char x, y, z; } Vector3B;
 typedef struct { short x, y, z; } Vector3S;
 typedef struct { short x, y; } Vector2S;
 typedef struct { signed char x, y, z, w; } Vector4B;
+typedef struct { short x, y, z, w; } Vector4S;
 
 typedef struct {
     unsigned char verticesLength;
@@ -75,22 +76,30 @@ typedef struct {
 } screenPoint;
 
 typedef struct {
-    void* verticesIPC;
-    void* triangles;
-    void* normal;
-    void* color;
-    void* brightnes;
-    void* textureSize;
-    void* solidColor;
-    Vector3I position;
+    Vector3 position;
+    Vector3I actualPosition;
+    int sizeV;
+    int sizeT;
+    Vector3S* verticesIPC;
+    Vector2 rotation;
+    Vector4S* triangles;
+    Vector3B* normal;
+    unsigned char* color;
+    unsigned char* brightnes;
+    unsigned char* textureSize;
+    color_t* solidColor;
 } obj;
 
 typedef struct {
     bool mode;
+    color_t color;
 } particle;
 
 typedef struct {
     float moveTimer;
+    float velocityY;
+    int state2;
+    int locationOnAllObj;
 } entity;
 
 typedef struct {
