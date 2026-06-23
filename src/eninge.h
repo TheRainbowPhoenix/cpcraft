@@ -88,6 +88,7 @@ typedef struct {
     unsigned char* brightnes;
     unsigned char* textureSize;
     color_t* solidColor;
+    bool active;
 } obj;
 
 typedef struct {
@@ -100,6 +101,10 @@ typedef struct {
     float velocityY;
     int state2;
     int locationOnAllObj;
+    bool active;
+    int type;
+    bool renderTextured;
+    int extraEntity;
 } entity;
 
 typedef struct {

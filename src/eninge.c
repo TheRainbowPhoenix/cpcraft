@@ -22,7 +22,7 @@ void savegameData();
 void renderText(int x, int y, const char *text);
 void renderTextUpdate(int x, int y, int stop, const char *text);
 #define File_GetSize(fd) File_GetSize_Helper(fd)
-static int File_Create_Helper(const char* path, int type, void* size) { if (type == 5) return File_Mkdir(path); int fd = File_Open(path, 2 | 4); if (fd >= 0) File_Close(fd); (void)size; return 0; }
+static int File_Create_Helper(const char* path, int type, size_t* size) { if (type == 5) return File_Mkdir(path); int fd = File_Open(path, 2 | 4); if (fd >= 0) File_Close(fd); return 0; }
 #define File_Create(path, type, size) File_Create_Helper(path, type, size)
 
 #define PrintMini(...) ((void)0)
@@ -43,7 +43,7 @@ static int File_Create_Helper(const char* path, int type, void* size) { if (type
 #define Bfile_StrToName_ncpy(dest, src, n) strcpy((char*)dest, (const char*)src)
 #define Bfile_NameToStr_ncpy(dest, src, n) strcpy((char*)dest, (const char*)src)
 #define Bfile_DeleteEntry(path) File_Remove((const char*)path)
-#define Bfile_FindFirst(path, handle, name, info) File_FindFirst((const char_const16_t*)path, handle, (char_const16_t*)name, (struct File_FindInfo*)info)
+#define Bfile_FindFirst(path, handle, name, info) File_FindFirst((const char*)path, handle, (char_const16_t*)name, (struct File_FindInfo*)info)
 #define Bfile_FindNext(handle, name, info) File_FindNext(handle, (char_const16_t*)name, (struct File_FindInfo*)info)
 #define Bfile_FindClose(handle) File_FindClose(handle)
 
@@ -6650,7 +6650,7 @@ void clearAll(color_t color)
 {
     memset(VRAMAddress, color, LCD_HEIGHT_PX * LCD_WIDTH_PX * 2);
 }
-void CopySprite(color_t* sprite, int x, int y, int width, int height, color_t transparentColor) {
+void CopySprite(const color_t* sprite, int x, int y, int width, int height, color_t transparentColor) {
     color_t* VRAM = (color_t*)LCD_GetVRAMAddress();
     VRAM += LCD_WIDTH_PX*y + x;
     for(int j = y; j < y+height; j++)
@@ -6667,7 +6667,7 @@ void CopySprite(color_t* sprite, int x, int y, int width, int height, color_t tr
         VRAM += LCD_WIDTH_PX-width;
     }
 }
-void CopySpriteHeart(color_t* sprite, int x, int y, int width, int height, color_t transparentColor, int maxX) {
+void CopySpriteHeart(const color_t* sprite, int x, int y, int width, int height, color_t transparentColor, int maxX) {
     color_t* VRAM = (color_t*)LCD_GetVRAMAddress();
     VRAM += LCD_WIDTH_PX*y + x;
     for(int j = y; j < y+height; j++)
@@ -6712,7 +6712,7 @@ void CopySpriteNbitMasked(const unsigned char* data, int x, int y, int width, in
         VRAM += (LCD_WIDTH_PX-width);
     }
 }
-void CopySpriteIcon(color_t* sprite, int x, int y, int width, int height, color_t transparentColor) {
+void CopySpriteIcon(const color_t* sprite, int x, int y, int width, int height, color_t transparentColor) {
     color_t* VRAM = (color_t*)LCD_GetVRAMAddress();
     VRAM += LCD_WIDTH_PX*y + x;
     for(int j = y; j < y+height; j++)
@@ -6837,10 +6837,10 @@ void makeSkyBox() //brokey
             {
                 if((v1.y > 0 && v1.y < resY) || (v2.y > 0 && v2.y < resY) || (v3.y > 0 && v3.y < resY) || (v4.y > 0 && v4.y < resY))
                 {
-                    Vector2I V1_ = {v1.x, v1.y};
-                    Vector2I V2_ = {v2.x, v2.y};
-                    Vector2I V3_ = {v3.x, v3.y};
-                    Vector2I V4_ = {v4.x, v4.y};
+                    Vector2S V1_ = {v1.x, v1.y};
+                    Vector2S V2_ = {v2.x, v2.y};
+                    Vector2S V3_ = {v3.x, v3.y};
+                    Vector2S V4_ = {v4.x, v4.y};
 
                     Vector2S AT = {5, uvd[alltri].x};
                     Vector2S BT = {5, uvd[alltri].y};
@@ -11150,7 +11150,7 @@ void loadWorldData(int world)
     {
         int length = File_GetSize(hFile);
 
-        (void)File_Read(hFile, worlData, length);
+        (void)(void)File_Read(hFile, worlData, length);
         File_Close(hFile);
 
         SEED = 0;
@@ -11244,7 +11244,7 @@ void loadChestData(int world)
 
         char chestData_[length];
 
-        (void)File_Read(hFile, chestData_, length);
+        (void)(void)File_Read(hFile, chestData_, length);
         File_Close(hFile);
 
         for (int chestI = 0; chestI < chestAmount; chestI++)
@@ -11306,7 +11306,7 @@ void loadChestDataV4(int world)
 
         char chestData_[length];
 
-        (void)File_Read(hFile, chestData_, length);
+        (void)(void)File_Read(hFile, chestData_, length);
         File_Close(hFile);
 
         for (int chestI = 0; chestI < chestAmount; chestI++)
@@ -11394,7 +11394,7 @@ void loadgameData()
     {
         int length = File_GetSize(hFile);
 
-        (void)File_Read(hFile, playerData, length);
+        (void)(void)File_Read(hFile, playerData, length);
         File_Close(hFile);
 
         for (int i = 0; i < 5; i++)
@@ -11468,12 +11468,12 @@ void loadSettings()
 			File_Close(hFile);
 
 			loadSettingsO();
-			File_Remove(fileLocation);
+			Bfile_DeleteEntry(pFile);
 			saveSettings();
 		}
 		else
 		{
-(void)File_Read(hFile, settingData, length);
+(void)(void)File_Read(hFile, settingData, length);
 		File_Close(hFile);
 
 			renderDistance = 		    settingData[0];
@@ -11508,7 +11508,7 @@ void loadSettingsO()
     {
         int length = File_GetSize(hFile);
 
-        (void)File_Read(hFile, settingData, length);
+        (void)(void)File_Read(hFile, settingData, length);
         File_Close(hFile);
 
 		renderDistance = 		 settingData[0];
@@ -11577,7 +11577,7 @@ void loadChunk(int index, int world)
     int hFile = File_Open(fileLocation, 3); // Get handle          //0=read, 1=read_share, 2=write, 3=readwrite, 4=readwriteshare
     int length = File_GetSize(hFile);
 
-(void)File_Read(hFile, blocks[index], length);
+(void)(void)File_Read(hFile, blocks[index], length);
     File_Close(hFile);
 
     //for (int x = 0; x < width; x++)
@@ -11662,7 +11662,7 @@ void loadChunkExtraData(int index, int world)
 
     //unsigned char buffer[length];
 
-(void)File_Read(hFile, &blockData[index*width*width*height], length);
+(void)(void)File_Read(hFile, &blockData[index*width*width*height], length);
     File_Close(hFile);
 
     if(hFile < 0)
@@ -11706,7 +11706,7 @@ void saveCompressedChunk(int index, int world, bool exists)
         if(length != compressedSize)
         {
             File_Close(hFile);
-            File_Remove(fileLocation);
+            Bfile_DeleteEntry(pFile);
             File_Create(fileLocation, 1, &compressedSize);
             hFile = File_Open(fileLocation, 3);
         }
@@ -11739,7 +11739,7 @@ void loadCompressedChunk(int index, int world)
 
 	char data[length];
 
-(void)File_Read(hFile, data, length);
+(void)(void)File_Read(hFile, data, length);
     File_Close(hFile);
 
 	char decompressedData[width*width*height*3];
@@ -11809,7 +11809,7 @@ void saveChestDataCompressed(int world, int exists)
         if(length != compressedSize)
         {
             File_Close(hFile);
-            File_Remove(fileLocation);
+            Bfile_DeleteEntry(pFile);
             File_Create(fileLocation, 1, &compressedSize);
             hFile = File_Open(fileLocation, 3);
         }
@@ -11841,7 +11841,7 @@ void loadChestDataCompressed(int world)
 
         char chestData_[length];
 
-        (void)File_Read(hFile, chestData_, length);
+        (void)(void)File_Read(hFile, chestData_, length);
         File_Close(hFile);
 
         char decompressedData[121*chestAmount];
@@ -11960,7 +11960,7 @@ void loadEntityData(int world)
 
         char entityData_[length];
 
-        (void)File_Read(hFile, entityData_, length);
+        (void)(void)File_Read(hFile, entityData_, length);
         File_Close(hFile);
 
 		for (int i = 0; i < entityLength; i++)
@@ -12004,7 +12004,7 @@ void deleteOldWorld(int world)
 		//getting entry for chunkFile
 		unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
 		Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
-		File_Remove(fileLocation);
+		Bfile_DeleteEntry(pFile);
 
 		loadingScreen(i + 1, 129, "converting...", 13);
 	}
@@ -12017,7 +12017,7 @@ void deleteOldWorld(int world)
 		//getting entry for chunkFile"\\fls0/fxcraft\\world%d\\chunkED%d", world, i
 		unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
 		Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
-		File_Remove(fileLocation);
+		Bfile_DeleteEntry(pFile);
 
 		loadingScreen(i + 65, 129, "converting...", 13);
 	}
@@ -12030,7 +12030,7 @@ void deleteOldWorld(int world)
 	//	//getting entry for chunkFile
 	//	unsigned short pFile[sizeof(fileLocation)*2]; // Make buffer
 	//	Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation));
-	//	File_Remove(fileLocation);
+	//	Bfile_DeleteEntry(pFile);
 
 	//	loadingScreen(i + 128, 129, "converting...", 13);
     //}
@@ -12113,7 +12113,7 @@ void loadPlayerData(int world)
 
         //unsigned char buffer[length];
 
-        (void)File_Read(hFile, playerData, length);
+        (void)(void)File_Read(hFile, playerData, length);
         File_Close(hFile);
 
         int pPosI[5] = {0};
@@ -12181,7 +12181,7 @@ void loadPlayerDataV4(int world)
 
         //unsigned char buffer[length];
 
-        (void)File_Read(hFile, playerData, length);
+        (void)(void)File_Read(hFile, playerData, length);
         File_Close(hFile);
 
         int pPosI[5] = {0};
@@ -12336,14 +12336,14 @@ void loadAllChunk(int world)
 
 			unsigned short pFile1[sizeof(fileLocation1)*2];
 			Bfile_StrToName_ncpy(pFile1, (unsigned char*)fileLocation1, sizeof(fileLocation1));
-			File_Remove(fileLocation1);
+			Bfile_DeleteEntry(pFile1);
 
             char fileLocation2[50];
 			sprintf(fileLocation2, "\\fls0/fxcraft\\world%d\\chestData", world);
 
 			unsigned short pFile2[sizeof(fileLocation2)*2];
 			Bfile_StrToName_ncpy(pFile2, (unsigned char*)fileLocation2, sizeof(fileLocation2));
-			File_Remove(fileLocation2);
+			Bfile_DeleteEntry(pFile2);
 
             saveChestData(world);
 			savePlayerData(world);
@@ -12391,7 +12391,7 @@ void loadTextureAssets()
     {
         int length = File_GetSize(hFile);
 
-        (void)File_Read(hFile, assetsInputBuffer, length);
+        (void)(void)File_Read(hFile, assetsInputBuffer, length);
         File_Close(hFile);
 
         LZ4_decompress_safe(assetsInputBuffer, textures2, length, 0x40000);
@@ -12420,7 +12420,7 @@ void loadIconAssets()
     {
         int length = File_GetSize(hFile);
 
-        (void)File_Read(hFile, assetsInputBuffer, length);
+        (void)(void)File_Read(hFile, assetsInputBuffer, length);
         File_Close(hFile);
 
         LZ4_decompress_safe(assetsInputBuffer, itemIcons2, length, 0x40000);
@@ -12444,7 +12444,7 @@ void loadTexturePackData(char *texturePackPath, char *creator, char *name, int* 
     {
         int length = File_GetSize(hFile);
 
-        (void)File_Read(hFile, data, length);
+        (void)(void)File_Read(hFile, data, length);
         File_Close(hFile);
 
         int ver = 0;
@@ -12484,7 +12484,7 @@ void loadTexturePackIcon(char *texturePackPath, color_t *icon)
     {
         int length = File_GetSize(hFile);
 
-        (void)File_Read(hFile, (unsigned char*)icon, 2048);
+        (void)(void)File_Read(hFile, (unsigned char*)icon, 2048);
         File_Close(hFile);
     }
     else
@@ -12503,7 +12503,7 @@ void loadAvailableTexturePacks()
     unsigned short pFile[sizeof(fileLocation)*2];
 
     int ret, handle;
-    struct File_FindInfo info;
+    file_type_t info;
     char location[50] = "";
     maxTextureIndex = 0;
     Bfile_StrToName_ncpy(pFile, (unsigned char*)fileLocation, sizeof(fileLocation)); // Overkill
@@ -12641,7 +12641,7 @@ void convertToBitmap16bit()
         int length = File_GetSize(hFile2);
         char fileData[length];
 
-        (void)File_Read(hFile2, fileData, length);
+        (void)(void)File_Read(hFile2, fileData, length);
         File_Close(hFile2);
 		amount = fileData[0];
 	}
@@ -13320,10 +13320,10 @@ void renderBlockDestruction(float timeDone, float totalTime)
                         {
 							int Depth = ((v1.z + v2.z + v3.z + v4.z) >> 2) - 1;
 
-					Vector2I V1_ = {v1.x, v1.y};
-					Vector2I V2_ = {v2.x, v2.y};
-					Vector2I V3_ = {v3.x, v3.y};
-					Vector2I V4_ = {v4.x, v4.y};
+					Vector2S V1_ = {v1.x, v1.y};
+					Vector2S V2_ = {v2.x, v2.y};
+					Vector2S V3_ = {v3.x, v3.y};
+					Vector2S V4_ = {v4.x, v4.y};
 
 					Vector2S AT = {0, 0};
 					Vector2S BT = {10, 0};
@@ -22911,10 +22911,10 @@ void renderObject()
                                         {
                                             int Depth = (v1.z + v2.z + v3.z + v4.z) >> 2;
 
-                                            Vector2I V1_ = {v1.x, v1.y};
-                                            Vector2I V2_ = {v2.x, v2.y};
-                                            Vector2I V3_ = {v3.x, v3.y};
-                                            Vector2I V4_ = {v4.x, v4.y};
+                                            Vector2S V1_ = {v1.x, v1.y};
+                                            Vector2S V2_ = {v2.x, v2.y};
+                                            Vector2S V3_ = {v3.x, v3.y};
+                                            Vector2S V4_ = {v4.x, v4.y};
 
                                             int brightness = allObj[obj].brightnes[alltri];
                                             if(brightness < 1)
@@ -23032,10 +23032,10 @@ void renderObject()
                                     {
                                         int Depth = (v1.z + v2.z + v3.z + v4.z) >> 2;
 
-                                        Vector2I V1_ = {v1.x, v1.y};
-                                        Vector2I V2_ = {v2.x, v2.y};
-                                        Vector2I V3_ = {v3.x, v3.y};
-                                        Vector2I V4_ = {v4.x, v4.y};
+                                        Vector2S V1_ = {v1.x, v1.y};
+                                        Vector2S V2_ = {v2.x, v2.y};
+                                        Vector2S V3_ = {v3.x, v3.y};
+                                        Vector2S V4_ = {v4.x, v4.y};
 
                                         int brightness = 16;
                                         if(lighting == true)
@@ -23167,10 +23167,10 @@ void renderObject()
                 {
                     int Depth = (v1.z + v2.z + v3.z + v4.z) >> 2;
 
-                    Vector2I V1_ = {v1.x, v1.y};
-                    Vector2I V2_ = {v2.x, v2.y};
-                    Vector2I V3_ = {v3.x, v3.y};
-                    Vector2I V4_ = {v4.x, v4.y};
+                    Vector2S V1_ = {v1.x, v1.y};
+                    Vector2S V2_ = {v2.x, v2.y};
+                    Vector2S V3_ = {v3.x, v3.y};
+                    Vector2S V4_ = {v4.x, v4.y};
 
                     int brightness = allObj[obj].brightnes[alltri];
                     if(brightness < 1)
@@ -23249,10 +23249,10 @@ void renderObject()
                 {
                     int Depth = (v1.z + v2.z + v3.z + v4.z) >> 2;
 
-                    Vector2I V1_ = {v1.x, v1.y};
-                    Vector2I V2_ = {v2.x, v2.y};
-                    Vector2I V3_ = {v3.x, v3.y};
-                    Vector2I V4_ = {v4.x, v4.y};
+                    Vector2S V1_ = {v1.x, v1.y};
+                    Vector2S V2_ = {v2.x, v2.y};
+                    Vector2S V3_ = {v3.x, v3.y};
+                    Vector2S V4_ = {v4.x, v4.y};
 
                     int brightness = allObj[obj].brightnes[alltri];
                     if(brightness < 1)
