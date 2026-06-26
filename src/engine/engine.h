@@ -24,10 +24,6 @@
  */
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "builtins.h"
 #include "power.h"
 #include "tmu.h"
@@ -37,9 +33,10 @@ extern "C" {
 #include "overlay.h"
 #include "texture.h"
 
-/* One-stop initialization. Call once at startup, before any other engine
- * function. Initializes the framebuffer, input state, and procedural
- * textures. */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void engine_init(void);
 
 #ifdef __cplusplus

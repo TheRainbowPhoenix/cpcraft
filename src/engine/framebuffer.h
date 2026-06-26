@@ -66,15 +66,17 @@
  */
 #pragma once
 
+#include <stdint.h>
+#include <sdk/os/lcd.h>
+#include "builtins.h"
+
+/* Do not include sdk/calc/calc.h here unless framebuffer really needs it.
+ * That header has C++ overloads and should not be pulled into generic C headers.
+ */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
-#include <sdk/os/lcd.h>
-#include <sdk/calc/calc.h>
-#include "builtins.h"
-
 /* Virtual framebuffer size. Half the LCD in each axis -> 2x upscale.
  *
  * We hardcode 160x264 (matching the ClassPad's 320x528 LCD) instead of
