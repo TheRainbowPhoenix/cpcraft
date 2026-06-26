@@ -67,7 +67,6 @@
 #pragma once
 
 #include <stdint.h>
-#include <sdk/os/lcd.h>
 #include "builtins.h"
 
 

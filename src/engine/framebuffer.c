@@ -14,6 +14,7 @@
 #include "framebuffer.h"
 #include "tmu.h"
 #include "power.h"
+#include <sdk/os/lcd.h>
 
 /* YRAM-backed line pools. The section attribute is what makes this fast. */
 uint16_t __attribute__((section(".oc_mem.y.fb"), aligned(32)))
