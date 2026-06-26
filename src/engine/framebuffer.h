@@ -70,9 +70,6 @@
 #include <sdk/os/lcd.h>
 #include "builtins.h"
 
-#ifdef __sh__
-// volatile uint16_t *const lcd_data_port = (volatile uint16_t *)0xB4000000;
-#endif
 
 /* Do not include sdk/calc/calc.h here unless framebuffer really needs it.
  * That header has C++ overloads and should not be pulled into generic C headers.

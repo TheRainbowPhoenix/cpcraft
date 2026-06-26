@@ -168,7 +168,7 @@ void fb_present(void)
          * The `*lcd_data_port = ...` writes go through the SDK's
          * volatile pointer at 0xB4000000, which the SH-4A store queue
          * can pipeline. */
-        volatile uint16_t * const port = lcd_data_port;
+        volatile uint16_t * const port = (volatile uint16_t *)0xB4000000; // lcd_data_port;
         const uint16_t *p = pool;
         const uint16_t *p_end = pool + FB_W;
 
