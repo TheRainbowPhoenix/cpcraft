@@ -16,9 +16,9 @@ name: Build Simulator
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, "z-port" ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, "z-port" ]
 
 permissions:
   contents: read
