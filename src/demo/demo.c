@@ -32,7 +32,7 @@
 /*  Scene 0 — DIAGNOSTIC (print world block data)                      */
 /* ------------------------------------------------------------------ */
 
-static void scene_diag(int frame)
+static void scene_diag()
 {
     fb_clear(0x0000);  /* black background */
 
@@ -268,7 +268,7 @@ void demo_run(void)
 
         switch (scene)
         {
-            case 0: scene_diag(frame); break;
+            case 0: scene_diag(); break;
             case 1: scene_plasma(); break;
             case 2: scene_textured(frame); break;
             case 3: scene_quad(); break;
