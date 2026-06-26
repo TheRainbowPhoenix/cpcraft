@@ -16,12 +16,12 @@
  */
 #pragma once
 
+#include <stdint.h>
+#include "framebuffer.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
-#include "framebuffer.h"
 
 #define TEX_SIZE 16   /* 16x16 textures, RGB565 */
 

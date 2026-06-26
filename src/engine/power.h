@@ -12,11 +12,11 @@
  */
 #pragma once
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
 
 /* NOTE: typedef'd so the macro below doesn't need the `union` keyword.
  * The original benchmark was C++ where union tags work as type names

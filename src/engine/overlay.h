@@ -17,12 +17,12 @@
  */
 #pragma once
 
+#include <stdint.h>
+#include "framebuffer.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
-#include "framebuffer.h"
 
 /* Draw a single ASCII character (32..127) at pixel position (x, y) in the
  * virtual framebuffer. Characters outside the range are drawn as a space.
