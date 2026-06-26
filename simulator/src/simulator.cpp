@@ -773,9 +773,15 @@ extern "C" void simulator_init()
         CP_LCD_W * sim_window_scale, CP_LCD_H * sim_window_scale,
         SDL_WINDOW_SHOWN);
 
+    Uint32 renderer_flags = SDL_RENDERER_ACCELERATED;
+
+    #ifndef __EMSCRIPTEN__
+    renderer_flags |= SDL_RENDERER_PRESENTVSYNC;
+    #endif
+
     sim_renderer = SDL_CreateRenderer(
         sim_window, -1,
-        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+        renderer_flags);
 
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 
