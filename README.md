@@ -100,7 +100,7 @@ export SDK_DIR=/path/to/hollyhock-3/sdk
 make -j
 ```
 
-This produces `dist/CPapp.hh3` — copy that to the root of the calculator
+This produces `dist/CPCraft.hh3` — copy that to the root of the calculator
 (in USB storage mode) and run it from the launcher.
 
 ## How to run the host-side tests
