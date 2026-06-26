@@ -56,8 +56,8 @@ jobs:
       with:
         name: cpcraft-port-sim-windows
         path: |
-          simulator/build/Release/*.exe
-          simulator/build/Release/*.dll
+          simulator/build/out/*.exe
+          simulator/build/out/*.dll
 
   build-web:
     runs-on: ubuntu-latest
