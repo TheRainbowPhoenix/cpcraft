@@ -158,44 +158,243 @@ static void scene_textured(int frame)
 }
 
 /* ------------------------------------------------------------------ */
-/*  Scene 3 — RAYCAST QUAD (a wall in front of the player)             */
+/*  Scene 3 — SINGLE 3D CUBE (textured, turnable)                     */
+/*                                                                     */
+/*  Places a single cube in front of the camera and renders all 6     */
+/*  faces using 3D projection + the z-buffered quad rasterizer.       */
+/*  Backface culling removes faces pointing away from the camera.     */
+/*  The player can turn the camera (Left/Right = yaw, Up/Down = pitch */
+/*  and the cube's visible faces will change accordingly.             */
 /* ------------------------------------------------------------------ */
 
-static void scene_quad(void)
+/* Cube face definitions. Each face has 4 corners (CCW from outside)
+ * and an outward normal. The corners are offsets from the cube's
+ * min corner (bx, by, bz). */
+struct CubeFace {
+    int8_t corners[4][3];   /* 4 corner offsets, each (dx, dy, dz) in {0,1} */
+    int32_t normal[3];      /* outward normal in fix16 */
+};
+
+static const struct CubeFace CUBE_FACES[6] = {
+    /* +X face (east) */
+    { {{1,0,1}, {1,0,0}, {1,1,0}, {1,1,1}}, {FIX16_ONE, 0, 0} },
+    /* -X face (west) */
+    { {{0,0,0}, {0,0,1}, {0,1,1}, {0,1,0}}, {-FIX16_ONE, 0, 0} },
+    /* +Y face (top) */
+    { {{0,1,1}, {1,1,1}, {1,1,0}, {0,1,0}}, {0, FIX16_ONE, 0} },
+    /* -Y face (bottom) */
+    { {{0,0,0}, {1,0,0}, {1,0,1}, {0,0,1}}, {0, -FIX16_ONE, 0} },
+    /* +Z face (south) */
+    { {{0,0,1}, {1,0,1}, {1,1,1}, {0,1,1}}, {0, 0, FIX16_ONE} },
+    /* -Z face (north) */
+    { {{1,0,0}, {0,0,0}, {0,1,0}, {1,1,0}}, {0, 0, -FIX16_ONE} },
+};
+
+/* Draw a single cube at world position (bx, by, bz) with the given
+ * textures for top/sides/bottom. Uses backface culling + z-buffer. */
+static void draw_cube(int bx, int by, int bz,
+                      const uint16_t (*top_tex)[TEX_SIZE],
+                      const uint16_t (*side_tex)[TEX_SIZE],
+                      const uint16_t (*bot_tex)[TEX_SIZE],
+                      fix16_t ex, fix16_t ey, fix16_t ez,
+                      uint16_t yaw, int16_t pitch)
 {
-    /* Use the raycaster to render the world. For this scene, the world
-     * has already been generated, so the raycaster will show whatever
-     * blocks are in front of the player. This tests the full raycast
-     * pipeline. */
-    fb_clear(0x6C59);  /* sky */
+    /* Cube center in fix16. */
+    fix16_t cx = fix16_from_int(bx) + FIX16_HALF;
+    fix16_t cy = fix16_from_int(by) + FIX16_HALF;
+    fix16_t cz = fix16_from_int(bz) + FIX16_HALF;
+
+    /* View vector (camera -> cube center). */
+    fix16_t vx = cx - ex, vy = cy - ey, vz = cz - ez;
+
+    for (int f = 0; f < 6; f++)
+    {
+        const struct CubeFace *face = &CUBE_FACES[f];
+
+        /* Backface culling: dot(normal, view) > 0 means the face
+         * points AWAY from the camera. Skip it. */
+        fix16_t dot = fix16_mul(face->normal[0], vx) +
+                      fix16_mul(face->normal[1], vy) +
+                      fix16_mul(face->normal[2], vz);
+        if (dot <= 0) continue;
+
+        /* Project the 4 corners. */
+        ScreenPoint sp[4];
+        for (int i = 0; i < 4; i++)
+        {
+            fix16_t wx = fix16_from_int(bx) + fix16_from_int(face->corners[i][0]);
+            fix16_t wy = fix16_from_int(by) + fix16_from_int(face->corners[i][1]);
+            fix16_t wz = fix16_from_int(bz) + fix16_from_int(face->corners[i][2]);
+            sp[i] = camera_project(wx, wy, wz, ex, ey, ez, yaw, pitch);
+        }
+
+        /* Skip if any vertex is behind the camera. */
+        bool all_visible = true;
+        for (int i = 0; i < 4; i++)
+            if (!sp[i].visible) { all_visible = false; break; }
+        if (!all_visible) continue;
+
+        /* Pick texture for this face. */
+        const uint16_t (*tex)[TEX_SIZE] = side_tex;
+        if (f == 2 && top_tex)  tex = top_tex;
+        if (f == 3 && bot_tex)  tex = bot_tex;
+
+        if (tex)
+            rz_draw_textured_quad(sp, tex);
+    }
+}
+
+static void scene_cube(void)
+{
+    fb_clear(0x6C59);  /* sky blue */
+    rz_clear_zbuf();
 
     fix16_t ex, ey, ez;
     player_eye(&ex, &ey, &ez);
-    raycast_render(ex, ey, ez, player.yaw, player.pitch);
+
+    /* Place a single cube 3 blocks in front of the player, at eye level.
+     * The player can turn the camera to see different faces. */
+    int bx = fix16_to_int(ex);
+    int bz = fix16_to_int(ez) + 3;  /* 3 blocks in front */
+    int by = fix16_to_int(ey) - 1;  /* at eye level so it's visible */
+
+    if (bx < 0) bx = 0;
+    if (bx >= WORLD_W) bx = WORLD_W - 1;
+    if (bz < 0) bz = 0;
+    if (bz >= WORLD_D) bz = WORLD_D - 1;
+    if (by < 0) by = 0;
+    if (by >= WORLD_H) by = WORLD_H - 1;
+
+    draw_cube(bx, by, bz, tex_grass, tex_stone, tex_stone,
+              ex, ey, ez, player.yaw, player.pitch);
 }
 
 /* ------------------------------------------------------------------ */
-/*  Scene 4 — SMALL WORLD (raycaster, same as scene 3)                 */
+/*  Scene 4 — SMALL CUBE GRID (a few cubes, 3D projected)             */
 /* ------------------------------------------------------------------ */
 
-static void scene_small_world(void)
+static void scene_cubes(void)
 {
     fb_clear(0x6C59);  /* sky */
+    rz_clear_zbuf();
+
     fix16_t ex, ey, ez;
     player_eye(&ex, &ey, &ez);
-    raycast_render(ex, ey, ez, player.yaw, player.pitch);
+
+    /* Draw a small 3x3 grid of cubes in front of the player. */
+    int px = fix16_to_int(ex);
+    int pz = fix16_to_int(ez);
+
+    for (int dz = 2; dz <= 4; dz++)
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            int bx = px + dx;
+            int bz = pz + dz;
+            int by = 0;
+            if (bx < 0 || bx >= WORLD_W) continue;
+            if (bz < 0 || bz >= WORLD_D) continue;
+
+            /* Use different textures for variety. */
+            const uint16_t (*top)[TEX_SIZE] = (dx == 0) ? tex_grass : tex_checker;
+            const uint16_t (*side)[TEX_SIZE] = (dz == 3) ? tex_stone : tex_checker;
+
+            draw_cube(bx, by, bz, top, side, tex_stone,
+                      ex, ey, ez, player.yaw, player.pitch);
+        }
 }
 
 /* ------------------------------------------------------------------ */
-/*  Scene 5 — FULL WORLD (raycaster)                                   */
+/*  Scene 5 — FULL WORLD (3D projected cubes)                         */
 /* ------------------------------------------------------------------ */
 
-static void scene_full_world(void)
+static void scene_world_3d(void)
 {
     fb_clear(0x6C59);  /* sky */
+    rz_clear_zbuf();
+
     fix16_t ex, ey, ez;
     player_eye(&ex, &ey, &ez);
-    raycast_render(ex, ey, ez, player.yaw, player.pitch);
+
+    /* Walk every block in the world and draw exposed faces.
+     * This is the brute-force approach — for a 64x32x64 world that's
+     * 131072 iterations. On hardware this will be slow, but it tests
+     * the full 3D pipeline. */
+    int px = fix16_to_int(ex);
+    int pz = fix16_to_int(ez);
+
+    /* Only render blocks within a small radius of the player to keep
+     * the frame time reasonable. */
+    int radius = 8;
+    int x0 = px - radius, x1 = px + radius;
+    int z0 = pz - radius, z1 = pz + radius;
+    if (x0 < 0) x0 = 0;
+    if (z0 < 0) z0 = 0;
+    if (x1 >= WORLD_W) x1 = WORLD_W - 1;
+    if (z1 >= WORLD_D) z1 = WORLD_D - 1;
+
+    for (int by = 0; by < WORLD_H; by++)
+        for (int bz = z0; bz <= z1; bz++)
+            for (int bx = x0; bx <= x1; bx++)
+            {
+                uint8_t id = world_get(bx, by, bz);
+                if (id == BLK_AIR) continue;
+
+                /* Check if any neighbor is air (i.e., this block has
+                 * at least one exposed face). If fully surrounded by
+                 * solid blocks, skip it entirely. */
+                bool exposed = false;
+                if (!block_is_solid(world_get(bx+1, by, bz))) exposed = true;
+                if (!block_is_solid(world_get(bx-1, by, bz))) exposed = true;
+                if (!block_is_solid(world_get(bx, by+1, bz))) exposed = true;
+                if (!block_is_solid(world_get(bx, by-1, bz))) exposed = true;
+                if (!block_is_solid(world_get(bx, by, bz+1))) exposed = true;
+                if (!block_is_solid(world_get(bx, by, bz-1))) exposed = true;
+                if (!exposed) continue;
+
+                /* Draw the cube with per-face neighbor checks. */
+                for (int f = 0; f < 6; f++)
+                {
+                    const struct CubeFace *face = &CUBE_FACES[f];
+                    int nx = bx + face->normal[0] / FIX16_ONE;
+                    int ny = by + face->normal[1] / FIX16_ONE;
+                    int nz = bz + face->normal[2] / FIX16_ONE;
+
+                    /* Skip this face if the neighbor is solid. */
+                    if (block_is_solid(world_get(nx, ny, nz))) continue;
+
+                    /* Backface culling. */
+                    fix16_t cx = fix16_from_int(bx) + FIX16_HALF;
+                    fix16_t cy = fix16_from_int(by) + FIX16_HALF;
+                    fix16_t cz = fix16_from_int(bz) + FIX16_HALF;
+                    fix16_t vx = cx - ex, vy = cy - ey, vz = cz - ez;
+
+                    fix16_t dot = fix16_mul(face->normal[0], vx) +
+                                  fix16_mul(face->normal[1], vy) +
+                                  fix16_mul(face->normal[2], vz);
+                    if (dot <= 0) continue;
+
+                    /* Project the 4 corners. */
+                    ScreenPoint sp[4];
+                    bool all_vis = true;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        fix16_t wx = fix16_from_int(bx) + fix16_from_int(face->corners[i][0]);
+                        fix16_t wy = fix16_from_int(by) + fix16_from_int(face->corners[i][1]);
+                        fix16_t wz = fix16_from_int(bz) + fix16_from_int(face->corners[i][2]);
+                        sp[i] = camera_project(wx, wy, wz, ex, ey, ez, player.yaw, player.pitch);
+                        if (!sp[i].visible) all_vis = false;
+                    }
+                    if (!all_vis) continue;
+
+                    /* Pick texture. */
+                    const uint16_t (*tex)[TEX_SIZE] = block_textures[id];
+                    if (f == 2 && top_textures[id])     tex = top_textures[id];
+                    else if (f == 3 && bottom_textures[id]) tex = bottom_textures[id];
+
+                    if (tex)
+                        rz_draw_textured_quad(sp, tex);
+                }
+            }
 }
 
 /* ------------------------------------------------------------------ */
@@ -203,13 +402,13 @@ static void scene_full_world(void)
 /* ------------------------------------------------------------------ */
 
 static const char *scene_names[] = {
-    "DIAG", "PLASMA", "TEXTURED", "RAYCAST", "RAYCAST", "RAYCAST"
+    "DIAG", "PLASMA", "TEXTURED", "CUBE", "CUBES", "WORLD3D"
 };
 #define SCENE_COUNT 6
 
 void demo_run(void)
 {
-    int scene = 3;  /* Start on RAYCAST scene */
+    int scene = 3;  /* Start on CUBE scene */
     int frame = 0;
     int fps = 0, fps_count = 0;
     uint32_t fps_timer = 0;
@@ -233,28 +432,27 @@ void demo_run(void)
             frame = 0;
         }
 
-        /* Movement (scenes 3-5). */
-        bool forward = input_down(EK_DOWN);   /* D-pad down = forward (towards look) */
-        bool back    = input_down(EK_UP);     /* D-pad up = backward */
-        bool jump    = false;
-        (void)forward; (void)back; (void)jump;
+        /* Controls for 3D scenes (3-5):
+         *   Left/Right = turn camera (yaw)
+         *   Up/Down    = look up/down (pitch)
+         *   EXE (hold) = walk forward
+         *   Backspace(hold) = walk backward
+         *   EXE tap    = cycle scene (see input_pressed above)
+         *
+         * For the single-cube scene (3), just turning the camera
+         * shows different faces of the cube.
+         */
+        bool forward = input_down(EK_EXE);
+        bool back    = input_down(EK_BACKSPACE);
 
         /* Look delta (BRAD per frame). 3°/frame ≈ 546 BRAD. */
         int16_t yaw_delta = 0, pitch_delta = 0;
-        /* Use Left/Right for yaw, and Shift+Up/Down won't work since Shift
-         * is exit... use number-less scheme: Left/Right = yaw. */
         if (input_down(EK_LEFT))  yaw_delta   -= 546;
         if (input_down(EK_RIGHT)) yaw_delta   += 546;
-        /* For pitch, we'd need Up/Down but those are movement. Let's just
-         * use Backspace for pitch down, EXE is scene cycle...
-         * Actually for the prototype, let's keep it simple: Left/Right =
-         * yaw, Up/Down = forward/back. Pitch is fixed at 0 for now. */
+        if (input_down(EK_UP))    pitch_delta -= 546;
+        if (input_down(EK_DOWN))  pitch_delta += 546;
 
-        /* Walk forward/back with Up/Down. */
-        forward = input_down(EK_UP);
-        back    = input_down(EK_DOWN);
-
-        /* Update player (only matters for scenes 3-5). */
+        /* Update player. */
         player_update(forward, back, false, false, false,
                       yaw_delta, pitch_delta);
 
@@ -271,9 +469,9 @@ void demo_run(void)
             case 0: scene_diag(); break;
             case 1: scene_plasma(); break;
             case 2: scene_textured(frame); break;
-            case 3: scene_quad(); break;
-            case 4: scene_small_world(); break;
-            case 5: scene_full_world(); break;
+            case 3: scene_cube(); break;
+            case 4: scene_cubes(); break;
+            case 5: scene_world_3d(); break;
         }
 
         const uint32_t t_render_end = *TMU_TCNT_1;
