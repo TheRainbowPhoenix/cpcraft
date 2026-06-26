@@ -56,85 +56,85 @@ static int hotbar_selected = 0;
  * non-air block hit by the ray from `origin` in direction `dir`, within
  * `max_dist` blocks. The hit position is stored in *out_x/y/z and the
  * face normal of the hit is stored in *out_normal. */
-static bool raycast_voxel(float ox, float oy, float oz,
-                          float dx, float dy, float dz,
-                          float max_dist,
-                          int *out_x, int *out_y, int *out_z,
-                          int *out_normal_x, int *out_normal_y, int *out_normal_z)
-    {
-    /* Normalize direction. */
-    float len = dx*dx + dy*dy + dz*dz;
-    if (len < 0.0001f) return false;
-    len = 1.0f / len;  /* sqrt would be more correct but this is fine
-                        * for raycasting — we just scale max_dist. */
+// static bool raycast_voxel(float ox, float oy, float oz,
+//                           float dx, float dy, float dz,
+//                           float max_dist,
+//                           int *out_x, int *out_y, int *out_z,
+//                           int *out_normal_x, int *out_normal_y, int *out_normal_z)
+//     {
+//     /* Normalize direction. */
+//     float len = dx*dx + dy*dy + dz*dz;
+//     if (len < 0.0001f) return false;
+//     len = 1.0f / len;  /* sqrt would be more correct but this is fine
+//                         * for raycasting — we just scale max_dist. */
 
-    int ix = (int)floorf(ox);
-    int iy = (int)floorf(oy);
-    int iz = (int)floorf(oz);
+//     int ix = (int)floorf(ox);
+//     int iy = (int)floorf(oy);
+//     int iz = (int)floorf(oz);
 
-    /* Step direction per axis. */
-    int step_x = (dx > 0) ? 1 : (dx < 0) ? -1 : 0;
-    int step_y = (dy > 0) ? 1 : (dy < 0) ? -1 : 0;
-    int step_z = (dz > 0) ? 1 : (dz < 0) ? -1 : 0;
+//     /* Step direction per axis. */
+//     int step_x = (dx > 0) ? 1 : (dx < 0) ? -1 : 0;
+//     int step_y = (dy > 0) ? 1 : (dy < 0) ? -1 : 0;
+//     int step_z = (dz > 0) ? 1 : (dz < 0) ? -1 : 0;
 
-    /* Distance to the next voxel boundary on each axis. */
-    float t_max_x = (step_x != 0) ?
-        (((step_x > 0 ? (ix + 1) : ix) - ox) / dx) : 1e30f;
-    float t_max_y = (step_y != 0) ?
-        (((step_y > 0 ? (iy + 1) : iy) - oy) / dy) : 1e30f;
-    float t_max_z = (step_z != 0) ?
-        (((step_z > 0 ? (iz + 1) : iz) - oz) / dz) : 1e30f;
+//     /* Distance to the next voxel boundary on each axis. */
+//     float t_max_x = (step_x != 0) ?
+//         (((step_x > 0 ? (ix + 1) : ix) - ox) / dx) : 1e30f;
+//     float t_max_y = (step_y != 0) ?
+//         (((step_y > 0 ? (iy + 1) : iy) - oy) / dy) : 1e30f;
+//     float t_max_z = (step_z != 0) ?
+//         (((step_z > 0 ? (iz + 1) : iz) - oz) / dz) : 1e30f;
 
-    /* t_delta = distance along the ray per unit voxel step. */
-    float t_delta_x = (step_x != 0) ? fabsf(1.0f / dx) : 1e30f;
-    float t_delta_y = (step_y != 0) ? fabsf(1.0f / dy) : 1e30f;
-    float t_delta_z = (step_z != 0) ? fabsf(1.0f / dz) : 1e30f;
+//     /* t_delta = distance along the ray per unit voxel step. */
+//     float t_delta_x = (step_x != 0) ? fabsf(1.0f / dx) : 1e30f;
+//     float t_delta_y = (step_y != 0) ? fabsf(1.0f / dy) : 1e30f;
+//     float t_delta_z = (step_z != 0) ? fabsf(1.0f / dz) : 1e30f;
 
-    int normal_x = 0, normal_y = 0, normal_z = 0;
-    float t = 0.0f;
+//     int normal_x = 0, normal_y = 0, normal_z = 0;
+//     float t = 0.0f;
 
-    while (t <= max_dist * len)
-{
-        if (world_get(ix, iy, iz) != BLK_AIR &&
-            world_get(ix, iy, iz) != BLK_WATER)
-        {
-            *out_x = ix; *out_y = iy; *out_z = iz;
-            *out_normal_x = normal_x;
-            *out_normal_y = normal_y;
-            *out_normal_z = normal_z;
-            return true;
-        }
+//     while (t <= max_dist * len)
+// {
+//         if (world_get(ix, iy, iz) != BLK_AIR &&
+//             world_get(ix, iy, iz) != BLK_WATER)
+//         {
+//             *out_x = ix; *out_y = iy; *out_z = iz;
+//             *out_normal_x = normal_x;
+//             *out_normal_y = normal_y;
+//             *out_normal_z = normal_z;
+//             return true;
+//         }
 
-        /* Advance to the next voxel. */
-        if (t_max_x < t_max_y && t_max_x < t_max_z) {
-            ix += step_x; t = t_max_x; t_max_x += t_delta_x;
-            normal_x = -step_x; normal_y = 0; normal_z = 0;
-        } else if (t_max_y < t_max_z) {
-            iy += step_y; t = t_max_y; t_max_y += t_delta_y;
-            normal_x = 0; normal_y = -step_y; normal_z = 0;
-        } else {
-            iz += step_z; t = t_max_z; t_max_z += t_delta_z;
-            normal_x = 0; normal_y = 0; normal_z = -step_z;
-        }
-    }
-    return false;
-}
+//         /* Advance to the next voxel. */
+//         if (t_max_x < t_max_y && t_max_x < t_max_z) {
+//             ix += step_x; t = t_max_x; t_max_x += t_delta_x;
+//             normal_x = -step_x; normal_y = 0; normal_z = 0;
+//         } else if (t_max_y < t_max_z) {
+//             iy += step_y; t = t_max_y; t_max_y += t_delta_y;
+//             normal_x = 0; normal_y = -step_y; normal_z = 0;
+//         } else {
+//             iz += step_z; t = t_max_z; t_max_z += t_delta_z;
+//             normal_x = 0; normal_y = 0; normal_z = -step_z;
+//         }
+//     }
+//     return false;
+// }
 
 /* Compute the player's view direction from yaw/pitch. */
-static void player_look(float *dx, float *dy, float *dz)
-        {
-    const float DEG2RAD = 3.14159265f / 180.0f;
-    float yr = player.yaw * DEG2RAD;
-    float pr = player.pitch * DEG2RAD;
-    float cp = cosf(pr), sp = sinf(pr);
-    float sy = sinf(yr), cy = cosf(yr);
+// static void player_look(float *dx, float *dy, float *dz)
+//         {
+//     const float DEG2RAD = 3.14159265f / 180.0f;
+//     float yr = player.yaw * DEG2RAD;
+//     float pr = player.pitch * DEG2RAD;
+//     float cp = cosf(pr), sp = sinf(pr);
+//     float sy = sinf(yr), cy = cosf(yr);
 
-    /* Forward (yaw 0 = +Z, pitch 0 = horizontal, pitch +89 = up).
-     * forward = (sin(yaw)*cos(pitch), sin(pitch), cos(yaw)*cos(pitch)) */
-    *dx = sy * cp;
-    *dy = sp;
-    *dz = cy * cp;
-        }
+//     /* Forward (yaw 0 = +Z, pitch 0 = horizontal, pitch +89 = up).
+//      * forward = (sin(yaw)*cos(pitch), sin(pitch), cos(yaw)*cos(pitch)) */
+//     *dx = sy * cp;
+//     *dy = sp;
+//     *dz = cy * cp;
+//         }
 
 /* ------------------------------------------------------------------ */
 /*  Sky color                                                          */
