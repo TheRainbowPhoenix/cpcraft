@@ -1,3 +1,4 @@
+/* src/engine/framebuffer.c */
 /*
  * cpcraft-port — engine/framebuffer.c
  *
@@ -16,18 +17,10 @@
 #include "power.h"
 #include <sdk/os/lcd.h>
 
-#ifndef __sh__
-    extern void sim_present(void);
-#endif
-
-/* YRAM-backed line pools. The section attribute is what makes this fast. */
-uint16_t __attribute__((section(".oc_mem.y.fb"), aligned(32)))
-    fb_line_pool[2][FB_W];
-
 /* VRAM pointer (set in fb_init). Initialized to the SDK's vram address
  * (0x8c000000 on hardware) at startup. In the simulator, fb_init() will
  * redirect this to LCD_GetVRAMAddress() which returns a real heap buffer. */
-uint16_t *fb_vram = (uint16_t *)(uintptr_t)0x8c000000u;
+uint16_t *fb_vram = (uint16_t *)0x8c000000;
 
 /* Last frame's refresh tick count. */
 uint32_t fb_last_refresh_ticks = 0;
@@ -102,30 +95,25 @@ void fb_rect(int x, int y, int w, int h, uint16_t color)
 /* ----------------------------------------------------------------------------
  *  fb_present — the hot path.
  *
- *  We walk the virtual framebuffer one source line at a time. For each line:
- *    1. Copy FB_W pixels (320 bytes) from VRAM into a YRAM pool.
- *    2. Write back the dirty cache lines for the YRAM pool (ocbwb) so the
- *       subsequent writes to the LCD data port see fresh data.
- *    3. Set the LCD drawing bounds to a 2-line-tall strip on the physical
- *       screen (because we double vertically).
- *    4. Send COMMAND_PREPARE_FOR_DRAW_DATA (0x2C).
- *    5. Stream the pool to the LCD, writing each pixel TWICE (horizontal
- *       doubling) and repeating the whole stream TWICE (vertical doubling).
+ *  The simplest, fastest version: set the LCD drawing window to the full
+ *  physical screen ONCE, then stream the 160x264 framebuffer through the
+ *  LCD data port with 2x horizontal and 2x vertical doubling.
  *
- *  The two YRAM pools alternate so step 1 of line N+1 can be in flight while
- *  step 5 of line N is still streaming. On the SH-4A the store queue can
- *  absorb the CPU writes to YRAM while the LCD bus is busy accepting the
- *  previous line — that overlap is what gets us to ~140k ticks/frame.
+ *  Per source line we write FB_W pixels twice (horizontal doubling) and
+ *  we repeat the whole line twice (vertical doubling). That's the exact
+ *  pattern QBos07's benchmark confirmed as optimal: ~140k ticks / frame.
  *
- *  We DO NOT use the DMAC. The benchmark proved DMAC is slower than CPU
- *  here because the LCD data port is on a slow peripheral bus and the DMAC
- *  stalls between every transfer, whereas the CPU pipelines the writes.
+ *  No YRAM intermediate, no ocbwb — those were only needed for DMA, which
+ *  we don't use (the benchmark proved DMA is slower than CPU here). The
+ *  CPU writes go straight from VRAM through the store queue to the LCD
+ *  data port at 0xB4000000, which the R61523 controller picks up.
+ *
+ *  This matches the gint R61523 driver's r61523_display() pattern: a
+ *  single win_set() + select(REG_DATA) followed by a flat pixel stream.
  * ---------------------------------------------------------------------------- */
 void fb_present(void)
 {
     /* Start the TMU so we can measure refresh ticks. */
-    #ifdef __sh__
-    
     POWER_MSTPCR0->s.TMU = 0;                 /* un-gate TMU clock */
     TMU_TCR_1->raw = 0;
     TMU_TCR_1->s.TPSC = PHI_DIV_4;
@@ -134,9 +122,6 @@ void fb_present(void)
     TMU_TSTR->s.STR1 = 1;
 
     const uint32_t t_start = *TMU_TCNT_1;
-    #endif
-
-
    
     /* Configure the LCD window ONCE for the full physical screen.
      * The R61523 keeps this window until the next win_set, so we don't
@@ -171,20 +156,19 @@ void fb_present(void)
         src += FB_W;
     }
 
-#ifdef __sh__
-
     /* Stop the TMU and record the refresh ticks. */
     const uint32_t t_end = *TMU_TCNT_1;
     TMU_TSTR->s.STR1 = 0;
     /* TMU counts DOWN, so delta = start - end. */
     fb_last_refresh_ticks = t_start - t_end;
-#else
-    fb_last_refresh_ticks = 0;
+
+#ifndef __sh__
     /* In the simulator, push the LCD framebuffer to the SDL window.
      * On hardware this is implicit — the LCD controller reads GRAM
      * continuously and displays it. In the simulator, sim_present()
      * updates the SDL texture from lcd_gram (which our SIM_LCD_WRITE
      * calls just filled) and pumps SDL events. */
+    extern void sim_present(void);
     sim_present();
 #endif
 
