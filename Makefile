@@ -86,6 +86,27 @@ compile_commands.json:
 	$(MAKE) $(MAKEFLAGS) clean
 	bear -- sh -c "$(MAKE) $(MAKEFLAGS) --keep-going all || exit 0"
 
+# Simulator target. Delegates to simulator/Makefile, which builds a native
+# (SDL2) or web (Emscripten) binary that runs the engine against stub SDK
+# headers. See simulator/README.md for details.
+#
+# Examples:
+#   make sim            - build the native simulator
+#   make sim-run        - build and run the native simulator
+#   make sim-web        - build the web simulator (requires emcc on PATH)
+#   make sim-clean      - clean simulator build artifacts
+sim:
+	$(MAKE) -C simulator
+
+sim-run:
+	$(MAKE) -C simulator run
+
+sim-web:
+	$(MAKE) -C simulator web
+
+sim-clean:
+	$(MAKE) -C simulator clean
+
 # Host-side test target. Compiles the engine against stub SDK headers and
 # runs the test harness. Requires gcc on the host.
 #
@@ -103,6 +124,6 @@ test:
 	    -o /tmp/cpcraft-port-test -lm
 	/tmp/cpcraft-port-test
 
-.PHONY: elf hh3 all clean compile_commands.json test
+.PHONY: elf hh3 all clean compile_commands.json test sim sim-run sim-web sim-clean
 
 -include $(DEPFILES)

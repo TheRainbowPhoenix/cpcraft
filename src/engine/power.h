@@ -9,7 +9,11 @@
  * to un-gate them by clearing the corresponding bit in MSTPCR0.
  *
  * Ported from Render-Display-Benchmark/src/power.h (QBos07) — same bit layout.
- */
+ *
+ * SIMULATOR NOTE: When building for the simulator (i.e. not __sh__), we
+ * define POWER_MSTPCR0 as a pointer to a real power_mstpcr0 struct so the
+ * engine's `POWER_MSTPCR0->s.TMU = 0;` calls don't segfault. The bits
+ * have no effect on the host. */
 #pragma once
 
 #include <stdint.h>
@@ -58,7 +62,15 @@ typedef union power_mstpcr0
   uint32_t raw;
 } power_mstpcr0;
 
+#ifdef __sh__
+/* Real hardware: MSTPCR0 is at the fixed MMIO address. */
 #define POWER_MSTPCR0 ((volatile power_mstpcr0 *)0xA4150030)
+#else
+/* Simulator: use a real struct so writes don't segfault. The bits have
+ * no effect on the host. */
+extern power_mstpcr0 sim_power_mstpcr0;
+#define POWER_MSTPCR0 (&sim_power_mstpcr0)
+#endif
 
 #ifdef __cplusplus
 }

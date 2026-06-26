@@ -12,14 +12,19 @@
  *
  * Ported from Render-Display-Benchmark/src/tmu.h (QBos07) — same register
  * layout, same prescaler constants.
- */
+ *
+ * SIMULATOR NOTE: When building for the simulator (i.e. not __sh__), the
+ * TMU register macros point at real host-side storage so the engine's
+ * writes don't segfault. The simulator also overrides TMU_TCNT_1 to a
+ * function that returns a high-resolution host timer tick (so the engine's
+ * tick-delta measurements still produce sensible numbers). */
 #pragma once
+
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
 
 /* TMU counts down at PHI/TPSC. With PHI = ~58 MHz and TPSC=PHI_DIV_4 we get
  * roughly 14.5 MHz -> ~14.5 ticks per microsecond. The benchmark called this
@@ -65,6 +70,9 @@ typedef union
   uint16_t raw;
 } tmu_tcr;
 
+#ifdef __sh__
+/* Real hardware: TMU registers are at the fixed MMIO addresses. */
+
 /* General register — uses the typedef'd union. */
 #define TMU_TSTR    ((volatile tmu_tstr *) 0xA4490004)
 
@@ -82,6 +90,30 @@ typedef union
 #define TMU_TCOR_2  ((volatile uint32_t *) 0xA4490020)
 #define TMU_TCNT_2  ((volatile uint32_t *) 0xA4490024)
 #define TMU_TCR_2   ((volatile tmu_tcr *)  0xA4490028)
+
+#else
+/* Simulator: TMU registers point at real host-side storage so the engine's
+ * writes don't segfault. The simulator runtime (simulator.cpp) defines
+ * these. sim_tmu_tcnt_1_storage is updated by the simulator's main loop
+ * on each frame; the engine reads it via *TMU_TCNT_1 to compute frame
+ * deltas. Numbers won't be cycle-accurate vs the real 14.5 MHz TMU clock,
+ * but they'll be in the same ballpark — enough to spot regressions. */
+extern tmu_tstr sim_tmu_tstr;
+extern tmu_tcr  sim_tmu_tcr_0, sim_tmu_tcr_1, sim_tmu_tcr_2;
+extern uint32_t sim_tmu_tcor_0, sim_tmu_tcor_1, sim_tmu_tcor_2;
+extern uint32_t sim_tmu_tcnt_0, sim_tmu_tcnt_1_storage, sim_tmu_tcnt_2;
+
+#define TMU_TSTR    ((volatile tmu_tstr *) &sim_tmu_tstr)
+#define TMU_TCOR_0  ((volatile uint32_t *) &sim_tmu_tcor_0)
+#define TMU_TCNT_0  ((volatile uint32_t *) &sim_tmu_tcnt_0)
+#define TMU_TCR_0   ((volatile tmu_tcr *)  &sim_tmu_tcr_0)
+#define TMU_TCOR_1  ((volatile uint32_t *) &sim_tmu_tcor_1)
+#define TMU_TCNT_1  ((volatile uint32_t *) &sim_tmu_tcnt_1_storage)
+#define TMU_TCR_1   ((volatile tmu_tcr *)  &sim_tmu_tcr_1)
+#define TMU_TCOR_2  ((volatile uint32_t *) &sim_tmu_tcor_2)
+#define TMU_TCNT_2  ((volatile uint32_t *) &sim_tmu_tcnt_2)
+#define TMU_TCR_2   ((volatile tmu_tcr *)  &sim_tmu_tcr_2)
+#endif
 
 #ifdef __cplusplus
 }

@@ -1,42 +1,50 @@
+/* src/engine/input.h */
 /*
  * cpcraft-port — engine/input.h
  *
- * Tiny key-state polling helper for the engine.
+ * Key-state polling helper using the ClassPad's GetInput() event API.
  *
- * The SDK's Input_GetKeyState() takes a scancode and returns whether the key
- * is currently down. That's fine for ad-hoc checks but CPCraft-style engines
- * need "just pressed" / "just released" edges, so we keep two snapshots and
- * expose simple predicates on top.
+ * Design: matches the CP-Raycaster-Demo pattern. Each frame, input_update()
+ * drains the OS's event queue via GetInput(). For each KEY event, we update
+ * the corresponding flag. We DON'T reset flags between events — the OS
+ * sends KEY_HELD events for keys that stay down, so flags naturally persist.
+ * When a KEY_RELEASED event arrives, the flag clears.
  *
- * The set of keys tracked is intentionally minimal — we only poll what the
- * engine needs (D-pad + action keys). Each poll costs one syscall per key,
- * and the OS key scan isn't free, so keeping this list short matters.
+ * This is more reliable than Input_GetKeyState() (which can miss held keys)
+ * and is the same pattern CP-Raycaster-Demo uses to detect Shift+Clear
+ * as an "exit" combo.
+ *
+ * Keys tracked:
+ *   EK_UP, EK_DOWN, EK_LEFT, EK_RIGHT  — D-pad
+ *   EK_EXE                              — EXE key (primary action)
+ *   EK_BACKSPACE                        — Backspace (secondary action)
+ *   EK_SHIFT                            — Shift (modifier)
+ *   EK_CLEAR                            — Power/Clear (modifier + exit)
+ *
+ * Exit combo: when both EK_SHIFT and EK_CLEAR are down simultaneously,
+ * input_exit_requested() returns true. The demo checks this each frame
+ * and returns from demo_run() when it fires.
  */
 #pragma once
+
+#include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <sdk/os/input.h>
-
-/* Logical key enum — the engine never sees raw scancodes.
- *
- * NOTE: prefixed `EK_` (Engine Key) to avoid colliding with the SDK's
- * own `KEY_UP` / `KEY_DOWN` / `KEY_LEFT` / `KEY_RIGHT` constants in
- * <sdk/calc/calc.h>. The SDK's KEY_* are bitmask values for the
- * getKey() bitmask API; ours are small indices into input_state_t.
- * Keep them in different namespaces to avoid subtle bugs. */
+/* Logical key enum. Prefixed `EK_` to avoid colliding with the SDK's
+ * own KEY_* bitmask constants in <sdk/calc/calc.h>. */
 typedef enum {
-    EK_UP    = 0,
-    EK_DOWN  = 1,
-    EK_LEFT  = 2,
-    EK_RIGHT = 3,
-    EK_A     = 4,   /* EXE */
-    EK_B     = 5,   /* BACKSPACE */
-    EK_MENU  = 6,   /* POWER/CLEAR — used to exit the demo */
+    EK_UP        = 0,
+    EK_DOWN      = 1,
+    EK_LEFT      = 2,
+    EK_RIGHT     = 3,
+    EK_EXE       = 4,   /* EXE key — primary action */
+    EK_BACKSPACE = 5,   /* Backspace — secondary action */
+    EK_SHIFT     = 6,   /* Shift — modifier, used for exit combo */
+    EK_CLEAR     = 7,   /* Power/Clear — modifier, used for exit combo */
     EK_COUNT
 } engine_key_t;
 
@@ -50,13 +58,23 @@ typedef struct {
 /* Global input state — single instance, no malloc. */
 extern input_state_t input;
 
-/* Update the global input state. Call once per frame BEFORE reading keys. */
+/* Update the global input state. Call once per frame BEFORE reading keys.
+ *
+ * Drains the OS's GetInput() event queue and updates the down/pressed/
+ * released arrays. This is the only function that talks to the OS. */
 void input_update(void);
 
 /* Convenience predicates. */
-static inline bool input_down(engine_key_t k)    { return input.down[k]; }
-static inline bool input_pressed(engine_key_t k) { return input.pressed[k]; }
-static inline bool input_released(engine_key_t k){ return input.released[k]; }
+static inline bool input_down(engine_key_t k)     { return input.down[k]; }
+static inline bool input_pressed(engine_key_t k)  { return input.pressed[k]; }
+static inline bool input_released(engine_key_t k) { return input.released[k]; }
+
+/* Returns true if the Shift+Clear combo is currently held. The demo uses
+ * this to exit cleanly — same pattern as CP-Raycaster-Demo. */
+static inline bool input_exit_requested(void)
+{
+    return input.down[EK_SHIFT] && input.down[EK_CLEAR];
+}
 
 #ifdef __cplusplus
 }

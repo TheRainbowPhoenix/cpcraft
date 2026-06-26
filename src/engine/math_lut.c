@@ -44,7 +44,12 @@ uint8_t isin(uint16_t phase16)
     return (uint8_t)(a + (((b - a) * (int32_t)frac) / 256));
 }
 
-/* 16.16 fixed-point sine table, generated as literal int32_t values. */
+/* 16.16 fixed-point sine table, generated as literal int32_t values.
+ * sintable_deg10[i] = (int32_t)(sinf(i * pi / 1800) * 65536.0f)
+ * for i in [0, 449] (covers 0..45 degrees with 0.1-degree resolution).
+ *
+ * The engine's fsin_deg10() / fcos_deg10() helpers index into this table
+ * with wraparound for the full 0..360 range. See math_lut.h. */
 const int32_t sintable_deg10[450] = {
     0, 114, 228, 343, 457, 571, 686, 800, 915, 1029,
     1143, 1258, 1372, 1486, 1601, 1715, 1829, 1944, 2058, 2172,

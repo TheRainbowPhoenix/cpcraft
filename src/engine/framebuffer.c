@@ -20,8 +20,9 @@
 uint16_t __attribute__((section(".oc_mem.y.fb"), aligned(32)))
     fb_line_pool[2][FB_W];
 
-/* VRAM pointer (set in fb_init). The SDK's `vram` symbol is a `static const`
- * pointer in calc.h so we keep our own mutable copy here. */
+/* VRAM pointer (set in fb_init). Initialized to the SDK's vram address
+ * (0x8c000000 on hardware) at startup. In the simulator, fb_init() will
+ * redirect this to LCD_GetVRAMAddress() which returns a real heap buffer. */
 uint16_t *fb_vram = (uint16_t *)0x8c000000;
 
 /* Last frame's refresh tick count. */
@@ -29,8 +30,18 @@ uint32_t fb_last_refresh_ticks = 0;
 
 void fb_init(void)
 {
-    /* Nothing to allocate — VRAM and YRAM pools are statically placed by the
-     * linker. We just zero them so the first frame is clean. */
+    /* On the simulator, redirect fb_vram to the SDK's VRAM buffer (which
+     * is a real heap buffer, not the hardware's 0x8c000000). On hardware,
+     * LCD_GetVRAMAddress() also returns 0x8c000000 so this is a no-op.
+     *
+     * We use #ifndef __sh__ so the hardware build skips the function call
+     * entirely (saves a few cycles and avoids a dependency on the SDK
+     * function pointer being initialized). */
+#ifndef __sh__
+    fb_vram = LCD_GetVRAMAddress();
+#endif
+
+    /* Zero the framebuffer so the first frame is clean. */
     fb_clear(0xFFFF);
     fb_last_refresh_ticks = 0;
 }
@@ -119,7 +130,6 @@ void fb_present(void)
     const uint32_t t_start = *TMU_TCNT_1;
 
     const uint16_t *src = fb_vram;   /* walks the 160x264 framebuffer */
-    const uint16_t width = 160;   /* TODO: remove ? */
 
     for (int y = 0; y < FB_H; y++)
     {
@@ -158,7 +168,7 @@ void fb_present(void)
         /* --- Step 3 & 4: configure the LCD for a 2-line strip ---------- */
         /* Physical y range is [2y, 2y+1] (we double vertically). x range
          * is the full 320 pixels. */
-        LCD_SetDrawingBounds(0, width - 1, y * 2, y * 2 + 1);
+        LCD_SetDrawingBounds(0, LCD_W - 1, y * 2, y * 2 + 1);
         LCD_SendCommand(COMMAND_PREPARE_FOR_DRAW_DATA);
 
         /* --- Step 5: stream the pool to the LCD, 2x horizontal doubling */
@@ -166,26 +176,25 @@ void fb_present(void)
          * pixel is written twice. Total writes = FB_W * 2 * 2 = 640 per
          * source line, matching the physical 320*2 = 640 pixels per strip.
          *
-         * The `*lcd_data_port = ...` writes go through the SDK's
-         * volatile pointer at 0xB4000000, which the SH-4A store queue
-         * can pipeline. */
-        volatile uint16_t * const port = (volatile uint16_t *)0xB4000000; // lcd_data_port;
+         * SIM_LCD_WRITE() is a macro that's `*lcd_data_port = (px)` on
+         * hardware and `sim_lcd_write(px)` in the simulator. Either way
+         * the SH-4A store queue / SDL handler can pipeline the writes. */
         const uint16_t *p = pool;
         const uint16_t *p_end = pool + FB_W;
 
         /* Pass 1 — top line of the strip. */
         do {
             const uint16_t px = *p++;
-            *port = px;
-            *port = px;
+            SIM_LCD_WRITE(px);
+            SIM_LCD_WRITE(px);
         } while (p < p_end);
 
         /* Pass 2 — bottom line of the strip (same source data). */
         p = pool;
         do {
             const uint16_t px = *p++;
-            *port = px;
-            *port = px;
+            SIM_LCD_WRITE(px);
+            SIM_LCD_WRITE(px);
         } while (p < p_end);
 
         src += FB_W;
@@ -196,4 +205,14 @@ void fb_present(void)
     TMU_TSTR->s.STR1 = 0;
     /* TMU counts DOWN, so delta = start - end. */
     fb_last_refresh_ticks = t_start - t_end;
+
+#ifndef __sh__
+    /* In the simulator, push the LCD framebuffer to the SDL window.
+     * On hardware this is implicit — the LCD controller reads GRAM
+     * continuously and displays it. In the simulator, sim_present()
+     * updates the SDL texture from lcd_gram (which our SIM_LCD_WRITE
+     * calls just filled) and pumps SDL events. */
+    extern void sim_present(void);
+    sim_present();
+#endif
 }

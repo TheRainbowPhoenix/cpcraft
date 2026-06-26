@@ -69,22 +69,49 @@
 #include <stdint.h>
 #include "builtins.h"
 
-
-/* Do not include sdk/calc/calc.h here unless framebuffer really needs it.
- * That header has C++ overloads and should not be pulled into generic C headers.
- */
+/* Do not include <sdk/os/lcd.h> or <sdk/calc/calc.h> here. They have C++
+ * overloads (getKey(Keys1*, Keys2*) etc.) and pull in OS-specific typedefs
+ * that can leak into C translation units. The .c file includes them
+ * directly when it needs the LCD primitives. */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* SIM_LCD_WRITE(pixel): stream one pixel to the LCD.
+ *
+ * On hardware this is just `*lcd_data_port = (pixel)` — a volatile store
+ * to memory-mapped I/O that the LCD controller picks up.
+ *
+ * The simulator's <sdk/os/lcd.h> overrides this macro to call
+ * sim_lcd_write(pixel) instead, which lets the simulator intercept the
+ * write and update its LCD framebuffer.
+ *
+ * If <sdk/os/lcd.h> didn't define SIM_LCD_WRITE (i.e. we're building
+ * against the real SDK), we define it here as the plain store.
+ *
+ * NOTE: framebuffer.c includes <sdk/os/lcd.h> before this header, so by
+ * the time we get here the macro is already defined (or not, in which
+ * case we define it to the hardware form). */
+#ifndef SIM_LCD_WRITE
+#define SIM_LCD_WRITE(pixel) (*lcd_data_port = (pixel))
+#endif
+
 /* Virtual framebuffer size. Half the LCD in each axis -> 2x upscale.
  *
  * We hardcode 160x264 (matching the ClassPad's 320x528 LCD) instead of
  * deriving from the SDK's `width` / `height` constants, because those
  * are `static const` (not `#define`) and therefore not usable as array
- * bounds in C file-scope declarations. */
-#define FB_W   160
-#define FB_H   264
+ * bounds in C file-scope declarations.
+ *
+ * LCD_W / LCD_H are the physical LCD dimensions. We use these instead of
+ * the SDK's `width` / `height` because we don't include <sdk/calc/calc.h>
+ * from this header (it has C++ overloads that break C translation units).
+ */
+#define LCD_W   320
+#define LCD_H   528
+#define FB_W    (LCD_W / 2)   /* 160 */
+#define FB_H    (LCD_H / 2)   /* 264 */
 
 /* YRAM-backed double-buffered line pools.
  *

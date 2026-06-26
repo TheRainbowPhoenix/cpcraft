@@ -27,10 +27,10 @@
  *   - Frames-per-second, computed from total ticks
  *
  * Controls:
- *   D-pad : move the camera offset (scene 1)
- *   A/EXE : switch scene
- *   B/BS  : toggle the overlay text on/off
- *   MENU  : quit
+ *   D-pad     : move the camera offset (scene 1)
+ *   EXE       : switch scene
+ *   Backspace : toggle the overlay text on/off
+ *   Shift+Clear : quit (same combo as CP-Raycaster-Demo)
  */
 #include "demo.h"
 #include "../engine/engine.h"
@@ -162,9 +162,11 @@ void demo_run(void)
         /* --- Input -------------------------------------------------- */
         input_update();
 
-        if (input_pressed(EK_MENU)) return;
-        if (input_pressed(EK_A))    scene = (scene + 1) % 2;
-        if (input_pressed(EK_B))    show_overlay = !show_overlay;
+        /* Shift+Clear = quit (same combo as CP-Raycaster-Demo). */
+        if (input_exit_requested()) return;
+
+        if (input_pressed(EK_EXE))       scene = (scene + 1) % 2;
+        if (input_pressed(EK_BACKSPACE)) show_overlay = !show_overlay;
 
         if (input_down(EK_LEFT))  cam_x -= 2;
         if (input_down(EK_RIGHT)) cam_x += 2;

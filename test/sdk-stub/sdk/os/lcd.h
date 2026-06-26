@@ -1,13 +1,13 @@
-/* test/sdk-stub/sdk/os/lcd.h
+/* test/sdk-stub/sdk/os/lcd.h */
+/*
+ * Stub of the real HHK3 SDK's <sdk/os/lcd.h> for host-side testing.
  *
- * Stub of the real <sdk/os/lcd.h> for host-side testing.
+ * This is the SIMPLE version for the native test harness — it does NOT
+ * define SIM_LCD_WRITE (the engine's framebuffer.h will define it as
+ * `*lcd_data_port = pixel` which writes to a dummy sink in the test).
  *
- * Key differences from the real header:
- *   - lcd_data_port is declared non-const here so the test harness can
- *     redirect it to a real buffer (the real SDK has it as
- *     `volatile uint16_t *const` because the port never moves on hw).
- *   - LCD_SetDrawingBounds etc. are plain function pointers (the test
- *     harness provides no-op definitions).
+ * The simulator (simulator/include/sdk/os/lcd.h) has a more complete
+ * version that defines SIM_LCD_WRITE to call sim_lcd_write().
  */
 #pragma once
 #include <stdint.h>
@@ -23,7 +23,6 @@ enum LCD_Command {
     COMMAND_READ_DRAW_DATA = 0x2E
 };
 
-/* Non-const on host so the test can redirect. */
 extern volatile uint16_t *lcd_data_port;
 
 extern void (*LCD_SetDrawingBounds)(unsigned int xstart, unsigned int xend,
@@ -35,6 +34,11 @@ static inline void LCD_SendCommand(enum LCD_Command command) {
 }
 
 extern void (*LCD_Refresh)();
+
+/* VRAM address accessor — the engine uses this in fb_init() to get a
+ * pointer to the VRAM buffer. On hardware this returns 0x8c000000. */
+extern uint16_t *(*_FP_LCD_GetVRAMAddress)();
+static inline uint16_t *LCD_GetVRAMAddress() { return _FP_LCD_GetVRAMAddress(); }
 
 #define RGB_TO_RGB565(r, g, b) ( \
     ((r & 0x1F) << 11) | \

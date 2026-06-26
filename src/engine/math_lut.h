@@ -21,11 +21,11 @@
  */
 #pragma once
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
 
 /* 8-bit unsigned sin, period 256, range [0, 255], centered at 128. */
 extern const uint8_t sin_lut8[256];
