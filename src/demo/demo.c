@@ -29,14 +29,52 @@
 #include <sdk/os/input.h>
 
 /* ------------------------------------------------------------------ */
-/*  Scene 0 — CLEAR                                                    */
+/*  Scene 0 — DIAGNOSTIC (print world block data)                      */
 /* ------------------------------------------------------------------ */
 
-static void scene_clear(int frame)
+static void scene_diag(int frame)
 {
-    /* Cycle through a few colors so we can see it's alive. */
-    uint16_t colors[] = {0xF800, 0x07E0, 0x001F, 0xFFE0, 0xFFFF};
-    fb_clear(colors[(frame >> 4) & 3]);
+    fb_clear(0x0000);  /* black background */
+
+    /* Print player position using overlay_printf (writes to fb_vram,
+     * which gets streamed to the LCD by fb_present). Debug_Printf
+     * would be overwritten by fb_present. */
+    fix16_t ex, ey, ez;
+    player_eye(&ex, &ey, &ez);
+    int px = fix16_to_int(ex);
+    int py = fix16_to_int(ey);
+    int pz = fix16_to_int(ez);
+
+    const uint16_t white = 0xFFFF;
+    overlay_printf(1, 1, white, "P:%d,%d,%d", px, py, pz);
+    overlay_printf(1, 8, white, "YAW:%d", player.yaw);
+
+    /* Print blocks in front of the player (pz+1..pz+8). */
+    for (int i = 0; i < 8; i++) {
+        int bx = px;
+        int bz = pz + 1 + i;
+        if (bz >= WORLD_D) bz = WORLD_D - 1;
+        int top_y = -1;
+        uint8_t top_id = 0;
+        for (int by = WORLD_H - 1; by >= 0; by--) {
+            uint8_t id = world_get(bx, by, bz);
+            if (id != BLK_AIR) { top_y = by; top_id = id; break; }
+        }
+        overlay_printf(1, 15 + i * 7, white, "[%d,%d]t=%d i=%d", bx, bz, top_y, top_id);
+    }
+
+    /* Print 3x3 grid around player. */
+    overlay_printf(80, 1, white, "3x3 around P:");
+    for (int dz = -1; dz <= 1; dz++) {
+        for (int dx = -1; dx <= 1; dx++) {
+            int bx = px + dx, bz = pz + dz;
+            int top_y = -1;
+            for (int by = WORLD_H - 1; by >= 0; by--) {
+                if (world_get(bx, by, bz) != BLK_AIR) { top_y = by; break; }
+            }
+            overlay_printf(80, 8 + (dz + 1) * 7, white, "%d,%d=%d", dx, dz, top_y);
+        }
+    }
 }
 
 /* ------------------------------------------------------------------ */
@@ -120,128 +158,44 @@ static void scene_textured(int frame)
 }
 
 /* ------------------------------------------------------------------ */
-/*  Scene 3 — SINGLE PROJECTED QUAD                                    */
+/*  Scene 3 — RAYCAST QUAD (a wall in front of the player)             */
 /* ------------------------------------------------------------------ */
 
 static void scene_quad(void)
 {
-    fb_clear(0x0000);
-    rz_clear_zbuf();
+    /* Use the raycaster to render the world. For this scene, the world
+     * has already been generated, so the raycaster will show whatever
+     * blocks are in front of the player. This tests the full raycast
+     * pipeline. */
+    fb_clear(0x6C59);  /* sky */
 
-    /* Place a single 2x2 block face in front of the player and project it. */
     fix16_t ex, ey, ez;
     player_eye(&ex, &ey, &ez);
-
-    /* The quad's 4 corners in world space (a 2x2 square on the ground
-     * 3 blocks in front of the player). */
-    fix16_t bx = ex;
-    fix16_t bz = ez + fix16_from_int(3);
-    fix16_t by = fix16_from_int(0);
-
-    ScreenPoint sp[4];
-    sp[0] = camera_project(bx,           by,           bz,           ex, ey, ez, player.yaw, player.pitch);
-    sp[1] = camera_project(bx+FIX16_ONE, by,           bz,           ex, ey, ez, player.yaw, player.pitch);
-    sp[2] = camera_project(bx+FIX16_ONE, by+FIX16_ONE, bz,           ex, ey, ez, player.yaw, player.pitch);
-    sp[3] = camera_project(bx,           by+FIX16_ONE, bz,           ex, ey, ez, player.yaw, player.pitch);
-
-    rz_draw_textured_quad(sp, tex_checker);
+    raycast_render(ex, ey, ez, player.yaw, player.pitch);
 }
 
 /* ------------------------------------------------------------------ */
-/*  Scene 4 — SMALL WORLD (8x8x8)                                      */
+/*  Scene 4 — SMALL WORLD (raycaster, same as scene 3)                 */
 /* ------------------------------------------------------------------ */
-
-/* We reuse the full world_render() but restrict to a small area by
- * temporarily changing the world bounds. Simplest: just render the
- * full world but with a small world. For the prototype, we just render
- * a subset by checking bx/bz range in a wrapper. */
-static int small_render_count;
 
 static void scene_small_world(void)
 {
     fb_clear(0x6C59);  /* sky */
-    rz_clear_zbuf();
-
-    /* Render only blocks within 4 blocks of the player. */
     fix16_t ex, ey, ez;
     player_eye(&ex, &ey, &ez);
-    int px = fix16_to_int(ex);
-    int pz = fix16_to_int(ez);
-
-    int x0 = px - 4, x1 = px + 4;
-    int z0 = pz - 4, z1 = pz + 4;
-    if (x0 < 0) x0 = 0;
-    if (z0 < 0) z0 = 0;
-    if (x1 >= WORLD_W) x1 = WORLD_W - 1;
-    if (z1 >= WORLD_D) z1 = WORLD_D - 1;
-
-    small_render_count = 0;
-
-    /* Inline a restricted version of world_render. */
-    const uint16_t yaw = player.yaw;
-    const int16_t pitch = player.pitch;
-
-    for (int by = 0; by < WORLD_H; by++)
-        for (int bz = z0; bz <= z1; bz++)
-            for (int bx = x0; bx <= x1; bx++)
-            {
-                uint8_t id = world_get(bx, by, bz);
-                if (id == BLK_AIR) continue;
-                small_render_count++;
-
-                fix16_t cx = fix16_from_int(bx) + FIX16_HALF;
-                fix16_t cy = fix16_from_int(by) + FIX16_HALF;
-                fix16_t cz = fix16_from_int(bz) + FIX16_HALF;
-                fix16_t vx = cx - ex, vy = cy - ey, vz = cz - ez;
-
-                /* For each face, check exposure + backface cull + draw. */
-                static const struct { int8_t dx,dy,dz; int8_t c[4][3]; int32_t n[3]; } faces[6] = {
-                    { 1,0,0,{{1,0,1},{1,0,0},{1,1,0},{1,1,1}},{FIX16_ONE,0,0}},
-                    {-1,0,0,{{0,0,0},{0,0,1},{0,1,1},{0,1,0}},{-FIX16_ONE,0,0}},
-                    { 0,1,0,{{0,1,1},{1,1,1},{1,1,0},{0,1,0}},{0,FIX16_ONE,0}},
-                    { 0,-1,0,{{0,0,0},{1,0,0},{1,0,1},{0,0,1}},{0,-FIX16_ONE,0}},
-                    { 0,0,1,{{0,0,1},{1,0,1},{1,1,1},{0,1,1}},{0,0,FIX16_ONE}},
-                    { 0,0,-1,{{1,0,0},{0,0,0},{0,1,0},{1,1,0}},{0,0,-FIX16_ONE}},
-                };
-
-                for (int f = 0; f < 6; f++)
-                {
-                    uint8_t nid = world_get(bx + faces[f].dx, by + faces[f].dy, bz + faces[f].dz);
-                    if (!block_is_transparent(nid)) continue;
-                    if (block_is_transparent(id) && nid == id) continue;
-
-                    fix16_t dot = fix16_mul(faces[f].n[0], vx) +
-                                  fix16_mul(faces[f].n[1], vy) +
-                                  fix16_mul(faces[f].n[2], vz);
-                    if (dot < 0) continue;
-
-                    ScreenPoint sp[4];
-                    for (int i = 0; i < 4; i++) {
-                        sp[i] = camera_project(
-                            fix16_from_int(bx) + fix16_from_int(faces[f].c[i][0]),
-                            fix16_from_int(by) + fix16_from_int(faces[f].c[i][1]),
-                            fix16_from_int(bz) + fix16_from_int(faces[f].c[i][2]),
-                            ex, ey, ez, yaw, pitch);
-                    }
-
-                    const uint16_t (*tex)[TEX_SIZE];
-                    if (f == 0)      tex = top_textures[id];
-                    else if (f == 1) tex = bottom_textures[id];
-                    else             tex = block_textures[id];
-                    if (tex) rz_draw_textured_quad(sp, tex);
-                }
-            }
+    raycast_render(ex, ey, ez, player.yaw, player.pitch);
 }
 
 /* ------------------------------------------------------------------ */
-/*  Scene 5 — FULL WORLD                                               */
+/*  Scene 5 — FULL WORLD (raycaster)                                   */
 /* ------------------------------------------------------------------ */
 
 static void scene_full_world(void)
 {
     fb_clear(0x6C59);  /* sky */
-    rz_clear_zbuf();
-    world_render();
+    fix16_t ex, ey, ez;
+    player_eye(&ex, &ey, &ez);
+    raycast_render(ex, ey, ez, player.yaw, player.pitch);
 }
 
 /* ------------------------------------------------------------------ */
@@ -249,13 +203,13 @@ static void scene_full_world(void)
 /* ------------------------------------------------------------------ */
 
 static const char *scene_names[] = {
-    "CLEAR", "PLASMA", "TEXTURED", "QUAD", "SMALL", "WORLD"
+    "DIAG", "PLASMA", "TEXTURED", "RAYCAST", "RAYCAST", "RAYCAST"
 };
 #define SCENE_COUNT 6
 
 void demo_run(void)
 {
-    int scene = 0;
+    int scene = 3;  /* Start on RAYCAST scene */
     int frame = 0;
     int fps = 0, fps_count = 0;
     uint32_t fps_timer = 0;
@@ -314,7 +268,7 @@ void demo_run(void)
 
         switch (scene)
         {
-            case 0: scene_clear(frame); break;
+            case 0: scene_diag(frame); break;
             case 1: scene_plasma(); break;
             case 2: scene_textured(frame); break;
             case 3: scene_quad(); break;
@@ -339,7 +293,7 @@ void demo_run(void)
             overlay_printf(1, FB_H - 11, fg, "F%4d", frame);
             overlay_printf(40, FB_H - 11, fg, "FPS%2d", fps);
             if (scene == 4) {
-                overlay_printf(80, FB_H - 11, fg, "B%3d", small_render_count);
+                overlay_printf(80, FB_H - 11, fg, "Y%3d", fix16_to_int(player.y));
             }
         }
 

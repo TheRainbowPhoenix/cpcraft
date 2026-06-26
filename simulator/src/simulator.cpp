@@ -634,7 +634,7 @@ static SDL_Window   *sim_window   = nullptr;
 static SDL_Renderer *sim_renderer = nullptr;
 static SDL_Texture  *sim_texture  = nullptr;
 static bool          sim_should_quit = false;
-static int           sim_window_scale = 2;
+static int           sim_window_scale = 1;
 
 /* Host-key -> ClassPad-scancode mapping.
  * Keys not in this map are ignored. */

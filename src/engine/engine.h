@@ -49,6 +49,7 @@
 #include "player.h"
 #include "camera.h"
 #include "rasterizer.h"
+#include "raycast.h"
 #include "block_render.h"
 #include "ui.h"
 
