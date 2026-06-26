@@ -1,3 +1,4 @@
+/* test/sdk-stub/appdef.h */
 /* simulator/include/appdef.h */
 /* simulator/include/appdef.h
  *

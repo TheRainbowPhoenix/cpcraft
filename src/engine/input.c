@@ -1,3 +1,4 @@
+/* src/engine/input.c */
 /*
  * cpcraft-port — engine/input.c
  *

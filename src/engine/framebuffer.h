@@ -1,3 +1,4 @@
+/* src/engine/framebuffer.h */
 /*
  * cpcraft-port — engine/framebuffer.h
  *
@@ -113,17 +114,12 @@ extern "C" {
 #define FB_W    (LCD_W / 2)   /* 160 */
 #define FB_H    (LCD_H / 2)   /* 264 */
 
-/* YRAM-backed double-buffered line pools.
- *
- * Section attribute `.oc_mem.y.fb` places these in YRAM via the SDK's linker
- * script. Each pool holds one FB scanline (160 pixels * 2 bytes = 320 bytes).
- * Two pools = 640 bytes total, well under YRAM's ~8 KiB budget.
- *
- * The 32-byte alignment matches the SH-4A cache line so we can `ocbwb` the
- * line cleanly before streaming it to the LCD. */
-#define FB_LINE_BYTES  (FB_W * 2)
-extern uint16_t __attribute__((section(".oc_mem.y.fb"), aligned(32)))
-    fb_line_pool[2][FB_W];
+/* YRAM-backed line pools were used in the earlier per-line-strip version
+ * of fb_present(). The current version writes straight from VRAM to the
+ * LCD with a single full-screen window, so no intermediate buffer is
+ * needed. The .oc_mem.y.fb section attribute is kept here as a comment
+ * for reference — if a future optimization needs YRAM again, restore
+ * the attribute on a static buffer. */
 
 /* The virtual framebuffer itself, in main VRAM.
  *

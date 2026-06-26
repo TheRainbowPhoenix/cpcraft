@@ -137,68 +137,31 @@ void fb_present(void)
     #endif
 
 
-    const uint16_t *src = fb_vram;   /* walks the 160x264 framebuffer */
+   
+    /* Configure the LCD window ONCE for the full physical screen.
+     * The R61523 keeps this window until the next win_set, so we don't
+     * pay the per-line command overhead. */
+    LCD_SetDrawingBounds(0, LCD_W - 1, 0, LCD_H - 1);
+    LCD_SendCommand(COMMAND_PREPARE_FOR_DRAW_DATA);
 
+    /* Walk the 160x264 framebuffer. For each source line, write each
+     * pixel twice (horizontal doubling) and repeat the whole line twice
+     * (vertical doubling). The R61523's GRAM auto-increments x then y
+     * within the window, so the pixels land in the right places. */
+    const uint16_t *src = fb_vram;
     for (int y = 0; y < FB_H; y++)
     {
-        const int pool_idx = y & 1;            /* double-buffer: 0, 1, 0, 1, ... */
-        uint16_t *pool = fb_line_pool[pool_idx];
-
-        /* --- Step 1: copy source line into the YRAM pool --------------- */
-        /* Unrolled by 4 — each iteration copies 8 bytes. FB_W = 160 so we
-         * do 40 iterations, no remainder. */
-        {
-            const uint16_t *s = src;
-            uint16_t *d = pool;
-            int n = FB_W / 4;
-            do {
-                d[0] = s[0]; d[1] = s[1]; d[2] = s[2]; d[3] = s[3];
-                s += 4; d += 4;
-            } while (--n);
-        }
-
-        /* --- Step 2: write back the YRAM cache lines ------------------- */
-        /* The LCD reads main memory, not the cache. ocbwb writes back any
-         * dirty cache lines for the pool. Pool is 32-byte aligned and
-         * FB_LINE_BYTES = 320, so 10 cache lines.
-         *
-         * On non-SH targets (e.g. when running a native test build), we
-         * skip the cache writeback — the data still gets to "main memory"
-         * because there's no LCD on a host. */
-#ifdef __sh__
-        {
-            const uintptr_t base = (uintptr_t)pool;
-            for (uintptr_t a = base; a < base + FB_LINE_BYTES; a += 32)
-                __asm__ volatile ("ocbwb @%0" : : "r"(a));
-        }
-#endif
-
-        /* --- Step 3 & 4: configure the LCD for a 2-line strip ---------- */
-        /* Physical y range is [2y, 2y+1] (we double vertically). x range
-         * is the full 320 pixels. */
-        LCD_SetDrawingBounds(0, LCD_W - 1, y * 2, y * 2 + 1);
-        LCD_SendCommand(COMMAND_PREPARE_FOR_DRAW_DATA);
-
-        /* --- Step 5: stream the pool to the LCD, 2x horizontal doubling */
-        /* Two passes through the pool — one per physical line. Each source
-         * pixel is written twice. Total writes = FB_W * 2 * 2 = 640 per
-         * source line, matching the physical 320*2 = 640 pixels per strip.
-         *
-         * SIM_LCD_WRITE() is a macro that's `*lcd_data_port = (px)` on
-         * hardware and `sim_lcd_write(px)` in the simulator. Either way
-         * the SH-4A store queue / SDL handler can pipeline the writes. */
-        const uint16_t *p = pool;
-        const uint16_t *p_end = pool + FB_W;
-
-        /* Pass 1 — top line of the strip. */
+        /* Pass 1 — top physical line of the 2x strip. */
+        const uint16_t *p = src;
+        const uint16_t *p_end = src + FB_W;
         do {
             const uint16_t px = *p++;
             SIM_LCD_WRITE(px);
             SIM_LCD_WRITE(px);
         } while (p < p_end);
 
-        /* Pass 2 — bottom line of the strip (same source data). */
-        p = pool;
+        /* Pass 2 — bottom physical line (same source data). */
+        p = src;
         do {
             const uint16_t px = *p++;
             SIM_LCD_WRITE(px);

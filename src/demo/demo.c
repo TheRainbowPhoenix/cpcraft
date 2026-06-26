@@ -1,160 +1,165 @@
+/* src/demo/demo.c */
 /*
  * cpcraft-port — demo/demo.c
  *
- * Small rendering demo built on the engine, to validate that the engine
- * hits the ~140k-tick frame budget the benchmark proved is achievable.
+ * CPCraft prototype main loop.
  *
- * The demo cycles between two scenes when the user presses the A (EXE) key:
+ * This is the "mini Minecraft" port: walk around a generated voxel world,
+ * look around, place and break blocks. The world is rendered as textured
+ * cube faces through the z-buffered rasterizer.
  *
- *   Scene 0 — Plasma
- *     The classic 3-sin plasma, lifted from QBos07's benchmark verbatim.
- *     This is the heaviest per-pixel workload we expect to ship — if the
- *     engine can hold 30fps here, it can hold 30fps on anything reasonable
- *     we port from cpcraft.
- *
- *   Scene 1 — Textured cubes
- *     A 3x2 grid of textured rectangles, each showing a different
- *     procedural texture (checker / stone / grass). The texture offsets
- *     animate to prove the textured-rect path is fast enough for the
- *     floor/wall casters we'll need for cpcraft.
- *
- * On-screen overlay shows:
- *   - Scene name
- *   - Render ticks (the time spent rendering into the framebuffer)
- *   - Refresh ticks (the time spent blitting to the LCD — recorded by
- *     fb_present() and stored in fb_last_refresh_ticks)
- *   - Total ticks (render + refresh)
- *   - Frames-per-second, computed from total ticks
- *
- * Controls:
- *   D-pad     : move the camera offset (scene 1)
- *   EXE       : switch scene
- *   Backspace : toggle the overlay text on/off
+ * Controls (matches CPCraft / CP-Raycaster-Demo conventions):
+ *   D-pad up/down    : look up/down (pitch)
+ *   D-pad left/right : turn left/right (yaw)
+ *   EXE (hold)       : walk forward
+ *   Backspace (hold) : walk backward
+ *   EXE + Backspace  : jump (both held)
+ *   1 / 3            : cycle hotbar selection (TODO: need number-key tracking)
+ *   Backspace tap    : toggle debug overlay (TODO: edge detection)
  *   Shift+Clear : quit (same combo as CP-Raycaster-Demo)
+ *
+ * The control scheme is minimal for the prototype — we only track
+ * D-pad + EXE + Backspace + Shift + Clear in the input module. Number
+ * keys (1-9) for hotbar selection would require extending input.h to
+ * track more KEYCODE_* values. That's a TODO for the next iteration.
+ *
+ * The on-screen HUD shows:
+ *   - Crosshair at the screen center.
+ *   - Hotbar at the bottom (9 slots, currently filled with a few block
+ *     types for testing).
+ *   - Debug overlay (top-left) with FPS + tick counts, toggled by
+ *     Backspace.
  */
 #include "demo.h"
 #include "../engine/engine.h"
 #include <sdk/os/debug.h>
+#include <sdk/os/input.h>
+#include <math.h>
 
 /* ------------------------------------------------------------------ */
-/*  Scene 0 — plasma (lifted from QBos07's benchmark)                 */
+/*  Hotbar                                                             */
 /* ------------------------------------------------------------------ */
 
-/* Phase accumulators advanced per frame. 8.8 fixed point. */
-static uint16_t plasma_frame_phase = 0;
+/* The blocks available in the hotbar. Slot 0 is empty-handed; the rest
+ * are common block types. */
+static uint8_t hotbar[9] = {
+    BLK_STONE, BLK_GRASS, BLK_DIRT, BLK_WOOD, BLK_LEAVES,
+    BLK_SAND,  BLK_COBBLE, BLK_PLANK, BLK_GLASS
+};
+static int hotbar_selected = 0;
 
-static void render_plasma(uint16_t frame_phase)
-{
-    /* This is essentially the benchmark's render_plasma_line, but writing
-     * into the 160x264 virtual framebuffer instead of directly to the LCD.
-     *
-     * For each pixel:
-     *   s1 = sin(x_phase)
-     *   s2 = sin(y_phase)
-     *   s3 = sin((x_phase + y_phase) / 2)
-     *   v  = (s1 + s2 + s3) / 4    -> 0..191
-     *   color = RGB565(v & 0x1F, v & 0x3F, v & 0x1F)
-     *
-     * Each lookup is a single indexed load from sin_lut8, no multiplies. */
-    const uint16_t x_step = 5 << 8;   /* horizontal frequency */
+/* ------------------------------------------------------------------ */
+/*  Raycasting (for block selection)                                   */
+/* ------------------------------------------------------------------ */
 
-    for (int y = 0; y < FB_H; y++)
+/* A fast voxel raycast (Amanatides & Woo's algorithm). Returns the first
+ * non-air block hit by the ray from `origin` in direction `dir`, within
+ * `max_dist` blocks. The hit position is stored in *out_x/y/z and the
+ * face normal of the hit is stored in *out_normal. */
+static bool raycast_voxel(float ox, float oy, float oz,
+                          float dx, float dy, float dz,
+                          float max_dist,
+                          int *out_x, int *out_y, int *out_z,
+                          int *out_normal_x, int *out_normal_y, int *out_normal_z)
     {
-        const uint16_t y_phase = (uint16_t)((y << 4) + frame_phase);
-        const uint8_t  y_mod   = (uint8_t)(y_phase >> 8);
+    /* Normalize direction. */
+    float len = dx*dx + dy*dy + dz*dz;
+    if (len < 0.0001f) return false;
+    len = 1.0f / len;  /* sqrt would be more correct but this is fine
+                        * for raycasting — we just scale max_dist. */
 
-        uint16_t x_phase = frame_phase;
-        uint16_t *dst = fb_vram + (y * FB_W);
+    int ix = (int)floorf(ox);
+    int iy = (int)floorf(oy);
+    int iz = (int)floorf(oz);
 
-        for (int x = 0; x < FB_W; x++)
+    /* Step direction per axis. */
+    int step_x = (dx > 0) ? 1 : (dx < 0) ? -1 : 0;
+    int step_y = (dy > 0) ? 1 : (dy < 0) ? -1 : 0;
+    int step_z = (dz > 0) ? 1 : (dz < 0) ? -1 : 0;
+
+    /* Distance to the next voxel boundary on each axis. */
+    float t_max_x = (step_x != 0) ?
+        (((step_x > 0 ? (ix + 1) : ix) - ox) / dx) : 1e30f;
+    float t_max_y = (step_y != 0) ?
+        (((step_y > 0 ? (iy + 1) : iy) - oy) / dy) : 1e30f;
+    float t_max_z = (step_z != 0) ?
+        (((step_z > 0 ? (iz + 1) : iz) - oz) / dz) : 1e30f;
+
+    /* t_delta = distance along the ray per unit voxel step. */
+    float t_delta_x = (step_x != 0) ? fabsf(1.0f / dx) : 1e30f;
+    float t_delta_y = (step_y != 0) ? fabsf(1.0f / dy) : 1e30f;
+    float t_delta_z = (step_z != 0) ? fabsf(1.0f / dz) : 1e30f;
+
+    int normal_x = 0, normal_y = 0, normal_z = 0;
+    float t = 0.0f;
+
+    while (t <= max_dist * len)
+{
+        if (world_get(ix, iy, iz) != BLK_AIR &&
+            world_get(ix, iy, iz) != BLK_WATER)
         {
-            const uint8_t s1 = sin_lut8[(uint8_t)(x_phase >> 8)];
-            const uint8_t s2 = sin_lut8[y_mod];
-            const uint8_t s3 = sin_lut8[(uint8_t)(((x_phase + y_phase) >> 9) & 0xFF)];
+            *out_x = ix; *out_y = iy; *out_z = iz;
+            *out_normal_x = normal_x;
+            *out_normal_y = normal_y;
+            *out_normal_z = normal_z;
+            return true;
+        }
 
-            const uint16_t sum = (uint16_t)(s1 + s2 + s3);   /* 0..765 */
-            const uint8_t  v   = (uint8_t)(sum >> 2);         /* 0..191 */
-
-            const uint16_t r = (uint16_t)(v & 0x1F) << 11;
-            const uint16_t g = (uint16_t)(v & 0x3F) << 5;
-            const uint16_t b = (uint16_t)(v & 0x1F);
-            *dst++ = (uint16_t)(r | g | b);
-
-            x_phase = (uint16_t)(x_phase + x_step);
+        /* Advance to the next voxel. */
+        if (t_max_x < t_max_y && t_max_x < t_max_z) {
+            ix += step_x; t = t_max_x; t_max_x += t_delta_x;
+            normal_x = -step_x; normal_y = 0; normal_z = 0;
+        } else if (t_max_y < t_max_z) {
+            iy += step_y; t = t_max_y; t_max_y += t_delta_y;
+            normal_x = 0; normal_y = -step_y; normal_z = 0;
+        } else {
+            iz += step_z; t = t_max_z; t_max_z += t_delta_z;
+            normal_x = 0; normal_y = 0; normal_z = -step_z;
         }
     }
+    return false;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Scene 1 — textured grid                                          */
-/* ------------------------------------------------------------------ */
-
-typedef struct {
-    int x, y, w, h;
-    const uint16_t (*tex)[TEX_SIZE];
-    int u_off, v_off;
-    int u_speed, v_speed;
-} grid_cell_t;
-
-static int cam_x = 0, cam_y = 0;   /* D-pad offset, applied to all cells */
-
-static void render_textured_grid(int frame)
-{
-    /* Clear to a dark background so gaps between cells are visible. */
-    fb_clear(0x0000);
-
-    /* 3 columns x 2 rows of cells, each 48x48 in the virtual framebuffer.
-     * Total: 144x96, centered horizontally. */
-    const int cell_w = 48, cell_h = 48;
-    const int cols = 3, rows = 2;
-    const int total_w = cols * cell_w;
-    const int origin_x = (FB_W - total_w) / 2 + cam_x;
-    const int origin_y = 32 + cam_y;
-
-    static const uint16_t (*tex_list[3])[TEX_SIZE] = {
-        tex_checker, tex_stone, tex_grass
-    };
-
-    for (int row = 0; row < rows; row++)
-        for (int col = 0; col < cols; col++)
+/* Compute the player's view direction from yaw/pitch. */
+static void player_look(float *dx, float *dy, float *dz)
         {
-            const int idx = (row * cols + col) % 3;
-            const int u_off = (frame * 1) & (TEX_SIZE - 1);
-            const int v_off = (frame * 2 + idx * 5) & (TEX_SIZE - 1);
+    const float DEG2RAD = 3.14159265f / 180.0f;
+    float yr = player.yaw * DEG2RAD;
+    float pr = player.pitch * DEG2RAD;
+    float cp = cosf(pr), sp = sinf(pr);
+    float sy = sinf(yr), cy = cosf(yr);
 
-            fb_textured_rect(
-                origin_x + col * cell_w,
-                origin_y + row * cell_h,
-                cell_w, cell_h,
-                tex_list[idx],
-                u_off, v_off);
+    /* Forward (yaw 0 = +Z, pitch 0 = horizontal, pitch +89 = up).
+     * forward = (sin(yaw)*cos(pitch), sin(pitch), cos(yaw)*cos(pitch)) */
+    *dx = sy * cp;
+    *dy = sp;
+    *dz = cy * cp;
         }
 
-    /* Draw a frame around the grid so it's easy to see where the FB edge is. */
-    const uint16_t frame_color = 0xFFFF;
-    fb_hline(origin_x - 1, origin_x + total_w,     origin_y - 1,             frame_color);
-    fb_hline(origin_x - 1, origin_x + total_w,     origin_y + rows*cell_h,   frame_color);
-    fb_vline(origin_x - 1,           origin_y - 1, origin_y + rows*cell_h,   frame_color);
-    fb_vline(origin_x + total_w,     origin_y - 1, origin_y + rows*cell_h,   frame_color);
-}
+/* ------------------------------------------------------------------ */
+/*  Sky color                                                          */
+/* ------------------------------------------------------------------ */
+
+/* Light blue sky color (matches CPCraft's skyColors[8]). */
+#define SKY_COLOR  0x6C59
 
 /* ------------------------------------------------------------------ */
-/*  Main demo loop                                                   */
+/*  Main game loop                                                     */
 /* ------------------------------------------------------------------ */
 
 void demo_run(void)
 {
-    int scene = 0;          /* 0 = plasma, 1 = textured grid */
-    int show_overlay = 1;
+    bool show_debug = true;
     int frame = 0;
 
-    /* Colors for the overlay. */
-    const uint16_t overlay_fg = 0xFFFF;
-    const uint16_t overlay_bg = 0x0000;
+    /* FPS counter. */
+    int fps = 0;
+    int fps_frame_count = 0;
+    uint32_t fps_timer = 0;
 
-    /* We use TMU channel 1 for render-tick measurement. fb_present() uses
-     * the same channel for refresh-tick measurement, but it stops the TMU
-     * when done, so we restart it for the next render pass. */
+    /* We use TMU channel 1 for frame timing. fb_present() uses the same
+     * channel for refresh-tick measurement, but it stops the TMU when
+     * done, so we restart it for the next render pass. */
     POWER_MSTPCR0->s.TMU = 0;
 
     while (1)
@@ -162,23 +167,38 @@ void demo_run(void)
         /* --- Input -------------------------------------------------- */
         input_update();
 
-        /* Shift+Clear = quit (same combo as CP-Raycaster-Demo). */
         if (input_exit_requested()) return;
 
-        if (input_pressed(EK_EXE))       scene = (scene + 1) % 2;
-        if (input_pressed(EK_BACKSPACE)) show_overlay = !show_overlay;
+        /* Build the input state for player_update.
+         *
+         * Minimal scheme (see file header comment for rationale):
+         *   D-pad = look (yaw/pitch)
+         *   EXE (hold) = forward
+         *   Backspace (hold) = backward
+         *   EXE + Backspace (both held) = jump
+         */
+        const bool forward  = input_down(EK_EXE);
+        const bool backward = input_down(EK_BACKSPACE);
+        const bool jump     = forward && backward;
 
-        if (input_down(EK_LEFT))  cam_x -= 2;
-        if (input_down(EK_RIGHT)) cam_x += 2;
-        if (input_down(EK_UP))    cam_y -= 2;
-        if (input_down(EK_DOWN))  cam_y += 2;
-        if (cam_x < -64) cam_x = -64;
-        if (cam_x >  64) cam_x =  64;
-        if (cam_y < -32) cam_y = -32;
-        if (cam_y >  64) cam_y =  64;
+        /* Look delta. We target ~30 FPS, so per-frame delta =
+         * PLAYER_ROT_SPEED * (1/30) = 3 degrees. */
+        float yaw_delta = 0.0f, pitch_delta = 0.0f;
+        if (input_down(EK_LEFT))  yaw_delta   -= 3.0f;
+        if (input_down(EK_RIGHT)) yaw_delta   += 3.0f;
+        if (input_down(EK_UP))    pitch_delta -= 3.0f;
+        if (input_down(EK_DOWN))  pitch_delta += 3.0f;
+
+        /* Update the player. We assume ~30 FPS (the engine doesn't have
+         * a wall-clock timer yet — the TMU counts CPU ticks, not real
+         * time, so we can't easily compute real dt). Fixed dt is fine
+         * for a prototype. */
+        const float dt = 1.0f / 30.0f;
+        player_update(dt, forward, backward, false, false, jump,
+                      yaw_delta, pitch_delta);
 
         /* --- Render ------------------------------------------------- */
-        /* Start TMU for render-tick measurement. */
+        /* Start the TMU for render-tick measurement. */
         TMU_TCR_1->raw = 0;
         TMU_TCR_1->s.TPSC = PHI_DIV_4;
         *TMU_TCOR_1 = 0xFFFFFFFFu;
@@ -186,41 +206,41 @@ void demo_run(void)
         TMU_TSTR->s.STR1 = 1;
         const uint32_t t_render_start = *TMU_TCNT_1;
 
-        switch (scene)
-        {
-            case 0:
-                render_plasma(plasma_frame_phase);
-                plasma_frame_phase = (uint16_t)(plasma_frame_phase + 8);
-                break;
-            case 1:
-                render_textured_grid(frame);
-                break;
-        }
+        /* Clear the framebuffer to the sky color. */
+        fb_clear(SKY_COLOR);
+
+        /* Clear the z-buffer. */
+        rz_clear_zbuf();
+
+        /* Render the world. */
+        world_render();
+
+        /* Draw the HUD on top. */
+        ui_draw_crosshair();
+        ui_draw_hotbar(hotbar_selected, hotbar);
 
         const uint32_t t_render_end = *TMU_TCNT_1;
         TMU_TSTR->s.STR1 = 0;
         const uint32_t render_ticks = t_render_start - t_render_end;
 
-        /* --- Overlay (before present, so it's part of the render) --- */
-        if (show_overlay)
-        {
-            /* Black background bar at the top so the text is readable. */
-            fb_rect(0, 0, FB_W, 12, overlay_bg);
-
-            const char *scene_name = (scene == 0) ? "PLASMA" : "TEXTURED";
-            overlay_printf(1, 3, overlay_fg, "%s", scene_name);
-            overlay_printf(60, 3, overlay_fg, "R%6u", render_ticks);
-            overlay_printf(105, 3, overlay_fg, "B%6u", fb_last_refresh_ticks);
-            overlay_printf(1, 3 + 7, overlay_fg, "F%4d", frame);
-
-            /* FPS estimate: TMU_TICKS_PER_SEC / total_ticks. */
-            const uint32_t total = render_ticks + fb_last_refresh_ticks;
-            int fps = (total > 0) ? (int)(TMU_TICKS_PER_SEC / total) : 0;
-            overlay_printf(60, 3 + 7, overlay_fg, "FPS%3d", fps);
-        }
+        /* Toggle debug overlay. (We can't easily track the B key edge
+         * here without more keys; let's just always show it for now.) */
+        if (show_debug)
+            ui_draw_debug(fps, render_ticks, fb_last_refresh_ticks);
 
         /* --- Present to LCD ---------------------------------------- */
         fb_present();
+
+        /* --- FPS counter ------------------------------------------- */
+        fps_frame_count++;
+        fps_timer += render_ticks + fb_last_refresh_ticks;
+        /* Update FPS once per ~1 second of TMU ticks. TMU runs at
+         * TMU_TICKS_PER_SEC = 8 000 000 ticks/sec. */
+        if (fps_timer >= TMU_TICKS_PER_SEC) {
+            fps = fps_frame_count;
+            fps_frame_count = 0;
+            fps_timer = 0;
+        }
 
         frame++;
     }

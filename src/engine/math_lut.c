@@ -1,3 +1,4 @@
+/* src/engine/math_lut.c */
 /*
  * cpcraft-port — engine/math_lut.c
  *

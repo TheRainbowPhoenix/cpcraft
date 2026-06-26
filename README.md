@@ -27,16 +27,25 @@ cpcraft-port/
 │  ├─ engine/          — the engine itself
 │  │  ├─ engine.{c,h}       — one-stop init
 │  │  ├─ builtins.h         — likely/unlikely, ENGINE_INLINE
+│  │  ├─ math_types.h       — Vec2i/Vec3i/Vec4b integer vector types
 │  │  ├─ power.h            — MSTPCR0 layout (un-gate TMU/DMAC clocks)
 │  │  ├─ tmu.h              — TMU channel 1 (frame timing)
-│  │  ├─ framebuffer.{c,h}  — 160x264 virtual FB + YRAM line pools
-│  │  │                       + 2x-upscale CPU blit (the hot path)
-│  │  ├─ input.{c,h}        — polled key state with edge detection
+│  │  ├─ framebuffer.{c,h}  — 160x264 virtual FB + direct VRAM→LCD blit
+│  │  │                       (no YRAM, no ocbwb — just CPU writes)
+│  │  ├─ input.{c,h}        — GetInput()-based key polling with edge detection
 │  │  ├─ math_lut.{c,h}     — 8-bit sin LUT + 16.16 fixed-point sin/cos
+│  │  │                       (integer-only, no math.h, no FPU)
 │  │  ├─ overlay.{c,h}      — tiny 4x6 font + printf for on-screen labels
-│  │  └─ texture.{c,h}      — procedural 16x16 textures + textured rect
+│  │  ├─ texture.{c,h}      — procedural 16x16 textures + textured rect
+│  │  ├─ world.{c,h}        — voxel world storage + terrain generation
+│  │  │                       (64×32×64 blocks, hash-based heightmap + trees)
+│  │  ├─ player.{c,h}       — player position/rotation/velocity + AABB collision
+│  │  ├─ camera.{c,h}       — 3D-to-2D projection (yaw+pitch+perspective divide)
+│  │  ├─ rasterizer.{c,h}   — z-buffered affine-textured quad rasterizer
+│  │  ├─ block_render.{c,h} — walk world, draw exposed cube faces
+│  │  └─ ui.{c,h}           — crosshair, hotbar, debug overlay
 │  └─ demo/
-│     └─ demo.{c,h}         — small demo that validates the engine on hw
+│     └─ demo.{c,h}         — CPCraft prototype main loop
 └─ test/
    ├─ native_test.c         — host-side test harness (run with `make test`)
    └─ sdk-stub/             — stub SDK headers for the host test harness
@@ -127,9 +136,9 @@ Once the .hh3 is running on hardware:
 | Key            | Action                                          |
 | -------------- | ----------------------------------------------- |
 | D-pad          | Move the camera offset (scene 1 only)           |
-| A / EXE        | Switch scene (plasma → textured grid → ...)     |
-| B / Backspace  | Toggle the on-screen overlay (FPS, tick counts) |
-| Menu / Clear   | Quit the demo                                   |
+| EXE            | Switch scene (plasma → textured grid → ...)     |
+| Backspace      | Toggle the on-screen overlay (FPS, tick counts) |
+| Shift + Clear  | Quit the demo (same combo as CP-Raycaster-Demo) |
 
 The on-screen overlay shows:
 
@@ -141,23 +150,109 @@ The on-screen overlay shows:
 - `FPS` = estimated frames per second, computed as
   `TMU_TICKS_PER_SEC / (R + B)`
 
+### Input system
+
+The engine uses the ClassPad's `GetInput()` event API (not
+`Input_GetKeyState()`), matching the pattern from CP-Raycaster-Demo.
+This is more reliable for detecting held keys and allows the
+Shift+Clear exit combo.
+
+See `src/engine/input.h` for the full API. The key enum uses `EK_`
+prefix (e.g. `EK_UP`, `EK_SHIFT`, `EK_CLEAR`) to avoid colliding with
+the SDK's own `KEY_*` bitmask constants.
+
+## Simulator
+
+The simulator (`simulator/`) lets you run the engine on your PC without
+flashing to the ClassPad. It implements the LCD protocol in software
+(an ILI9341-style GRAM with `LCD_SetDrawingBounds` / `LCD_SendCommand`
+/ pixel writes) and renders to an SDL2 window.
+
+```sh
+make sim       # build native simulator (Linux/macOS/Windows)
+make sim-run   # build and run
+make sim-web   # build web version (requires emcc)
+make sim-clean # clean simulator build artifacts
+```
+
+The simulator's SDK stubs live in `simulator/include/sdk/`. They define
+the same function pointers as the real SDK, but the implementations
+live in `simulator/src/simulator.cpp` and talk to SDL2 instead of
+hardware.
+
+Keyboard mapping (host → ClassPad):
+
+| Host key        | ClassPad key   |
+| --------------- | -------------- |
+| Arrow keys      | D-pad          |
+| Enter / Space   | EXE            |
+| Backspace       | Backspace      |
+| Escape          | Power/Clear    |
+| Left/Right Shift| Shift          |
+| 0-9             | Number keys    |
+| X / Y / Z       | X / Y / Z keys |
+
+The GitHub workflow at `.github/workflows/simulator.yml` builds the
+simulator for Linux, Windows, and Web on every push. The web version
+is deployed to GitHub Pages.
+
+## Current state — CPCraft prototype
+
+The engine now has a full voxel-world renderer. Walking around the
+generated world works:
+
+- **World**: 64×32×64 blocks, hash-based heightmap terrain with grass
+  tops, dirt just below, stone deeper down. Trees are sprinkled in
+  (wood trunk + leaves canopy).
+- **Player**: float position, yaw/pitch, AABB collision against the
+  world. Gravity + jump.
+- **Camera**: 3D-to-2D projection with 70° FOV, perspective divide.
+- **Renderer**: walks every block, finds exposed faces (neighbor is
+  air/transparent), backface-culls, projects the 4 corners, and
+  rasterizes as a textured quad through the z-buffer.
+- **HUD**: crosshair at screen center, 9-slot hotbar at the bottom,
+  debug overlay (FPS + render/blit ticks) at the top.
+
+### Demo controls (minimal for prototype)
+
+| Key             | Action                          |
+| --------------- | ------------------------------- |
+| D-pad up/down   | Look up/down (pitch)            |
+| D-pad left/right| Turn left/right (yaw)           |
+| EXE (hold)      | Walk forward                    |
+| Backspace (hold)| Walk backward                  |
+| EXE + Backspace | Jump (both held)                |
+| Shift + Clear   | Quit (same combo as CP-Raycaster) |
+
+The control scheme is intentionally minimal — the input module only
+tracks D-pad + EXE + Backspace + Shift + Clear. Number keys (1-9) for
+hotbar selection and block place/break are TODOs for the next iteration.
+
 ## What's next
 
-This base is intentionally minimal. The next steps for the CPCraft port
-are roughly:
+The prototype is feature-complete enough to validate the rendering
+pipeline. Next steps for a fuller CPCraft port:
 
-1. **Add `engine/sound.{c,h}`** — wraps the SDK's serial/sound if needed.
-2. **Add `engine/chunk.{c,h}`** — a 16x16x16 block storage type, lifted
-   from CPCraft's chunk format but with a cleaner API.
-3. **Add `engine/raycast.{c,h}`** — a floor/wall caster using the
-   16.16 sin/cos tables in `math_lut.h`. CP-Raycaster-Demo's
-   `draw3dField()` is a great reference.
-4. **Add `engine/player.{c,h}`** — position, velocity, camera angle.
-5. **Replace `demo/demo.c`** with a CPCraft main loop that uses the
-   above.
-
-Each of those can be added without touching the framebuffer / present
-path — that part is done and validated.
+1. **Extend `input.h`** to track number keys (1-9), OPTN, EXP, VARS —
+   needed for hotbar selection, block place/break, and jump on
+   separate keys.
+2. **Add block place/break** using the `raycast_voxel()` function
+   already in `demo.c` (it's currently unused — wire it up to EXE
+   for break and Shift for place).
+3. **Chunk-based world storage** — replace the flat 64×32×64 array
+   with CPCraft's chunked storage so we can have infinite terrain.
+4. **Meshing + frustum culling** — the current renderer walks every
+   block in the world every frame. For a 64×32×64 world that's
+   131 072 iterations; fine for a prototype, too slow for real
+   gameplay. Chunk meshing (build a vertex list per chunk, cull
+   chunks outside the view frustum) would bring this down to ~1000
+   visible faces per frame.
+5. **Texture loading** — replace the procedural textures with actual
+   Minecraft-format textures from CPCraft's `assets/` folder.
+6. **Save/load** — persist the world + player position to flash.
+7. **Mobs** — port CPCraft's `updateEntitys()` and sheep/pig spawning.
+8. **Inventory + crafting** — port CPCraft's `makeUI()` and
+   crafting recipe system.
 
 ## License
 

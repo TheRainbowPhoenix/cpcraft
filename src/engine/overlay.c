@@ -1,3 +1,4 @@
+/* src/engine/overlay.c */
 /*
  * cpcraft-port — engine/overlay.c
  *

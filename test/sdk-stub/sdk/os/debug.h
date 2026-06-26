@@ -1,3 +1,4 @@
+/* test/sdk-stub/sdk/os/debug.h */
 /* simulator/include/sdk/os/debug.h */
 /* simulator/include/sdk/os/debug.h
  *

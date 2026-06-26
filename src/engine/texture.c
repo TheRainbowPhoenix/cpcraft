@@ -1,3 +1,4 @@
+/* src/engine/texture.c */
 /*
  * cpcraft-port — engine/texture.c
  *

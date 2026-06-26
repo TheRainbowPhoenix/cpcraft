@@ -1,3 +1,4 @@
+/* test/sdk-stub/sdk/os/input.h */
 /* simulator/include/sdk/os/input.h */
 /* simulator/include/sdk/os/input.h
  *

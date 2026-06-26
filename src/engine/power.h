@@ -1,3 +1,4 @@
+/* src/engine/power.h */
 /*
  * cpcraft-port — engine/power.h
  *
