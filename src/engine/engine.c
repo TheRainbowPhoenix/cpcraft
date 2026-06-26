@@ -13,5 +13,5 @@ void engine_init(void)
     world_init();
     player_init();
     block_render_init();
-    /* input_update() zeroes everything on first call, so no init needed. */
+    camera_init();
 }

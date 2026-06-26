@@ -177,11 +177,6 @@ static void sim_LCD_SendCommandU(uint16_t command)
         lb_cursor_y = lb_y0;
         lb_drawing = true;
     }
-    /* Other commands (SET_X_WINDOW, SET_Y_WINDOW) are typically sent
-     * via the OS's LCD_SetDrawingBounds helper, which we already
-     * handle. If the engine sends them directly, we'd need to parse
-     * the subsequent data bytes — but our engine doesn't, so we
-     * silently ignore them here. */
 }
 
 static void sim_LCD_Refresh()
@@ -773,15 +768,9 @@ extern "C" void simulator_init()
         CP_LCD_W * sim_window_scale, CP_LCD_H * sim_window_scale,
         SDL_WINDOW_SHOWN);
 
-    Uint32 renderer_flags = SDL_RENDERER_ACCELERATED;
-
-    #ifndef __EMSCRIPTEN__
-    renderer_flags |= SDL_RENDERER_PRESENTVSYNC;
-    #endif
-
     sim_renderer = SDL_CreateRenderer(
         sim_window, -1,
-        renderer_flags);
+        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 

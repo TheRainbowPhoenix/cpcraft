@@ -2,11 +2,7 @@
 /*
  * cpcraft-port — engine/camera.c
  *
- * 3D-to-2D projection implementation.
- *
- * The math is the standard yaw+pitch camera transform followed by a
- * perspective divide. We compute it in float (the SH-4A has soft-float
- * via libgcc; one projection per vertex is fine performance-wise).
+ * 3D-to-2D projection implementation (16.16 fixed-point, no floats).
  *
  * Steps:
  *   1. Translate world point by -eye.
@@ -15,78 +11,100 @@
  *   4. If cz <= near, the point is behind the camera -> not visible.
  *   5. Project: sx = FB_W/2 + (cx / cz) * focal; sy = FB_H/2 - (cy / cz) * focal.
  *
- * The focal length controls the FOV. focal = FB_W / (2 * tan(hfov/2)).
- * For a 70° horizontal FOV: focal = 160 / (2 * tan(35°)) ≈ 114.
+ * All math is fix16_t. Sin/cos come from the BRAD lookup table in
+ * math_lut.h — a single table lookup per axis, no branches.
+ *
+ * The focal length is precomputed at init time from the FOV:
+ *   focal = (FB_W / 2) / tan(hfov / 2)
+ * For 70° hfov: focal ≈ 114 (in fix16: 114 * 65536 ≈ 7471104).
  */
 #include "camera.h"
 #include "framebuffer.h"
-#include <math.h>
+#include "math_lut.h"
+#include "fix16.h"
 
-#define FOV_HORIZONTAL_DEG  70.0f
-#define NEAR_PLANE          0.1f
+#define NEAR_PLANE  6554    /* 0.1 in fix16 */
 
-ScreenPoint camera_project(float wx, float wy, float wz,
-                           float eye_x, float eye_y, float eye_z,
-                           float yaw_deg, float pitch_deg)
+/* Focal length in fix16. For 70° FOV:
+ * focal = 80 / tan(35°) = 80 / 0.7002 ≈ 114.2
+ * In fix16: 114 * 65536 + (0.2 * 65536) ≈ 7475200 */
+static fix16_t focal_length;
+
+void camera_init(void)
+{
+    /* tan(35°) in fix16. 35° in BRAD = 35 * 65536 / 360 = 6370.
+     * sin(35°) ≈ 0.5736, cos(35°) ≈ 0.8192
+     * tan(35°) = sin/cos ≈ 0.7002
+     * In fix16: 0.7002 * 65536 ≈ 45879 */
+    fix16_t s = fix16_sin_brads(deg_to_brads(35));
+    fix16_t c = fix16_cos_brads(deg_to_brads(35));
+    fix16_t tan35 = fix16_div(s, c);
+
+    /* focal = (FB_W / 2) / tan35 = 80 / 0.7002 ≈ 114.2 */
+    focal_length = fix16_div(fix16_from_int(FB_W / 2), tan35);
+}
+
+ScreenPoint camera_project(fix16_t wx, fix16_t wy, fix16_t wz,
+                           fix16_t ex, fix16_t ey, fix16_t ez,
+                           uint16_t yaw, int16_t pitch)
 {
     ScreenPoint out = {0, 0, 0, false};
 
     /* Step 1: translate. */
-    float dx = wx - eye_x;
-    float dy = wy - eye_y;
-    float dz = wz - eye_z;
+    fix16_t dx = wx - ex;
+    fix16_t dy = wy - ey;
+    fix16_t dz = wz - ez;
 
-    /* Step 2: rotate. Yaw rotates around Y, pitch around X.
+    /* Step 2: rotate. We rotate the WORLD by -yaw and -pitch, which is
+     * equivalent to rotating the camera by +yaw and +pitch.
      *
-     * We rotate by -yaw (because rotating the world by -yaw is the same
-     * as rotating the camera by +yaw).
-     *
-     * After yaw rotation (around Y, by -yaw):
-     *   cx =  dx*cos(yaw) + dz*sin(yaw)
-     *   cz = -dx*sin(yaw) + dz*cos(yaw)
-     *   cy =  dy  (unchanged)
-     *
-     * Then pitch rotation (around X, by -pitch):
-     *   cy' = cy*cos(pitch) - cz*sin(pitch)
-     *   cz' = cy*sin(pitch) + cz*cos(pitch)
-     *   cx' = cx  (unchanged)
+     * For the yaw rotation (around Y), we need cos(-yaw) and sin(-yaw).
+     * Since cos(-x) = cos(x) and sin(-x) = -sin(x), we use:
+     *   cy = cos(yaw), sy = sin(yaw)
+     * and the rotation matrix becomes:
+     *   cx1 =  dx * cy + dz * sy
+     *   cz1 = -dx * sy + dz * cy
+     *   cy1 =  dy
      */
-    const float DEG2RAD = 3.14159265f / 180.0f;
-    float yr = yaw_deg   * DEG2RAD;
-    float pr = pitch_deg * DEG2RAD;
-    float cy_yaw = cosf(yr),  sy_yaw = sinf(yr);
-    float cy_pit = cosf(pr),  sy_pit = sinf(pr);
+    fix16_t cy = fix16_cos_brads(yaw);
+    fix16_t sy = fix16_sin_brads(yaw);
 
-    /* Yaw rotation (around Y). */
-    float cx1 =  dx * cy_yaw + dz * sy_yaw;
-    float cy1 =  dy;
-    float cz1 = -dx * sy_yaw + dz * cy_yaw;
+    fix16_t cx1 = fix16_mul(dx, cy) + fix16_mul(dz, sy);
+    fix16_t cy1 = dy;
+    fix16_t cz1 = fix16_mul(-dx, sy) + fix16_mul(dz, cy);
 
-    /* Pitch rotation (around X). */
-    float cx2 = cx1;
-    float cy2 = cy1 * cy_pit - cz1 * sy_pit;
-    float cz2 = cy1 * sy_pit + cz1 * cy_pit;
+    /* Pitch rotation (around X). Same trick: use cos(pitch), -sin(pitch).
+     *   cy2 = cy1 * cp - cz1 * sp
+     *   cz2 = cy1 * sp + cz1 * cp
+     *   cx2 = cx1
+     */
+    /* Pitch is int16_t; convert to uint16_t for the LUT (it handles the
+     * sign via wraparound). */
+    fix16_t cp = fix16_cos_brads((uint16_t)pitch);
+    fix16_t sp = fix16_sin_brads((uint16_t)pitch);
 
-    /* Step 3: camera space is (cx2, cy2, cz2). In our convention +Z is
-     * forward, so points in front of the camera have cz2 > 0. */
-    if (cz2 <= NEAR_PLANE)
-    {
+    fix16_t cx2 = cx1;
+    fix16_t cy2 = fix16_mul(cy1, cp) - fix16_mul(cz1, sp);
+    fix16_t cz2 = fix16_mul(cy1, sp) + fix16_mul(cz1, cp);
+
+    /* Step 3: camera space is (cx2, cy2, cz2). +Z is forward. */
+    if (cz2 <= NEAR_PLANE) {
         out.visible = false;
         return out;
     }
 
-    /* Step 4: perspective project. Focal length derived from FOV.
+    /* Step 4: perspective project.
+     *   sx = FB_W/2 + (cx2 / cz2) * focal
+     *   sy = FB_H/2 - (cy2 / cz2) * focal
      *
-     * focal = (FB_W / 2) / tan(hfov / 2)
-     * For 70° hfov: 80 / tan(35°) = 80 / 0.7002 ≈ 114. */
-    const float focal = (FB_W * 0.5f) / tanf(FOV_HORIZONTAL_DEG * 0.5f * DEG2RAD);
+     * We compute cx2/cz2 as a fix16 division, then multiply by focal. */
+    fix16_t scale = fix16_div(FIX16_ONE, cz2);  /* 1/cz2 */
+    fix16_t sx_f = fix16_from_int(FB_W / 2) + fix16_mul(fix16_mul(cx2, scale), focal_length);
+    fix16_t sy_f = fix16_from_int(FB_H / 2) - fix16_mul(fix16_mul(cy2, scale), focal_length);
 
-    int sx = (int)(FB_W * 0.5f + (cx2 / cz2) * focal);
-    int sy = (int)(FB_H * 0.5f - (cy2 / cz2) * focal);
-
-    out.sx = sx;
-    out.sy = sy;
-    out.sz = cz2;
+    out.sx = fix16_to_int_round(sx_f);
+    out.sy = fix16_to_int_round(sy_f);
+    out.sz = cz2;  /* store raw fix16 depth (larger = farther) */
     out.visible = true;
     return out;
 }

@@ -37,6 +37,7 @@
  * being forced into C linkage. */
 #include "builtins.h"
 #include "math_types.h"
+#include "fix16.h"
 #include "power.h"
 #include "tmu.h"
 #include "framebuffer.h"

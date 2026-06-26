@@ -12,15 +12,19 @@
  * the store queue without introducing a function call or branch. Don't
  * "clean it up" — every line was tuned against the benchmark numbers.
  */
+#include <sdk/os/lcd.h>
 #include "framebuffer.h"
 #include "tmu.h"
 #include "power.h"
-#include <sdk/os/lcd.h>
+
+#ifndef __sh__
+    extern void sim_present(void);
+#endif
 
 /* VRAM pointer (set in fb_init). Initialized to the SDK's vram address
  * (0x8c000000 on hardware) at startup. In the simulator, fb_init() will
  * redirect this to LCD_GetVRAMAddress() which returns a real heap buffer. */
-uint16_t *fb_vram = (uint16_t *)0x8c000000;
+uint16_t *fb_vram = (uint16_t *)(uintptr_t)0x8c000000u;
 
 /* Last frame's refresh tick count. */
 uint32_t fb_last_refresh_ticks = 0;
@@ -95,25 +99,26 @@ void fb_rect(int x, int y, int w, int h, uint16_t color)
 /* ----------------------------------------------------------------------------
  *  fb_present — the hot path.
  *
- *  The simplest, fastest version: set the LCD drawing window to the full
- *  physical screen ONCE, then stream the 160x264 framebuffer through the
- *  LCD data port with 2x horizontal and 2x vertical doubling.
+ *  Walk the 160x264 framebuffer one source line at a time. For each line:
+ *    1. Set the LCD drawing bounds to a 2-line-tall strip (y*2, y*2+1).
+ *    2. Send COMMAND_PREPARE_FOR_DRAW_DATA (0x2C).
+ *    3. Stream the source line to the LCD twice (vertical doubling),
+ *       writing each pixel twice (horizontal doubling).
  *
- *  Per source line we write FB_W pixels twice (horizontal doubling) and
- *  we repeat the whole line twice (vertical doubling). That's the exact
- *  pattern QBos07's benchmark confirmed as optimal: ~140k ticks / frame.
+ *  We use per-line SetDrawingBounds because the SDK's LCD_SetDrawingBounds
+ *  may not reliably handle a full-screen window in one shot (the OS
+ *  implementation might reset state between calls). The per-line approach
+ *  is what the original working version used and what the benchmark
+ *  validated.
  *
- *  No YRAM intermediate, no ocbwb — those were only needed for DMA, which
- *  we don't use (the benchmark proved DMA is slower than CPU here). The
- *  CPU writes go straight from VRAM through the store queue to the LCD
- *  data port at 0xB4000000, which the R61523 controller picks up.
- *
- *  This matches the gint R61523 driver's r61523_display() pattern: a
- *  single win_set() + select(REG_DATA) followed by a flat pixel stream.
+ *  No YRAM intermediate, no ocbwb — we write directly from VRAM to the
+ *  LCD data port. The CPU's store queue pipelines the writes.
  * ---------------------------------------------------------------------------- */
 void fb_present(void)
 {
     /* Start the TMU so we can measure refresh ticks. */
+    #ifdef __sh__
+    
     POWER_MSTPCR0->s.TMU = 0;                 /* un-gate TMU clock */
     TMU_TCR_1->raw = 0;
     TMU_TCR_1->s.TPSC = PHI_DIV_4;
@@ -122,21 +127,17 @@ void fb_present(void)
     TMU_TSTR->s.STR1 = 1;
 
     const uint32_t t_start = *TMU_TCNT_1;
-   
-    /* Configure the LCD window ONCE for the full physical screen.
-     * The R61523 keeps this window until the next win_set, so we don't
-     * pay the per-line command overhead. */
-    LCD_SetDrawingBounds(0, LCD_W - 1, 0, LCD_H - 1);
-    LCD_SendCommand(COMMAND_PREPARE_FOR_DRAW_DATA);
+    #endif
 
-    /* Walk the 160x264 framebuffer. For each source line, write each
-     * pixel twice (horizontal doubling) and repeat the whole line twice
-     * (vertical doubling). The R61523's GRAM auto-increments x then y
-     * within the window, so the pixels land in the right places. */
+   
     const uint16_t *src = fb_vram;
     for (int y = 0; y < FB_H; y++)
     {
-        /* Pass 1 — top physical line of the 2x strip. */
+        /* Set the LCD window for this 2-line strip. */
+        LCD_SetDrawingBounds(0, LCD_W - 1, y * 2, y * 2 + 1);
+        LCD_SendCommand(COMMAND_PREPARE_FOR_DRAW_DATA);
+
+        /* Pass 1 — top physical line of the strip. */
         const uint16_t *p = src;
         const uint16_t *p_end = src + FB_W;
         do {
@@ -156,13 +157,16 @@ void fb_present(void)
         src += FB_W;
     }
 
+#ifdef __sh__
+
     /* Stop the TMU and record the refresh ticks. */
     const uint32_t t_end = *TMU_TCNT_1;
     TMU_TSTR->s.STR1 = 0;
     /* TMU counts DOWN, so delta = start - end. */
     fb_last_refresh_ticks = t_start - t_end;
+#else
+    fb_last_refresh_ticks = 0;
 
-#ifndef __sh__
     /* In the simulator, push the LCD framebuffer to the SDL window.
      * On hardware this is implicit — the LCD controller reads GRAM
      * continuously and displays it. In the simulator, sim_present()
