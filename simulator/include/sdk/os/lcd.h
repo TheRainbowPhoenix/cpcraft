@@ -21,6 +21,7 @@
  */
 #pragma once
 
+#include <sdk/compiler.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -67,7 +68,7 @@ extern uint16_t *(*_FP_LCD_GetVRAMAddress)();
 /* Returns a pointer to the simulated VRAM (same layout as the real one:
  * 320 * 528 uint16_t values, row-major). The simulator allocates this
  * as a real heap buffer; on hardware it's at 0x8c000000. */
-static inline __attribute__((always_inline)) uint16_t *LCD_GetVRAMAddress() {
+static SDK_ALWAYS_INLINE uint16_t *LCD_GetVRAMAddress() {
     return _FP_LCD_GetVRAMAddress();
 }
 

@@ -23,12 +23,7 @@
  */
 #pragma once
 
-#if defined(_MSC_VER) && !defined(__clang__)
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-#endif
-
+#include <sdk/compiler.h>
 #include <stdint.h>
 
 #ifdef __cplusplus

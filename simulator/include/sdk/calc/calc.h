@@ -23,6 +23,7 @@
  */
 #pragma once
 
+#include <sdk/compiler.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -53,13 +54,18 @@ static inline void setPixel(unsigned int x, unsigned int y, uint32_t c) {
 }
 
 /* Constructor/destructor hooks — the simulator provides no-op stubs. */
+#if !defined(_MSC_VER)
 #pragma GCC diagnostic push
 #ifndef __clang__
 #pragma GCC diagnostic ignored "-Wprio-ctor-dtor"
 #endif
+#endif
+
 __attribute__((constructor(99), used)) void calcInit(void);
 __attribute__((destructor(99), used)) void calcExit(void);
+#if !defined(_MSC_VER)
 #pragma GCC diagnostic pop
+#endif
 
 /* Keyboard bitmask API (rarely used; the simulator doesn't drive it). */
 void getKey(uint32_t *key1, uint32_t *key2);

@@ -29,13 +29,13 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Install SDL2
       run: sudo apt-get update && sudo apt-get install -y libsdl2-dev
     - name: Build simulator
       run: make sim
     - name: Upload Linux artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: cpcraft-port-sim-linux
         path: simulator/out/cpcraft-port-sim
@@ -43,7 +43,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Build
       run: |
         vcpkg install sdl2:x64-windows
@@ -52,7 +52,7 @@ jobs:
         cmake .. -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -A x64
         cmake --build . --config Release
     - name: Upload Windows artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: cpcraft-port-sim-windows
         path: |
@@ -62,7 +62,7 @@ jobs:
   build-web:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Setup Emscripten
       uses: emscripten-core/setup-emsdk@v15
       with:
@@ -85,7 +85,7 @@ jobs:
         cp simulator/web/cpcraft-port.js simulator/web/dist/
         cp simulator/web/cpcraft-port.wasm simulator/web/dist/
     - name: Upload web artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: cpcraft-port-sim-web
         path: simulator/web/dist/
