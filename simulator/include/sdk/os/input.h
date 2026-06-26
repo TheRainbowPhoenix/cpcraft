@@ -16,6 +16,12 @@
 extern "C" {
 #endif
 
+#if defined(_MSC_VER) && !defined(__clang__)
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+#endif
+
 enum Input_EventType {
     EVENT_KEY = 0x0017,
     EVENT_ACTBAR_RESIZE = 0x1003,
