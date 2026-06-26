@@ -6,6 +6,11 @@
  * The demo (demo/demo.c) is the only thing here that knows what to render.
  * main.cpp just wires it up and provides the App metadata that Hollyhock-3
  * uses to display the app in its launcher.
+ *
+ * SIMULATOR NOTE: When building for the simulator, this file is compiled
+ * with -Dmain=app_main (set in the simulator's Makefile target) so the
+ * simulator's main_simulator.cpp can call app_main() after initializing
+ * SDL. On hardware, main() is the real entry point as usual.
  */
 #include <appdef.h>
 #include <sdk/os/debug.h>

@@ -118,6 +118,7 @@ void fb_present(void)
     const uint32_t t_start = *TMU_TCNT_1;
 
     const uint16_t *src = fb_vram;   /* walks the 160x264 framebuffer */
+    const uint16_t width = 160;   /* TODO: remove ? */
 
     for (int y = 0; y < FB_H; y++)
     {

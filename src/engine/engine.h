@@ -24,6 +24,10 @@
  */
 #pragma once
 
+/* Pull in all engine headers. Includes go OUTSIDE the extern "C" block
+ * so that the simulator's <sdk/...> headers can use C++ features (e.g.
+ * the getKey(Keys1*, Keys2*) overload in <sdk/calc/calc.h>) without
+ * being forced into C linkage. */
 #include "builtins.h"
 #include "power.h"
 #include "tmu.h"
@@ -37,6 +41,9 @@
 extern "C" {
 #endif
 
+/* One-stop initialization. Call once at startup, before any other engine
+ * function. Initializes the framebuffer, input state, and procedural
+ * textures. */
 void engine_init(void);
 
 #ifdef __cplusplus
