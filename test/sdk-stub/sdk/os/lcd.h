@@ -10,6 +10,13 @@
  * version that defines SIM_LCD_WRITE to call sim_lcd_write().
  */
 #pragma once
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+#endif
+
 #include <stdint.h>
 
 #ifdef __cplusplus
