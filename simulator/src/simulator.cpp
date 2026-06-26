@@ -283,6 +283,22 @@ static int scancode_to_keycode(uint16_t sc)
         case ScancodeBackspace:  return KEYCODE_BACKSPACE;
         case ScancodeShift:      return KEYCODE_SHIFT;
         case ScancodeClear:      return KEYCODE_POWER_CLEAR;
+        case Scancode0:          return KEYCODE_0;
+        case Scancode1:          return KEYCODE_1;
+        case Scancode2:          return KEYCODE_2;
+        case Scancode3:          return KEYCODE_3;
+        case Scancode4:          return KEYCODE_4;
+        case Scancode5:          return KEYCODE_5;
+        case Scancode6:          return KEYCODE_6;
+        case Scancode7:          return KEYCODE_7;
+        case Scancode8:          return KEYCODE_8;
+        case Scancode9:          return KEYCODE_9;
+        case ScancodePlus:       return KEYCODE_PLUS;
+        case ScancodeMinus:      return KEYCODE_MINUS;
+        case ScancodeDot:        return KEYCODE_DOT;
+        case ScancodeEXP:        return KEYCODE_EXP;
+        case ScancodeDivide:     return KEYCODE_DIVIDE;
+        case ScancodeTimes:      return KEYCODE_TIMES;
         default:                 return 0;
     }
 }

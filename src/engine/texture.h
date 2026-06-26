@@ -35,6 +35,13 @@ extern uint16_t tex_stone[TEX_SIZE][TEX_SIZE];
 /* Procedural "grass" texture — green with darker speckles. */
 extern uint16_t tex_grass[TEX_SIZE][TEX_SIZE];
 
+/* Procedural "box" texture — looks like a crate with borders/corners.
+ * Has a dark border around all edges and lighter interior. */
+extern uint16_t tex_box[TEX_SIZE][TEX_SIZE];
+
+/* Procedural "wood" texture — looks like wooden planks with grain. */
+extern uint16_t tex_wood[TEX_SIZE][TEX_SIZE];
+
 /* Initialize the procedural textures. */
 void tex_init(void);
 

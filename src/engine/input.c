@@ -3,34 +3,12 @@
  * cpcraft-port — engine/input.c
  *
  * Implementation of the GetInput()-based key poller.
- *
- * Pattern lifted from CP-Raycaster-Demo/src/main.cpp's playerInput():
- *
- *   struct Input_Event event __attribute__((aligned(4)));
- *   while (GetInput(&event, 0, 0x10) == 0 && event.type != EVENT_NONE) {
- *     if (event.type == EVENT_KEY) {
- *       int isPressed = (dir == KEY_PRESSED || dir == KEY_HELD);
- *       switch (event.data.key.keyCode) { ... }
- *     }
- *     Mem_Memset(&event, 0, sizeof(struct Input_Event));
- *   }
- *
- * Key insight: we DON'T reset the down[] flags before polling. The OS
- * sends KEY_HELD events for keys that stay down, so flags naturally
- * persist between frames. When a KEY_RELEASED event arrives, we clear
- * the flag. This is the same behavior as CP-Raycaster-Demo's key_*
- * variables.
- *
- * Edge detection (pressed[]/released[]) is computed by comparing the
- * post-poll down[] state with a snapshot taken before the poll.
  */
 #include "input.h"
 #include <sdk/os/input.h>
 
 input_state_t input;
 
-/* Map a KEYCODE_* value to our engine_key_t. Returns -1 if the keycode
- * isn't one we track. */
 static int keycode_to_ek(int keycode)
 {
     switch (keycode)
@@ -43,32 +21,41 @@ static int keycode_to_ek(int keycode)
         case KEYCODE_BACKSPACE:    return EK_BACKSPACE;
         case KEYCODE_SHIFT:        return EK_SHIFT;
         case KEYCODE_POWER_CLEAR:  return EK_CLEAR;
+        case KEYCODE_0:            return EK_N0;
+        case KEYCODE_1:            return EK_N1;
+        case KEYCODE_2:            return EK_N2;
+        case KEYCODE_3:            return EK_N3;
+        case KEYCODE_4:            return EK_N4;
+        case KEYCODE_5:            return EK_N5;
+        case KEYCODE_6:            return EK_N6;
+        case KEYCODE_7:            return EK_N7;
+        case KEYCODE_8:            return EK_N8;
+        case KEYCODE_9:            return EK_N9;
+        case KEYCODE_PLUS:         return EK_PLUS;
+        case KEYCODE_MINUS:        return EK_MINUS;
+        case KEYCODE_DOT:          return EK_DOT;
+        case KEYCODE_EXP:          return EK_EXP;
+        case KEYCODE_DIVIDE:       return EK_DIV;
+        case KEYCODE_TIMES:        return EK_MUL;
         default:                   return -1;
     }
 }
 
 void input_update(void)
 {
-    /* Snapshot the pre-poll state for edge detection. */
     uint8_t prev_down[EK_COUNT];
     for (int i = 0; i < EK_COUNT; i++)
         prev_down[i] = input.down[i];
 
-    /* Drain the OS event queue. GetInput(event, 0, 0x10) is non-blocking:
-     * it returns 0 and fills `event` with the next event, or returns 0
-     * with event.type == EVENT_NONE if the queue is empty.
-     *
-     * We use a fresh zero-initialized struct each iteration (matching
-     * the CP-Raycaster pattern of Mem_Memset'ing between calls). */
     for (;;)
     {
         struct Input_Event event __attribute__((aligned(4))) = {0};
 
         if (GetInput(&event, 0, 0x10) != 0)
-            break;  /* error — stop polling */
+            break;
 
         if (event.type == EVENT_NONE)
-            break;  /* queue empty */
+            break;
 
         if (event.type == EVENT_KEY)
         {
@@ -80,11 +67,8 @@ void input_update(void)
             if (ek >= 0)
                 input.down[ek] = is_pressed ? 1 : 0;
         }
-
-        /* The struct is re-zeroed next iteration by the = {0} initializer. */
     }
 
-    /* Compute edges by comparing post-poll state with pre-poll snapshot. */
     for (int i = 0; i < EK_COUNT; i++)
     {
         input.pressed[i]  = (input.down[i] && !prev_down[i]) ? 1 : 0;

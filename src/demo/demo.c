@@ -265,7 +265,7 @@ static void scene_cube(void)
     if (by < 0) by = 0;
     if (by >= WORLD_H) by = WORLD_H - 1;
 
-    draw_cube(bx, by, bz, tex_grass, tex_stone, tex_stone,
+    draw_cube(bx, by, bz, tex_box, tex_box, tex_box,
               ex, ey, ez, player.yaw, player.pitch);
 }
 
@@ -432,28 +432,30 @@ void demo_run(void)
             frame = 0;
         }
 
-        /* Controls for 3D scenes (3-5):
-         *   Left/Right = turn camera (yaw)
-         *   Up/Down    = look up/down (pitch)
-         *   EXE (hold) = walk forward
-         *   Backspace(hold) = walk backward
-         *   EXE tap    = cycle scene (see input_pressed above)
-         *
-         * For the single-cube scene (3), just turning the camera
-         * shows different faces of the cube.
+        /* Controls (CPCraft-style numpad):
+         *   8 = forward, 5 = backward, 4 = strafe left, 6 = strafe right
+         *   2 = jump
+         *   7 = camera left (yaw), 9 = camera right (yaw)
+         *   D-pad up/down = look up/down (pitch)
+         *   D-pad left/right = camera left/right (yaw) — same as 7/9
+         *   EXE = cycle scene
+         *   Shift+Clear = quit
          */
-        bool forward = input_down(EK_EXE);
-        bool back    = input_down(EK_BACKSPACE);
+        bool forward  = input_down(EK_N8);
+        bool back     = input_down(EK_N5);
+        bool strafe_l = input_down(EK_N4);
+        bool strafe_r = input_down(EK_N6);
+        bool jump     = input_pressed(EK_N2);
 
         /* Look delta (BRAD per frame). 3°/frame ≈ 546 BRAD. */
         int16_t yaw_delta = 0, pitch_delta = 0;
-        if (input_down(EK_LEFT))  yaw_delta   -= 546;
-        if (input_down(EK_RIGHT)) yaw_delta   += 546;
+        if (input_down(EK_N7) || input_down(EK_LEFT))  yaw_delta   -= 546;
+        if (input_down(EK_N9) || input_down(EK_RIGHT)) yaw_delta   += 546;
         if (input_down(EK_UP))    pitch_delta -= 546;
         if (input_down(EK_DOWN))  pitch_delta += 546;
 
         /* Update player. */
-        player_update(forward, back, false, false, false,
+        player_update(forward, back, strafe_l, strafe_r, jump,
                       yaw_delta, pitch_delta);
 
         /* --- Render the current scene --- */

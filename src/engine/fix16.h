@@ -34,6 +34,8 @@ typedef int32_t fix16_t;
 #define FIX16_TWO       (131072)
 #define FIX16_PI        (205887)
 #define FIX16_2PI       (411775)
+#define FIX16_MAX       (0x7FFFFFFF)
+#define FIX16_MIN       (0x80000000)
 
 static inline fix16_t fix16_from_int(int v) { return (fix16_t)(v << 16); }
 static inline int fix16_to_int(fix16_t v) { return (int)(v >> 16); }
@@ -70,6 +72,12 @@ static inline fix16_t fix16_mul(fix16_t inArg0, fix16_t inArg1)
     if (product_lo < BD)
         product_hi++;
 
+    /* Overflow check: the upper 17 bits of a 16.16 result should all be
+     * the same sign. If not, clamp to max/min. */
+    if (product_hi >> 15 != product_hi >> 31) {
+        return (inArg0 < 0) ^ (inArg1 < 0) ? FIX16_MIN : FIX16_MAX;
+    }
+
     /* Round: subtract 0x8000 (0.5) then shift. */
     uint32_t product_lo_tmp = product_lo;
     product_lo -= 0x8000;
@@ -91,6 +99,11 @@ static inline fix16_t fix16_div(fix16_t a, fix16_t b)
 
     uint32_t remainder = fix16_abs(a);
     uint32_t divider = fix16_abs(b);
+
+    /* If a is very large and b is very small, the result would overflow.
+     * Clamp to a safe maximum to prevent infinite loops and overflow. */
+    if (divider < 16 && remainder > 0x10000000) return (a < 0) ^ (b < 0) ? FIX16_MIN : FIX16_MAX;
+
     uint32_t quotient = 0;
     uint32_t bit = 0x10000;
 

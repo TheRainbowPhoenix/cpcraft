@@ -10,6 +10,8 @@
 uint16_t tex_checker[TEX_SIZE][TEX_SIZE];
 uint16_t tex_stone[TEX_SIZE][TEX_SIZE];
 uint16_t tex_grass[TEX_SIZE][TEX_SIZE];
+uint16_t tex_box[TEX_SIZE][TEX_SIZE];
+uint16_t tex_wood[TEX_SIZE][TEX_SIZE];
 
 /* Helper: pack RGB565. */
 static inline uint16_t rgb565(int r, int g, int b)
@@ -61,6 +63,56 @@ void tex_init(void)
             int g = 28 + (n >> 1);
             int b = 4;
             tex_grass[y][x] = rgb565(r, g, b);
+        }
+
+    /* Box: crate-style with dark border and lighter interior.
+     * Looks like a Minecraft crate — brown wood with dark edges. */
+    for (int y = 0; y < TEX_SIZE; y++)
+        for (int x = 0; x < TEX_SIZE; x++)
+        {
+            int r, g, b;
+
+            /* Dark border (2 pixels wide). */
+            if (x < 2 || x >= TEX_SIZE - 2 || y < 2 || y >= TEX_SIZE - 2) {
+                r = 10; g = 7; b = 3;  /* dark brown border */
+            }
+            /* Corner accents (slightly brighter). */
+            else if ((x == 2 || x == TEX_SIZE - 3) && (y == 2 || y == TEX_SIZE - 3)) {
+                r = 22; g = 16; b = 6;  /* corner highlight */
+            }
+            /* Interior: light wood color with grain. */
+            else {
+                /* Wood grain: darker horizontal lines every 4 px. */
+                int grain = (y % 4 == 0) ? -4 : 0;
+                r = 18 + grain;
+                g = 13 + grain;
+                b = 5 + grain;
+            }
+
+            tex_box[y][x] = rgb565(r, g, b);
+        }
+
+    /* Wood: plank-style texture with horizontal grain. */
+    for (int y = 0; y < TEX_SIZE; y++)
+        for (int x = 0; x < TEX_SIZE; x++)
+        {
+            int r, g, b;
+
+            /* Plank separators (dark line every 4 rows). */
+            if (y % 4 == 0) {
+                r = 8; g = 5; b = 2;
+            }
+            else {
+                /* Wood grain: slight noise along the plank. */
+                uint32_t h = (uint32_t)(x * 73856093) ^ (uint32_t)(y * 19349663);
+                h ^= h >> 13;
+                int n = (int)(h & 0x03);
+                r = 16 + n;
+                g = 11 + n;
+                b = 4;
+            }
+
+            tex_wood[y][x] = rgb565(r, g, b);
         }
 }
 

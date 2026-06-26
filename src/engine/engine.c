@@ -14,4 +14,5 @@ void engine_init(void)
     player_init();
     block_render_init();
     camera_init();
+    game_data_init();
 }

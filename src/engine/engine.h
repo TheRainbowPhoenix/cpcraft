@@ -51,6 +51,7 @@
 #include "rasterizer.h"
 #include "raycast.h"
 #include "block_render.h"
+#include "game_data.h"
 #include "ui.h"
 
 #ifdef __cplusplus

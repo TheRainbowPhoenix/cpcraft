@@ -34,6 +34,7 @@ uint16_t rz_zbuf[FB_W * FB_H];
 static inline uint16_t quantize_inv_z(fix16_t sz)
 {
     if (sz <= 0) return 0;
+    if (sz < 256) sz = 256;  /* clamp to avoid overflow in fix16_div */
     /* inv_z = 1 / sz = FIX16_ONE / sz (in fix16). */
     fix16_t inv_z = fix16_div(FIX16_ONE, sz);
     /* Scale to uint16: (inv_z * INV_Z_SCALE) >> 16. */

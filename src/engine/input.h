@@ -15,15 +15,23 @@
  * as an "exit" combo.
  *
  * Keys tracked:
- *   EK_UP, EK_DOWN, EK_LEFT, EK_RIGHT  — D-pad
+ *   EK_UP, EK_DOWN, EK_LEFT, EK_RIGHT  — D-pad (camera look)
  *   EK_EXE                              — EXE key (primary action)
  *   EK_BACKSPACE                        — Backspace (secondary action)
  *   EK_SHIFT                            — Shift (modifier)
  *   EK_CLEAR                            — Power/Clear (modifier + exit)
+ *   EK_N0..EK_N9                        — Number keys 0-9
+ *   EK_PLUS, EK_MINUS                   — + and - keys
+ *   EK_DOT, EK_EXP                      — . and EXP keys
+ *   EK_DIV, EK_MUL                      — / and * keys
  *
  * Exit combo: when both EK_SHIFT and EK_CLEAR are down simultaneously,
- * input_exit_requested() returns true. The demo checks this each frame
- * and returns from demo_run() when it fires.
+ * input_exit_requested() returns true.
+ *
+ * Numpad controls (CPCraft-style):
+ *   8 = forward, 5 = backward, 4 = strafe left, 6 = strafe right
+ *   2 = jump (or backwards depending on context)
+ *   7 = camera left, 9 = camera right
  */
 #pragma once
 
@@ -41,36 +49,46 @@ typedef enum {
     EK_DOWN      = 1,
     EK_LEFT      = 2,
     EK_RIGHT     = 3,
-    EK_EXE       = 4,   /* EXE key — primary action */
-    EK_BACKSPACE = 5,   /* Backspace — secondary action */
-    EK_SHIFT     = 6,   /* Shift — modifier, used for exit combo */
-    EK_CLEAR     = 7,   /* Power/Clear — modifier, used for exit combo */
+    EK_EXE       = 4,
+    EK_BACKSPACE = 5,
+    EK_SHIFT     = 6,
+    EK_CLEAR     = 7,
+    /* Number keys */
+    EK_N0        = 8,
+    EK_N1        = 9,
+    EK_N2        = 10,
+    EK_N3        = 11,
+    EK_N4        = 12,
+    EK_N5        = 13,
+    EK_N6        = 14,
+    EK_N7        = 15,
+    EK_N8        = 16,
+    EK_N9        = 17,
+    /* Math keys */
+    EK_PLUS      = 18,
+    EK_MINUS     = 19,
+    EK_DOT       = 20,
+    EK_EXP       = 21,
+    EK_DIV       = 22,
+    EK_MUL       = 23,
     EK_COUNT
 } engine_key_t;
 
 /* Snapshot of the keyboard. Updated by input_update(). */
 typedef struct {
-    uint8_t down[EK_COUNT];       /* currently down? */
-    uint8_t pressed[EK_COUNT];    /* went down this frame? (edge) */
-    uint8_t released[EK_COUNT];   /* went up this frame? (edge) */
+    uint8_t down[EK_COUNT];
+    uint8_t pressed[EK_COUNT];
+    uint8_t released[EK_COUNT];
 } input_state_t;
 
-/* Global input state — single instance, no malloc. */
 extern input_state_t input;
 
-/* Update the global input state. Call once per frame BEFORE reading keys.
- *
- * Drains the OS's GetInput() event queue and updates the down/pressed/
- * released arrays. This is the only function that talks to the OS. */
 void input_update(void);
 
-/* Convenience predicates. */
 static inline bool input_down(engine_key_t k)     { return input.down[k]; }
 static inline bool input_pressed(engine_key_t k)  { return input.pressed[k]; }
 static inline bool input_released(engine_key_t k) { return input.released[k]; }
 
-/* Returns true if the Shift+Clear combo is currently held. The demo uses
- * this to exit cleanly — same pattern as CP-Raycaster-Demo. */
 static inline bool input_exit_requested(void)
 {
     return input.down[EK_SHIFT] && input.down[EK_CLEAR];
