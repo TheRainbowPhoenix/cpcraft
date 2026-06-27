@@ -81,13 +81,12 @@ void player_init(void)
     player.x = fix16_from_int(WORLD_W / 2);
     player.z = fix16_from_int(WORLD_D / 2);
 
-    /* Find the top non-air block at (x, z) and put feet 5 blocks above it
-     * so the player can see the terrain spreading out below them. */
+    /* Find the top non-air block at (x, z) and put feet 3 blocks above it. */
     int bx = WORLD_W / 2;
     int bz = WORLD_D / 2;
     int by = WORLD_H - 1;
     while (by > 0 && world_get(bx, by, bz) == BLK_AIR) by--;
-    player.y = fix16_from_int(by + 6);  /* 5 blocks above terrain top */
+    player.y = fix16_from_int(by + 3);  /* 5 blocks above terrain top */
 
     player.yaw   = 0;       /* looking down +Z */
     player.pitch = 0;       /* horizontal */
