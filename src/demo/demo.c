@@ -292,6 +292,7 @@ static void scene_raycast(void)
     fix16_t ex, ey, ez;
     player_eye(&ex, &ey, &ez);
 
+    /* Draw a small 3x3 grid of cubes in front of the player. */
     int px = fix16_to_int(ex);
     int pz = fix16_to_int(ez);
     
