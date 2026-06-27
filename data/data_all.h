@@ -5,14 +5,14 @@
  */
 #pragma once
 
+#include "item_icons.h"
 #include "sky_colors.h"
 #include "skybox_colors.h"
-#include "item_icons.h"
-#include "logo_buttons.h"
+// #include "logo_buttons.h"
 #include "ascii_font.h"
-#include "ui_elements.h"
-#include "palettes.h"
 #include "block_types.h"
-#include "items.h"
 #include "blocks.h"
+#include "items.h"
 #include "misc_data.h"
+#include "palettes.h"
+#include "ui_elements.h"

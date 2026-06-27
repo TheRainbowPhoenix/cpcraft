@@ -5,13 +5,13 @@
  */
 #pragma once
 
-#include "types.h"
 #include "../src/tlsf.h"
+#include "types.h"
 
-void swap(Vector2I** a, Vector2I** b) {
-    Vector2I* temp = *a;
-    *a = *b;
-    *b = temp;
+void swap(Vector2I **a, Vector2I **b) {
+  Vector2I *temp = *a;
+  *a = *b;
+  *b = temp;
 }
 
 #define resX 384
@@ -28,9 +28,9 @@ void swap(Vector2I** a, Vector2I** b) {
 int resXZBuffer = 192;
 int resYZBuffer = 108;
 
-int renderingMode;          //0=normal, 1=no transparent, 2=wireframe
+int renderingMode; // 0=normal, 1=no transparent, 2=wireframe
 int maxSpeed = 25;
-//unsigned short ZBuffer[192*108];
+// unsigned short ZBuffer[192*108];
 unsigned short *ZBuffer;
 float gravity = 9.81f;
 
@@ -62,8 +62,8 @@ int triangleLength;
 int verticesLength;
 
 short *VRAMAddress;
-char *lightmap = 0x8C228800 + ALLOC_OFFSET; //behind z-buffer
-char *blockData = 0x8C282800 + ALLOC_OFFSET; //behind lightmap
+char *lightmap = 0x8C228800 + ALLOC_OFFSET;  // behind z-buffer
+char *blockData = 0x8C282800 + ALLOC_OFFSET; // behind lightmap
 
 float deltaTime;
 float deltaTimeNoSlow;
@@ -136,9 +136,8 @@ short hotbarBlockTypes[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
 short hotbarBlockAmount[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 short hotbarBlockHp[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 short inventoryBlockTypes[27] = {
-    -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 };
 short inventoryBlockAmount[27];
 short inventoryBlockHp[27];
@@ -177,8 +176,9 @@ extern int SEED;
 /* More globals */
 int activeChunks = 0;
 char dayTimeChange = 0;
-unsigned char performace[10] = {0,0,0,0,0,0,0,0,0,0};
-unsigned char Cperformace[10] = {0,0,0,0,0,0,0,0,0,0};
-int performanceColors[6] = {0xF800, 0x07E0, 0x001F, 0xFFE0, 0xF81F, 0x07FF};
+unsigned char performace[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+unsigned char Cperformace[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+color_t performanceColors[10] = {0xf800, 0xfc00, 0xffe0, 0xfc10, 0xfc1f,
+                                 0xf81f, 0x841f, 0x041f, 0x001f, 0x07ff};
 int renderdV = 0;
 bool blocksRenderd[64];

@@ -6,9 +6,10 @@
  */
 #pragma once
 
-#define height 40
-#define width 12
-#define totalChunkWidth 8
+#define TERRAINHEIGHT 0
+#define HEIGHT 40
+#define WIDTH 12
+#define TOTALCHUNKWIDTH 8
 
 #define MULTIPLIER 1664525
 #define INCREMENT 1013904223
@@ -17,4 +18,9 @@
 #define MULTIPLIER_Z 2654435769
 
 /* World block data array */
-extern unsigned char blocks[totalChunkWidth*totalChunkWidth][width * height * width];
+extern unsigned char blocks[TOTALCHUNKWIDTH * TOTALCHUNKWIDTH]
+                           [WIDTH * HEIGHT * WIDTH];
+
+extern int chunkXMapRedstone;
+extern int chunkZMapRedstone;
+extern int cycle;

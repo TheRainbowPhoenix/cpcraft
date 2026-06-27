@@ -66,3 +66,21 @@ extern const furnaceRecipe furnaceRecipes[furnaceRecipeAmount];
 /* Texture type */
 extern int textureType[textureBlockAmount];
 extern const unsigned char asciiMap2[2048];
+
+/* Player */
+extern int health;
+
+/* UI */
+extern char performanceName[10][35];
+extern int renderdT;
+extern int renderdV;
+extern int UIstateOld;
+extern int cursorY;
+extern int cursorX;
+extern int cursorStage;
+extern int cursorTypeSelected;
+extern int cursorYExtra;
+extern int WorldOpenMode;
+extern bool useCurrentVersion;
+extern int cursorXSelected;
+extern int cursorYSelected;
