@@ -1,6 +1,7 @@
 /* src/fastBdisp.c */
 #include <fxcg/display.h>
 #include "engine.h"
+#include "config.h"
 
 #include "fastBdisp.h"
 

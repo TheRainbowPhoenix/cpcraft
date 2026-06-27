@@ -1,5 +1,6 @@
 /* src/ui/inventory.c - Full inventory, crafting, chest UI */
 #include "engine.h"
+#include "config.h"
 
 
 void swapItems(int cursorX1, int cursorY1, int cursorX2, int cursorY2)

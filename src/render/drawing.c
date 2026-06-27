@@ -1,6 +1,7 @@
 /* src/render/drawing.c */
 /* src/render/drawing.c - Screen clear, sprite copy helpers */
 #include "engine.h"
+#include "config.h"
 
 void clear(color_t color)
 {

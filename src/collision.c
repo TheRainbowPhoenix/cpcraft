@@ -1,6 +1,7 @@
 /* src/collision.c */
 /* src/collision.c - Player collision detection (blocks, water, lava, doors) */
 #include "engine.h"
+#include "config.h"
 #include "chunk_constants.h"
 #include "blocks.h"
 #include "block_types.h"

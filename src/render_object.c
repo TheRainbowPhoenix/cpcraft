@@ -1,8 +1,17 @@
+/* src/render_object.c */
 /* src/render_object.c - Main game loop (renderObject) */
 #include "engine.h"
+#include "config.h"
 #include "chunk_constants.h"
 
 
+
+void renderObject()
+{
+	int compressionRate = 6;
+    initializeTables();
+
+    float focalLength = 1;
 
     float time = 0;
     float redstoneUpdateTimer1 = 0;

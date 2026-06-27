@@ -1,22 +1,9 @@
 /* src/render/effects.c - Crosshair and block destruction rendering */
 #include "engine.h"
+#include "config.h"
+#include "chunk_constants.h"
 
 
-
-    int startX = resX / 2 - 1;
-    int startY = resY / 2 - 1;
-    for (int x = startX; x < startX+2; x++)
-    {
-        for (int y = startY-3; y < startY+5; y++)
-        *(VRAMAddress + (y * LCD_WIDTH_PX) + x) = 0xd6ba;
-    }
-
-    for (int x = startX-3; x < startX+5; x++)
-    {
-        for (int y = startY; y < startY+2; y++)
-        *(VRAMAddress + (y * LCD_WIDTH_PX) + x) = 0xd6ba;
-    }
-}
 void renderBlockDestruction(float timeDone, float totalTime)
 {
 	int destroyIndex = timeDone/(totalTime/10);
@@ -103,11 +90,3 @@ void renderBlockDestruction(float timeDone, float totalTime)
 	}
     
 }
-
-//structures
-void generateTree(int x, int y, int z, int hight)
-{
-
-    for (int yOnTree = hight-2; yOnTree <= hight-1; yOnTree++)
-    {
-        if(y+yOnTree < height)

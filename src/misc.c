@@ -1,5 +1,7 @@
+/* src/misc.c */
 /* src/misc.c - Performance log, map view, entity reach */
 #include "engine.h"
+#include "config.h"
 #include "chunk_constants.h"
 
 

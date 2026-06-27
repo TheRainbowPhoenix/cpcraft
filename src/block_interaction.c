@@ -1,8 +1,70 @@
 /* src/block_interaction.c - Block reach, destroy, place, highlight */
 #include "engine.h"
+#include "config.h"
 #include "chunk_constants.h"
 
+void updateBlockReach()
+{
+    Vector3I forw = {forward.x * 1000, -forward.y * 1000, -forward.z * 1000};
+    Vector3I pPos = {PPosX * 10000, PPosY * 10000, PPosZ * 10000};
 
+    Vector3I lastPointRounded;
+
+    removeBlock.x = -1;
+    removeBlock.y = -1;
+    removeBlock.z = -1;
+
+    addBlock.x = -1;
+    addBlock.y = -1;
+    addBlock.z = -1;
+
+    for (int i = 0; i < 50; i += 1)
+    {
+        int pointX = (forw.x * i + pPos.x) / 10000;
+        int pointY = (forw.y * i + pPos.y) / 10000;
+        int pointZ = (forw.z * i + pPos.z) / 10000;
+
+        if((forw.y * i + pPos.y) / 100 - pointY * 100 > 50)
+        isTopOfBlock = true;
+        else
+        isTopOfBlock = false;
+
+        if(pointX != lastPointRounded.x || pointY != lastPointRounded.y || pointZ != lastPointRounded.z)
+        {
+            int pointInChunkX = pointX % width;
+            int pointInChunkY = pointY;
+            int pointInChunkZ = pointZ % width;
+
+            if(pointY < height)
+            {
+                int chunkIndex = (pointX / width) + (pointZ / width) * totalChunkWidth;
+
+                int blockIndex = blocks[chunkIndex][pointInChunkX + pointInChunkZ * width + pointInChunkY * width * width];
+                if(blockIndex != 0 && allBlock[blockIndex].blockType != 2)
+                {
+                    removeBlock.x = pointX;
+                    removeBlock.y = pointY;
+                    removeBlock.z = pointZ;
+
+                    addBlock = lastPointRounded;
+
+                    break;
+                }
+            }
+
+            lastPointRounded.x = pointX;
+            lastPointRounded.y = pointY;
+            lastPointRounded.z = pointZ;
+        }
+    }
+}
+void destroyBlock()
+{
+    updateBlockReach();
+
+    if(removeBlock.x != -1)
+    {
+        int chunkX = removeBlock.x / width;
         int chunkY = removeBlock.z / width;
         int currentChunk_ = chunkX + chunkY * totalChunkWidth;
         
@@ -410,3 +472,18 @@ void renderCorsAir(int renderBlockOutline)
 
     if(removeBlock.x != -1 && renderBlockOutline == true)
     highlightBlock(removeBlock);
+
+    int startX = resX / 2 - 1;
+    int startY = resY / 2 - 1;
+    for (int x = startX; x < startX+2; x++)
+    {
+        for (int y = startY-3; y < startY+5; y++)
+        *(VRAMAddress + (y * LCD_WIDTH_PX) + x) = 0xd6ba;
+    }
+
+    for (int x = startX-3; x < startX+5; x++)
+    {
+        for (int y = startY; y < startY+2; y++)
+        *(VRAMAddress + (y * LCD_WIDTH_PX) + x) = 0xd6ba;
+    }
+}

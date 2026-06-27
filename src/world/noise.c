@@ -1,51 +1,8 @@
 /* src/world/noise.c */
 /* src/world/noise.c - Particle creation, Perlin noise, terrain height */
 #include "engine.h"
+#include "config.h"
 #include "chunk_constants.h"
-
-void createParticle(Vector3 position, float size, color_t color, char transparency, char mode, int totalTime, Vector3 velocity, bool gravity)
-{
-    int index = -1;
-    for (int i = 0; i < partiLength; i++)
-    {
-        if(allparticles[i].used == false){
-            index = i;
-            break;
-        }
-    }
-    if(index != -1)
-    {
-        allparticles[index].maxTime = totalTime;
-        allparticles[index].mode = mode;
-        allparticles[index].position = position;
-        allparticles[index].size = size;
-        allparticles[index].color = color;
-        allparticles[index].transparency = transparency;
-        allparticles[index].velocity = velocity;
-        allparticles[index].gravity = gravity;
-        allparticles[index].used = true;
-        allparticles[index].time = 0;
-    }
-}
-void deleteParticle(int index)
-{
-    allparticles[index].used = false;
-}
-Vector3I getCenter(int index)
-{
-    Vector3I center = {0, 0, 0};
-    for (int i = 0; i < allObj[index].sizeV; i++)
-    {
-        center.x += allObj[index].verticesIPC[i].x;
-        center.y += allObj[index].verticesIPC[i].y;
-        center.z += allObj[index].verticesIPC[i].z;
-    }
-    center.x /= allObj[index].sizeV;
-    center.y /= allObj[index].sizeV;
-    center.z /= allObj[index].sizeV;
-
-    return center;
-}
 
 //perlin noise
 int SEED = 0;
@@ -56,6 +13,7 @@ int SEED = 0;
 #define totalChunkWidth 8
 
 bool blocksRenderd[totalChunkWidth*totalChunkWidth];
+unsigned char blocks[totalChunkWidth*totalChunkWidth][width * height * width];
 unsigned char maxChunkHight[totalChunkWidth*totalChunkWidth];
 
 const unsigned char hash[256] = { 208,34,231,213,32,248,233,56,161,78,24,140,71,48,140,254,245,255,247,247,40,

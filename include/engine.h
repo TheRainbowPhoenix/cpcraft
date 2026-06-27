@@ -68,6 +68,7 @@
 
 /* System config */
 #include "config.h"
+#include "data_all.h"
 
 /* Type definitions */
 #include "types.h"

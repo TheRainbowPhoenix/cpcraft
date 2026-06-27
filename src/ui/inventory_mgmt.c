@@ -1,5 +1,6 @@
 /* src/ui/inventory_mgmt.c - Add/remove items from hotbar and inventory */
 #include "engine.h"
+#include "config.h"
 
 
 void addItemToHotbar(int itemIndex, int amount)

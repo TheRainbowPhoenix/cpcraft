@@ -3,6 +3,28 @@
 #include "types.h"
 #include "../src/tlsf.h"
 
+#ifndef craftingRecipeAmount
+#define craftingRecipeAmount 57
+#endif
+#ifndef furnaceRecipeAmount
+#define furnaceRecipeAmount 6
+#endif
+#ifndef itemAmount
+#define itemAmount 100
+#endif
+#ifndef textureBlockAmount
+#define textureBlockAmount 136
+#endif
+#ifndef chestAmount
+#define chestAmount 32
+#endif
+#ifndef entityLength
+#define entityLength 128
+#endif
+#ifndef objLength
+#define objLength 228
+#endif
+
 const furnaceRecipe furnaceRecipes[furnaceRecipeAmount] = {
     {
         .inputItem = 10,
@@ -611,23 +633,4 @@ const craftingRecipe craftingRecipes[craftingRecipeAmount] = {
         .outputItemAmount = 1,
 	},
 };
-
-Vector2S chunk2DPos[64];
-bool chunk2DActive[64];
-bool chunk2DReset[64];
-
-int currentSlot = 0;
-short hotbarBlockTypes[9] =  {-1, -1, -1, -1, -1, -1, -1, -1, -1};
-short hotbarBlockAmount[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-short hotbarBlockHp[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-
-short inventoryBlockTypes[27] =  {
-    -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1,
-};
-short inventoryBlockAmount[27];
-short inventoryBlockHp[27];
-
-tlsf_t tlsf;
 

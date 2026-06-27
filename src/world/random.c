@@ -1,6 +1,7 @@
 /* src/world/random.c */
 /* src/world/random.c - Random number generators and quicksort */
 #include "engine.h"
+#include "config.h"
 #include "chunk_constants.h"
 
 unsigned int generate_random(unsigned int seed, int range) {

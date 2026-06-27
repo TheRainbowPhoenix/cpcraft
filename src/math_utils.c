@@ -1,5 +1,7 @@
+/* src/math_utils.c */
 /* src/math_utils.c - Math helper functions (arctan, sqrt, sin/cos, vectors, distance) */
 #include "engine.h"
+#include "config.h"
 
 
 //math functions

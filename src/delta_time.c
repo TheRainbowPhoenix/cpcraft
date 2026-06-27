@@ -1,6 +1,7 @@
 /* src/delta_time.c */
 /* src/delta_time.c - Frame timing */
 #include "engine.h"
+#include "config.h"
 
 void deltaTimeCalculate()
 {

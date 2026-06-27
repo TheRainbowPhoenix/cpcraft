@@ -1,6 +1,7 @@
 /* src/tlsf.c */
 #include <limits.h>
 #include "engine.h"
+#include "config.h"
 
 #include <stddef.h>
 #include <stdio.h>

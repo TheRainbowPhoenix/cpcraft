@@ -123,3 +123,61 @@ int entityInFrontIndex;
 /* Forward vector (computed by CalculateForwardVector) */
 Vector3 forward;
 /* World block data array */
+
+/* Chunk management */
+Vector2S chunk2DPos[64];
+bool chunk2DActive[64];
+bool chunk2DReset[64];
+
+/* Hotbar / inventory */
+int currentSlot = 0;
+short hotbarBlockTypes[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
+short hotbarBlockAmount[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+short hotbarBlockHp[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+short inventoryBlockTypes[27] = {
+    -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1,
+};
+short inventoryBlockAmount[27];
+short inventoryBlockHp[27];
+
+/* Memory allocator */
+tlsf_t tlsf;
+
+/* UI state */
+int UIState = 9;
+bool ExitLoop = false;
+
+/* Texture pointers */
+color_t *textures2;
+color_t *itemIcons2;
+color_t *assetsInputBuffer;
+color_t *randomShit;
+color_t *screenColor;
+
+/* World data */
+
+/* Performance tracking */
+int performanceTime1 = 0;
+int performanceTime2 = 0;
+float performanceTime = 0;
+int fps = 0;
+
+/* More missing globals */
+int currentChunkUpdateTimer = 0;
+int currentChunkUpdated = 0;
+bool isInCraftingTable = false;
+bool isInFurnace = false;
+int currentChestIndex = -1;
+int startColor = 0;
+extern int SEED;
+
+/* More globals */
+int activeChunks = 0;
+char dayTimeChange = 0;
+unsigned char performace[10] = {0,0,0,0,0,0,0,0,0,0};
+unsigned char Cperformace[10] = {0,0,0,0,0,0,0,0,0,0};
+int performanceColors[6] = {0xF800, 0x07E0, 0x001F, 0xFFE0, 0xF81F, 0x07FF};
+int renderdV = 0;
+bool blocksRenderd[64];

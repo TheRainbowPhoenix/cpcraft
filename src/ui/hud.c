@@ -1,20 +1,7 @@
 /* src/ui/hud.c - Health bar, Minecraft font, hotbar, item details */
 #include "engine.h"
 
-
-            color_t endColor16 = combineColors(startColor, 0x8c51, 50);
-
-            *(VRAMAddress + x + y * 384) = endColor16;
-        }
-    }
-}
-
-int performanceTime1 = 0;
-int performanceTime2 = 0;
-unsigned char performace[10];
-unsigned char Cperformace[10];
 color_t performanceColors[10] = {0xf800, 0xfc00, 0xffe0, 0xfc10, 0xfc1f, 0xf81f, 0x841f, 0x041f, 0x001f, 0x07ff};
-float performanceTime = 0;
 char performanceName[10][35] = {
     "mapUpdate",
     "collision, fw, time",
@@ -133,7 +120,6 @@ int fps = 0;
 int renderdT = 0;
 int renderdV = 0;
 
-int UIState = 9;
 int UIstateOld = 0;
 int cursorY = 0;
 int cursorX = 0;
@@ -151,8 +137,6 @@ int currentChestIndex = 0;
 
 int WorldOpenMode = 0; //0=create/load, 1=overwrite, 2=always load-
 
-bool ExitLoop = false;
-bool isInCraftingTable = false;
 int returnTotalItemAmount(int type)
 {
     int totAmount = 0;

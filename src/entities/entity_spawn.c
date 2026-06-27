@@ -1,8 +1,14 @@
 /* src/entities/entity_spawn.c - makeItem, makeSheep, makePig, load variants */
 #include "engine.h"
+#include "config.h"
 #include "chunk_constants.h"
 
-
+void makeItem(int posX, int posY, int posZ, float velocityX, float velocityY, float velocityZ, int itemIndex)
+{
+    int slot = -1;
+    for (int i = 0; i < entityLength; i++)
+    {
+        if(entityList[i].active == false)
         {
             slot = i;
             break;

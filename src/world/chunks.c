@@ -1,7 +1,28 @@
 /* src/world/chunks.c - Chunk generation, meshing, texture update, lighting */
 #include "engine.h"
+#include "config.h"
 #include "chunk_constants.h"
 
+void loadPerlinCaves(int chunkX, int chunkY)
+{
+    int chunkIndex = chunkX + chunkY * totalChunkWidth;
+
+    if(advancedTerrain == 2)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            for (int z = 0; z < width; z++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    if(generate_random3D(SEED, 100000, x+chunkX*width, y, z+chunkY*width) < 30)
+                    //if(x+chunkX*width == 48 && y == 10 && z+chunkY*width == 48)
+                    generateWorm((x+chunkX*width)*1000, y*1000, (z+chunkY*width)*1000, 1, generate_random3D(SEED+1, 200, x+chunkX*width, y, z+chunkY*width) + 200);
+                }
+            }
+        }
+    }
+}
 
 void loadPerlin(int chunkX, int chunkY)
 {
@@ -179,7 +200,6 @@ int chunkXMapRedstone = 0;
 int chunkZMapRedstone = 0;
 
 int cycle = 0;
-int activeChunks;
 
 //map
 void generateChunkV2(int chunkX, int chunkZ)
@@ -1227,10 +1247,3 @@ void updateChunkLightFacesV2(int chunkX, int chunkZ)
         }
     }
 }
-
-void makeExplosion(int size, int posX, int posY, int posZ)
-{
-    int half = size/2;
-
-    bool doUpdateInChunk[totalChunkWidth*totalChunkWidth];
-    for (int i = 0; i < totalChunkWidth*totalChunkWidth; i++)

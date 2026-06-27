@@ -1,5 +1,6 @@
 /* src/game.c - start_program and update (chunk loading) */
 #include "engine.h"
+#include "config.h"
 #include "chunk_constants.h"
 
 
@@ -107,10 +108,3 @@ void update()
         }
     }
 }
-
-void renderObject()
-{
-	int compressionRate = 6;
-    initializeTables();
-
-    float focalLength = 1;

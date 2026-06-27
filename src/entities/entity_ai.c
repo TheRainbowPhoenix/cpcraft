@@ -1,5 +1,6 @@
 /* src/entities/entity_ai.c - Entity update logic (sheep, pig, item AI) */
 #include "engine.h"
+#include "config.h"
 #include "chunk_constants.h"
 
 

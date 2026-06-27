@@ -1,5 +1,6 @@
 /* src/render/triangles.c - Triangle/line rasterizers (textured, solid, transparent, skybox) */
 #include "engine.h"
+#include "config.h"
 
 
 void renderLine(int x0, int x1, int y0, int y1)

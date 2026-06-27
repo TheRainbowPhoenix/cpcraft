@@ -1,8 +1,14 @@
 /* src/world/world_mgmt.c - Chunk/entity lifecycle, lighting updates */
 #include "engine.h"
+#include "config.h"
 #include "chunk_constants.h"
 
-
+void changeBrightnessAllTriangles(int lighChange)
+{
+    for (int i = 0; i < totalChunkWidth*totalChunkWidth; i++)
+    {
+        for (int j = 0; j < allObj[i].sizeT; j++)
+        allObj[i].brightnes[j] += lighChange;
     }
 
     if(lighting == true)

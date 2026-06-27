@@ -11,3 +11,4 @@ __pycache__/
 *.sublime-workspace
 .vscode
 .idea
+split_engine.py

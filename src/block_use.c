@@ -1,5 +1,6 @@
 /* src/block_use.c - Chest data management and block use interactions */
 #include "engine.h"
+#include "config.h"
 #include "chunk_constants.h"
 
 
@@ -32,8 +33,6 @@ void createChestData(int x, int y, int z)
 }
 //add a function to remove chests later
 
-int currentChunkUpdated = 0;
-float currentChunkUpdateTimer = 0;
 
 void useBlock()
 {

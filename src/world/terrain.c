@@ -1,8 +1,14 @@
-/* src/world/terrain.c - Tree, ore patch, and cave worm generation */
+/* src/world/terrain.c - Tree, ore patch, cave worm generation */
 #include "engine.h"
+#include "config.h"
 #include "chunk_constants.h"
 
+void generateTree(int x, int y, int z, int hight)
+{
 
+    for (int yOnTree = hight-2; yOnTree <= hight-1; yOnTree++)
+    {
+        if(y+yOnTree < height)
         {
             for (int xOnTree = -2; xOnTree <= 2; xOnTree++)
             {
@@ -150,25 +156,5 @@ void generateWorm(int x_, int y_, int z_, int distancePerStep, int length) {
         }
         if(breakAll == 1)
         break;
-    }
-}
-void loadPerlinCaves(int chunkX, int chunkY)
-{
-    int chunkIndex = chunkX + chunkY * totalChunkWidth;
-
-    if(advancedTerrain == 2)
-    {
-        for (int x = 0; x < width; x++)
-        {
-            for (int z = 0; z < width; z++)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    if(generate_random3D(SEED, 100000, x+chunkX*width, y, z+chunkY*width) < 30)
-                    //if(x+chunkX*width == 48 && y == 10 && z+chunkY*width == 48)
-                    generateWorm((x+chunkX*width)*1000, y*1000, (z+chunkY*width)*1000, 1, generate_random3D(SEED+1, 200, x+chunkX*width, y, z+chunkY*width) + 200);
-                }
-            }
-        }
     }
 }

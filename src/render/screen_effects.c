@@ -61,6 +61,7 @@ void renderUnderWaterEffect()
         }
     }
 }
+
 void renderMenuEffect()
 {
     for (int y = 0; y < 216; y++)
@@ -68,3 +69,9 @@ void renderMenuEffect()
         for (int x = 0; x < 384; x++)
         {
             color_t startColor = *(VRAMAddress + x + y * 384);
+            color_t endColor16 = combineColors(startColor, 0x8c51, 50);
+
+            *(VRAMAddress + x + y * 384) = endColor16;
+        }
+    }
+}

@@ -239,9 +239,50 @@ void setRotateObject(int indexGet, int indexSet, Vector3I center, float pitch, f
         allObj[indexSet].verticesIPC[i].z = newZ + center.z;
     }
 }
+
+/* TODO: move me !! */
 void createParticle(Vector3 position, float size, color_t color, char transparency, char mode, int totalTime, Vector3 velocity, bool gravity)
 {
     int index = -1;
     for (int i = 0; i < partiLength; i++)
     {
         if(allparticles[i].used == false){
+            index = i;
+            break;
+        }
+    }
+    if(index != -1)
+    {
+        allparticles[index].maxTime = totalTime;
+        allparticles[index].mode = mode;
+        allparticles[index].position = position;
+        allparticles[index].size = size;
+        allparticles[index].color = color;
+        allparticles[index].transparency = transparency;
+        allparticles[index].velocity = velocity;
+        allparticles[index].gravity = gravity;
+        allparticles[index].used = true;
+        allparticles[index].time = 0;
+    }
+}
+void deleteParticle(int index)
+{
+    allparticles[index].used = false;
+}
+
+Vector3I getCenter(int index)
+{
+    Vector3I center = {0, 0, 0};
+    for (int i = 0; i < allObj[index].sizeV; i++)
+    {
+        center.x += allObj[index].verticesIPC[i].x;
+        center.y += allObj[index].verticesIPC[i].y;
+        center.z += allObj[index].verticesIPC[i].z;
+    }
+    center.x /= allObj[index].sizeV;
+    center.y /= allObj[index].sizeV;
+    center.z /= allObj[index].sizeV;
+
+    return center;
+}
+

@@ -1,6 +1,7 @@
 /* src/fxlibc_hal.c */
 #include "casiowin.h"
 #include "engine.h"
+#include "config.h"
 
 #include <unistd.h>
 

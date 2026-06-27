@@ -1,5 +1,6 @@
 /* src/world/redstone.c - Redstone map update logic */
 #include "engine.h"
+#include "config.h"
 #include "chunk_constants.h"
 
 

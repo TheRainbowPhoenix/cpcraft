@@ -1,6 +1,7 @@
 /* src/DMA_Transfer.c */
 #include <fxcg/display.h>
 #include "engine.h"
+#include "config.h"
 
 
 // DMA Base Addresses
