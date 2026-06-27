@@ -8,11 +8,7 @@
 #include "../src/tlsf.h"
 #include "types.h"
 
-void swap(Vector2I **a, Vector2I **b) {
-  Vector2I *temp = *a;
-  *a = *b;
-  *b = temp;
-}
+void swap(Vector2I **a, Vector2I **b);
 
 #define resX 384
 #define resY 216
