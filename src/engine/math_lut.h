@@ -54,7 +54,8 @@ static inline int brads_to_deg(uint16_t angle) {
 /* --- Old fix16 compat (deprecated, do not use in new code) --- */
 extern const int32_t sintable_deg10[450];
 static inline int32_t fsin_deg10(int a) {
-    while (a < 0) a += 3600; while (a >= 3600) a -= 3600;
+    while (a < 0) a += 3600;
+    while (a >= 3600) a -= 3600;
     return sintable_deg10[a];
 }
 static inline int32_t fcos_deg10(int a) { return fsin_deg10(a + 900); }

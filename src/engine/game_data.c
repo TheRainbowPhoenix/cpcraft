@@ -300,13 +300,13 @@ void entity_update_all(int32_t dt)
                     int32_t speed = 1966;  /* ~0.03 blocks/frame */
                     e->vx = (sin_brads(angle) * speed)/TRIG_SCALE;
                     e->vz = (cos_brads(angle) * speed)/TRIG_SCALE;
-                    e->moveTimer = ((2 + ((h >> 8) * 100) & 3));
+                    e->moveTimer = (((2 + ((h >> 8) * 100)) & 3));
                 } else {
                     /* Stand still. */
                     e->state = ENT_STANDING;
                     e->vx = 0;
                     e->vz = 0;
-                    e->moveTimer = ((2 + ((h >> 8) * 100) & 3));
+                    e->moveTimer = (((2 + ((h >> 8) * 100)) & 3));
                 }
             }
 
