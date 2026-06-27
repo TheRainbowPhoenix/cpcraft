@@ -412,9 +412,9 @@ void demo_run(void)
     POWER_MSTPCR0->s.TMU = 0;
 
     /* Show startup message. */
-    Debug_Printf(0, 0, false, 0, "CPCraft-port starting...");
+    // Debug_Printf(0, 0, false, 0, "CPCraft-port starting...");
     fb_present();
-    Debug_Printf(0, 1, false, 0, "engine_init done");
+    // Debug_Printf(0, 1, false, 0, "engine_init done");
 
     while (1)
     {
