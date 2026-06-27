@@ -4,8 +4,8 @@
  *
  * Walk the world, find exposed faces, project + draw them.
  *
- * All positions are fix16_t (16.16 fixed-point). Block corners are
- * computed as fix16_from_int(bx) + offset (0 or FIX16_ONE).
+ * All positions are int32_t (16.16 fixed-point). Block corners are
+ * computed as ((bx) * 100) + offset (0 or 100).
  *
  * Face winding order (counter-clockwise when viewed from outside):
  *   +X face (right):  (1,0,1) (1,0,0) (1,1,0) (1,1,1)
@@ -63,27 +63,27 @@ struct FaceDef {
 static const struct FaceDef FACES[6] = {
     { 1, 0, 0,
       { {1,0,1}, {1,0,0}, {1,1,0}, {1,1,1} },
-      FIX16_ONE, 0, 0 },
+      100, 0, 0 },
     { -1, 0, 0,
       { {0,0,0}, {0,0,1}, {0,1,1}, {0,1,0} },
-      -FIX16_ONE, 0, 0 },
+      -100, 0, 0 },
     { 0, 1, 0,
       { {0,1,1}, {1,1,1}, {1,1,0}, {0,1,0} },
-      0, FIX16_ONE, 0 },
+      0, 100, 0 },
     { 0, -1, 0,
       { {0,0,0}, {1,0,0}, {1,0,1}, {0,0,1} },
-      0, -FIX16_ONE, 0 },
+      0, -100, 0 },
     { 0, 0, 1,
       { {0,0,1}, {1,0,1}, {1,1,1}, {0,1,1} },
-      0, 0, FIX16_ONE },
+      0, 0, 100 },
     { 0, 0, -1,
       { {1,0,0}, {0,0,0}, {0,1,0}, {1,1,0} },
-      0, 0, -FIX16_ONE },
+      0, 0, -100 },
 };
 
 void world_render(void)
 {
-    fix16_t ex, ey, ez;
+    int32_t ex, ey, ez;
     player_eye(&ex, &ey, &ez);
     const uint16_t yaw = player.yaw;
     const int16_t pitch = player.pitch;
@@ -96,12 +96,12 @@ void world_render(void)
                 if (id == BLK_AIR) continue;
 
                 /* Block center (fix16). */
-                fix16_t cx = fix16_from_int(bx) + FIX16_HALF;
-                fix16_t cy = fix16_from_int(by) + FIX16_HALF;
-                fix16_t cz = fix16_from_int(bz) + FIX16_HALF;
+                int32_t cx = ((bx) * 100) + 50;
+                int32_t cy = ((by) * 100) + 50;
+                int32_t cz = ((bz) * 100) + 50;
 
                 /* View vector (camera -> block center). */
-                fix16_t vx = cx - ex, vy = cy - ey, vz = cz - ez;
+                int32_t vx = cx - ex, vy = cy - ey, vz = cz - ez;
 
                 for (int f = 0; f < 6; f++)
                 {
@@ -118,19 +118,19 @@ void world_render(void)
 
                     /* Backface culling: dot(normal, view) > 0 = facing away.
                      * dot = nx*vx + ny*vy + nz*vz (all fix16). */
-                    fix16_t dot = fix16_mul(fd->normal_x, vx) +
-                                  fix16_mul(fd->normal_y, vy) +
-                                  fix16_mul(fd->normal_z, vz);
+                    int32_t dot = (fd->normal_x * vx)/TRIG_SCALE +
+                                  (fd->normal_y * vy)/TRIG_SCALE +
+                                  (fd->normal_z * vz)/TRIG_SCALE;
                     if (dot < 0) continue;
 
                     /* Project the 4 corners. */
                     ScreenPoint sp[4];
                     for (int i = 0; i < 4; i++)
                     {
-                        fix16_t wx = fix16_from_int(bx) + fix16_from_int(fd->corners[i][0]);
-                        fix16_t wy = fix16_from_int(by) + fix16_from_int(fd->corners[i][1]);
-                        fix16_t wz = fix16_from_int(bz) + fix16_from_int(fd->corners[i][2]);
-                        sp[i] = camera_project(wx, wy, wz, ex, ey, ez, yaw, pitch);
+                        int32_t wx = ((bx) * 100) + ((fd->corners[i][0]) * 100);
+                        int32_t wy = ((by) * 100) + ((fd->corners[i][1]) * 100);
+                        int32_t wz = ((bz) * 100) + ((fd->corners[i][2]) * 100);
+                        camera_project(wx, wy, wz, ex, ey, ez, yaw, pitch, &sp[i]);
                     }
 
                     const uint16_t (*tex)[TEX_SIZE];

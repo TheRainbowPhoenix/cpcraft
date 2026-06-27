@@ -31,12 +31,12 @@
 /* Maximum ray march distance (in blocks). */
 #define MAX_RAY_DIST  40
 
-void raycast_render(fix16_t eye_x, fix16_t eye_y, fix16_t eye_z,
+void raycast_render(int32_t eye_x, int32_t eye_y, int32_t eye_z,
                     uint16_t yaw, int16_t pitch)
 {
     /* Player's block position. */
-    int px = fix16_to_int(eye_x);
-    int pz = fix16_to_int(eye_z);
+    int px = ((eye_x) / 100);
+    int pz = ((eye_z) / 100);
 
     /* FOV: 70 degrees horizontal. In BRAD: 70 * 65536 / 360 ≈ 12740.
      * Per-column angle step = FOV / FB_W = 12740 / 160 ≈ 80 BRAD/pixel.
@@ -56,8 +56,8 @@ void raycast_render(fix16_t eye_x, fix16_t eye_y, fix16_t eye_z,
         uint16_t ray_angle = yaw + (uint16_t)angle_offset;
 
         /* Ray direction. */
-        fix16_t ray_x = fix16_sin_brads(ray_angle);
-        fix16_t ray_z = fix16_cos_brads(ray_angle);
+        int32_t ray_x = sin_brads(ray_angle);
+        int32_t ray_z = cos_brads(ray_angle);
 
         /* DDA setup. We march in the XZ plane.
          * The ray starts at (eye_x, eye_z) and goes in (ray_x, ray_z). */
@@ -72,37 +72,37 @@ void raycast_render(fix16_t eye_x, fix16_t eye_y, fix16_t eye_z,
          * If ray_x > 0: next boundary is at floor(x)+1, so t = (floor(x)+1 - x) / ray_x.
          * If ray_x < 0: next boundary is at floor(x), so t = (x - floor(x)) / -ray_x.
          * We use fix16 for the fractional part. */
-        fix16_t frac_x = fix16_frac(eye_x);
-        fix16_t frac_z = fix16_frac(eye_z);
+        int32_t frac_x = ((eye_x) % 100);
+        int32_t frac_z = ((eye_z) % 100);
 
-        fix16_t t_max_x, t_max_z;
-        fix16_t t_delta_x, t_delta_z;
+        int32_t t_max_x, t_max_z;
+        int32_t t_delta_x, t_delta_z;
 
         if (step_x > 0) {
-            t_max_x = fix16_div(FIX16_ONE - frac_x, ray_x);
+            t_max_x = ((100 - frac_x) * 100/ray_x);
         } else if (step_x < 0) {
-            t_max_x = fix16_div(frac_x, -ray_x);
+            t_max_x = ((frac_x) * 100/-ray_x);
         } else {
             t_max_x = 0x7FFFFFFF;  /* "infinity" */
         }
 
         if (step_z > 0) {
-            t_max_z = fix16_div(FIX16_ONE - frac_z, ray_z);
+            t_max_z = ((100 - frac_z) * 100/ray_z);
         } else if (step_z < 0) {
-            t_max_z = fix16_div(frac_z, -ray_z);
+            t_max_z = ((frac_z) * 100/-ray_z);
         } else {
             t_max_z = 0x7FFFFFFF;
         }
 
         /* t_delta = 1 / |ray_dir| per axis. */
-        t_delta_x = (step_x != 0) ? fix16_div(FIX16_ONE, fix16_abs(ray_x)) : 0x7FFFFFFF;
-        t_delta_z = (step_z != 0) ? fix16_div(FIX16_ONE, fix16_abs(ray_z)) : 0x7FFFFFFF;
+        t_delta_x = (step_x != 0) ? ((100) * 100/((ray_x) < 0 ? -(ray_x) : (ray_x))) : 0x7FFFFFFF;
+        t_delta_z = (step_z != 0) ? ((100) * 100/((ray_z) < 0 ? -(ray_z) : (ray_z))) : 0x7FFFFFFF;
 
         /* DDA march. */
         int hit_block = -1;
         int hit_side = 0;  /* 0 = X side, 1 = Z side */
-        fix16_t hit_dist = 0;
-        fix16_t hit_wall_x = 0;
+        int32_t hit_dist = 0;
+        int32_t hit_wall_x = 0;
         uint8_t hit_id = BLK_AIR;
         int hit_visible = 0;  /* 1 once we find a block whose wall is on-screen */
 
@@ -145,14 +145,14 @@ void raycast_render(fix16_t eye_x, fix16_t eye_y, fix16_t eye_z,
                  *
                  * Quick visibility check: compute approximate wall_top
                  * and wall_bot. If both are off-screen, skip this block. */
-                fix16_t dist = hit_dist;
-                if (dist < FIX16_ONE) dist = FIX16_ONE;
-                fix16_t wh = fix16_div(fix16_from_int(FB_H), dist);
-                fix16_t scale = wh;
-                fix16_t bt = fix16_from_int(hit_y + 1);
-                fix16_t bb = fix16_from_int(hit_y);
-                int approx_top = horizon + fix16_to_int(fix16_mul(eye_y - bt, scale));
-                int approx_bot = horizon + fix16_to_int(fix16_mul(eye_y - bb, scale));
+                int32_t dist = hit_dist;
+                if (dist < 100) dist = 100;
+                int32_t wh = ((((FB_H) * 100)) * 100/dist);
+                int32_t scale = wh;
+                int32_t bt = ((hit_y + 1) * 100);
+                int32_t bb = ((hit_y) * 100);
+                int approx_top = horizon + (((eye_y - bt * scale) / 100)/TRIG_SCALE);
+                int approx_bot = horizon + (((eye_y - bb * scale) / 100)/TRIG_SCALE);
 
                 /* If the wall is entirely above or below the screen,
                  * skip it and keep marching. */
@@ -167,12 +167,12 @@ void raycast_render(fix16_t eye_x, fix16_t eye_y, fix16_t eye_z,
 
                 /* Compute the wall X coordinate for texturing. */
                 if (hit_side == 0) {
-                    hit_wall_x = eye_z + fix16_mul(hit_dist, ray_z);
+                    hit_wall_x = eye_z + (hit_dist * ray_z)/TRIG_SCALE;
                 } else {
-                    hit_wall_x = eye_x + fix16_mul(hit_dist, ray_x);
+                    hit_wall_x = eye_x + (hit_dist * ray_x)/TRIG_SCALE;
                 }
-                hit_wall_x = fix16_frac(hit_wall_x);
-                if (hit_wall_x < 0) hit_wall_x += FIX16_ONE;
+                hit_wall_x = ((hit_wall_x) % 100);
+                if (hit_wall_x < 0) hit_wall_x += 100;
             }
         }
 
@@ -190,8 +190,8 @@ void raycast_render(fix16_t eye_x, fix16_t eye_y, fix16_t eye_z,
          *
          * To avoid fix16_div in the hot loop, we precompute a lookup
          * table of 1/d for small d. But for now, just use fix16_div. */
-        fix16_t dist = hit_dist;
-        if (dist < FIX16_ONE) dist = FIX16_ONE;  /* clamp to avoid div by 0 */
+        int32_t dist = hit_dist;
+        if (dist < 100) dist = 100;  /* clamp to avoid div by 0 */
 
         /* wall_height = (FB_H * focal) / dist
          * focal ≈ 114 in fix16 = 114 * 65536 = 7471104
@@ -204,8 +204,8 @@ void raycast_render(fix16_t eye_x, fix16_t eye_y, fix16_t eye_z,
          * = 264 * 65536 / dist = 17301504 / dist.
          * That fits in int32 (max 2^31 = 2147483648).
          */
-        fix16_t wall_h_fix = fix16_div(fix16_from_int(FB_H), dist);
-        int wall_h = fix16_to_int(wall_h_fix);
+        int32_t wall_h_fix = ((((FB_H) * 100)) * 100/dist);
+        int wall_h = ((wall_h_fix) / 100);
         if (wall_h > FB_H) wall_h = FB_H;
         if (wall_h < 1) wall_h = 1;
 
@@ -223,12 +223,12 @@ void raycast_render(fix16_t eye_x, fix16_t eye_y, fix16_t eye_z,
          *   wall_top = horizon + (eye_y - (hit_block + 1)) * scale
          *   wall_bot = horizon + (eye_y - hit_block) * scale
          */
-        fix16_t scale = wall_h_fix;
-        fix16_t block_top_y = fix16_from_int(hit_block + 1);
-        fix16_t block_bot_y = fix16_from_int(hit_block);
+        int32_t scale = wall_h_fix;
+        int32_t block_top_y = ((hit_block + 1) * 100);
+        int32_t block_bot_y = ((hit_block) * 100);
 
-        int wall_top = horizon + fix16_to_int(fix16_mul(eye_y - block_top_y, scale));
-        int wall_bot = horizon + fix16_to_int(fix16_mul(eye_y - block_bot_y, scale));
+        int wall_top = horizon + (((eye_y - block_top_y * scale) / 100)/TRIG_SCALE);
+        int wall_bot = horizon + (((eye_y - block_bot_y * scale) / 100)/TRIG_SCALE);
 
         /* Clamp to screen. */
         int draw_top = wall_top;
@@ -241,7 +241,7 @@ void raycast_render(fix16_t eye_x, fix16_t eye_y, fix16_t eye_z,
         if (!tex) tex = tex_stone;
 
         /* Compute texture U coordinate from hit_wall_x. */
-        int tex_u = fix16_to_int(hit_wall_x * (TEX_SIZE - 1));
+        int tex_u = ((hit_wall_x * (TEX_SIZE - 1) / 100));
         if (tex_u < 0) tex_u = 0;
         if (tex_u >= TEX_SIZE) tex_u = TEX_SIZE - 1;
 

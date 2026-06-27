@@ -9,7 +9,7 @@
  * overflow, no 64-bit ops).
  *
  * Z-buffer: stores a uint16_t "1/z" value. Closer = larger.
- * We compute 1/z from the fix16_t sz field ONCE per edge endpoint
+ * We compute 1/z from the int32_t sz field ONCE per edge endpoint
  * (not per pixel), then interpolate the uint16_t with integer math.
  */
 #include "rasterizer.h"

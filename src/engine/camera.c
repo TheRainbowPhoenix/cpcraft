@@ -2,109 +2,80 @@
 /*
  * cpcraft-port — engine/camera.c
  *
- * 3D-to-2D projection implementation (16.16 fixed-point, no floats).
+ * 3D-to-2D projection — PLAIN INT math.
  *
- * Steps:
- *   1. Translate world point by -eye.
- *   2. Rotate by -yaw around Y, then -pitch around X.
- *   3. The resulting (cx, cy, cz) is in camera space.
- *   4. If cz <= near, the point is behind the camera -> not visible.
- *   5. Project: sx = FB_W/2 + (cx / cz) * focal; sy = FB_H/2 - (cy / cz) * focal.
+ * Scale: 100 units per block. Sin/cos: 10000 = 1.0.
  *
- * All math is fix16_t. Sin/cos come from the BRAD lookup table in
- * math_lut.h — a single table lookup per axis, no branches.
- *
- * The focal length is precomputed at init time from the FOV:
- *   focal = (FB_W / 2) / tan(hfov / 2)
- * For 70° hfov: focal ≈ 114 (in fix16: 114 * 65536 ≈ 7471104).
+ * Projection: sx = FB_W/2 + (cx * focal) / cz
+ *             sy = FB_H/2 - (cy * focal) / cz
+ * All plain int division. No fix16, no float, no int64 in hot paths.
  */
 #include "camera.h"
 #include "framebuffer.h"
 #include "math_lut.h"
 #include "fix16.h"
 
-#define NEAR_PLANE  6554    /* 0.1 in fix16 */
+#define NEAR_PLANE  10    /* 0.1 blocks in units */
 
-/* Focal length in fix16. For 70° FOV:
- * focal = 80 / tan(35°) = 80 / 0.7002 ≈ 114.2
- * In fix16: 114 * 65536 + (0.2 * 65536) ≈ 7475200 */
-static fix16_t focal_length;
+static int32_t focal_length;  /* in screen pixels (~114) */
 
 void camera_init(void)
 {
-    /* tan(35°) in fix16. 35° in BRAD = 35 * 65536 / 360 = 6370.
-     * sin(35°) ≈ 0.5736, cos(35°) ≈ 0.8192
-     * tan(35°) = sin/cos ≈ 0.7002
-     * In fix16: 0.7002 * 65536 ≈ 45879 */
-    fix16_t s = fix16_sin_brads(deg_to_brads(35));
-    fix16_t c = fix16_cos_brads(deg_to_brads(35));
-    fix16_t tan35 = fix16_div(s, c);
-
-    /* focal = (FB_W / 2) / tan35 = 80 / 0.7002 ≈ 114.2 */
-    focal_length = fix16_div(fix16_from_int(FB_W / 2), tan35);
+    /* focal = (FB_W / 2) / tan(35°)
+     * tan(35°) = sin(35°) / cos(35°)
+     * sin/cos return scale-10000 values. */
+    int32_t s = sin_brads(deg_to_brads(35));  /* ~5736 */
+    int32_t c = cos_brads(deg_to_brads(35));  /* ~8192 */
+    /* tan = s * 10000 / c (plain int) */
+    int32_t tan35 = s * TRIG_SCALE / c;  /* ~7002 */
+    /* focal = (FB_W/2) * 10000 / tan35 */
+    focal_length = (FB_W / 2) * TRIG_SCALE / tan35;  /* ~1142 */
+    /* Actually we want focal in pixels, not scaled. Let's use:
+     * focal_pixels = (FB_W/2) / tan(35°) = 80 / 0.7002 ≈ 114 */
+    focal_length = 114;
 }
 
-ScreenPoint camera_project(fix16_t wx, fix16_t wy, fix16_t wz,
-                           fix16_t ex, fix16_t ey, fix16_t ez,
-                           uint16_t yaw, int16_t pitch)
+void camera_project(int32_t wx, int32_t wy, int32_t wz,
+                    int32_t ex, int32_t ey, int32_t ez,
+                    uint16_t yaw, int16_t pitch,
+                    ScreenPoint *out)
 {
-    ScreenPoint out = {0, 0, 0, false};
+    /* Step 1: translate (units = 100 per block). */
+    int32_t dx = wx - ex;
+    int32_t dy = wy - ey;
+    int32_t dz = wz - ez;
 
-    /* Step 1: translate. */
-    fix16_t dx = wx - ex;
-    fix16_t dy = wy - ey;
-    fix16_t dz = wz - ez;
+    /* Step 2: rotate by -yaw (around Y).
+     * sin/cos return scale-10000. Multiply by dx/dz and divide by 10000. */
+    int32_t cy = cos_brads(yaw);  /* 10000 = 1.0 */
+    int32_t sy = sin_brads(yaw);
 
-    /* Step 2: rotate. We rotate the WORLD by -yaw and -pitch, which is
-     * equivalent to rotating the camera by +yaw and +pitch.
-     *
-     * For the yaw rotation (around Y), we need cos(-yaw) and sin(-yaw).
-     * Since cos(-x) = cos(x) and sin(-x) = -sin(x), we use:
-     *   cy = cos(yaw), sy = sin(yaw)
-     * and the rotation matrix becomes:
-     *   cx1 =  dx * cy + dz * sy
-     *   cz1 = -dx * sy + dz * cy
-     *   cy1 =  dy
-     */
-    fix16_t cy = fix16_cos_brads(yaw);
-    fix16_t sy = fix16_sin_brads(yaw);
+    /* cx1 =  dx*cy + dz*sy  (all /10000) */
+    int32_t cx1 = (dx * cy + dz * sy) / TRIG_SCALE;
+    int32_t cy1 = dy;
+    int32_t cz1 = (-dx * sy + dz * cy) / TRIG_SCALE;
 
-    fix16_t cx1 = fix16_mul(dx, cy) + fix16_mul(dz, sy);
-    fix16_t cy1 = dy;
-    fix16_t cz1 = fix16_mul(-dx, sy) + fix16_mul(dz, cy);
+    /* Pitch rotation (around X). */
+    int32_t cp = cos_brads((uint16_t)pitch);
+    int32_t sp = sin_brads((uint16_t)pitch);
 
-    /* Pitch rotation (around X). Same trick: use cos(pitch), -sin(pitch).
-     *   cy2 = cy1 * cp - cz1 * sp
-     *   cz2 = cy1 * sp + cz1 * cp
-     *   cx2 = cx1
-     */
-    /* Pitch is int16_t; convert to uint16_t for the LUT (it handles the
-     * sign via wraparound). */
-    fix16_t cp = fix16_cos_brads((uint16_t)pitch);
-    fix16_t sp = fix16_sin_brads((uint16_t)pitch);
+    int32_t cx2 = cx1;
+    int32_t cy2 = (cy1 * cp - cz1 * sp) / TRIG_SCALE;
+    int32_t cz2 = (cy1 * sp + cz1 * cp) / TRIG_SCALE;
 
-    fix16_t cx2 = cx1;
-    fix16_t cy2 = fix16_mul(cy1, cp) - fix16_mul(cz1, sp);
-    fix16_t cz2 = fix16_mul(cy1, sp) + fix16_mul(cz1, cp);
-
-    /* Step 3: camera space is (cx2, cy2, cz2). +Z is forward. */
+    /* Step 3: behind-camera check. */
     if (cz2 <= NEAR_PLANE) {
-        out.visible = false;
-        return out;
+        out->visible = false;
+        out->sx = 0; out->sy = 0; out->sz = 0;
+        return;
     }
 
-    /* Step 4: perspective project.
-     *   sx = FB_W/2 + (cx2 / cz2) * focal
-     *   sy = FB_H/2 - (cy2 / cz2) * focal
-     *
-     * We compute cx2/cz2 as a fix16 division, then multiply by focal. */
-    fix16_t scale = fix16_div(FIX16_ONE, cz2);  /* 1/cz2 */
-    fix16_t sx_f = fix16_from_int(FB_W / 2) + fix16_mul(fix16_mul(cx2, scale), focal_length);
-    fix16_t sy_f = fix16_from_int(FB_H / 2) - fix16_mul(fix16_mul(cy2, scale), focal_length);
-
-    out.sx = fix16_to_int_round(sx_f);
-    out.sy = fix16_to_int_round(sy_f);
-    out.sz = cz2;  /* store raw fix16 depth (larger = farther) */
-    out.visible = true;
-    return out;
+    /* Step 4: perspective project — PLAIN INT DIVISION.
+     *   sx = FB_W/2 + cx2 * focal / cz2
+     *   sy = FB_H/2 - cy2 * focal / cz2
+     * focal is in pixels (~114). cx2/cy2/cz2 are in units (100/block). */
+    out->sx = FB_W / 2 + (cx2 * focal_length) / cz2;
+    out->sy = FB_H / 2 - (cy2 * focal_length) / cz2;
+    out->sz = cz2;
+    out->visible = true;
 }
