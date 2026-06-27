@@ -211,8 +211,10 @@ static void draw_cube(int bx, int by, int bz,
     {
         const struct CubeFace *face = &CUBE_FACES[f];
 
-        /* Backface culling: dot(normal, view) > 0 means the face
-         * points AWAY from the camera. Skip it. */
+        /* Backface culling: the view vector goes FROM camera TO cube.
+         * A face is visible if its normal points TOWARD the camera,
+         * i.e. dot(normal, view) < 0.
+         * If dot >= 0, the face points AWAY — skip it. */
         fix16_t dot = fix16_mul(face->normal[0], vx) +
                       fix16_mul(face->normal[1], vy) +
                       fix16_mul(face->normal[2], vz);
@@ -270,10 +272,19 @@ static void scene_cube(void)
 }
 
 /* ------------------------------------------------------------------ */
-/*  Scene 4 — SMALL CUBE GRID (a few cubes, 3D projected)             */
+/*  Scene 4 — DDA RAYCASTER (like CP-Raycaster-Demo)                  */
 /* ------------------------------------------------------------------ */
 
-static void scene_cubes(void)
+/* Cast one ray per screen column through the voxel grid using DDA
+ * (Amanatides & Woo algorithm). When we hit a solid block, draw a
+ * textured vertical strip. Fill above with sky, below with floor.
+ *
+ * This is the same approach as CP-Raycaster-Demo but adapted for our
+ * 3D voxel world (heightmap terrain). */
+
+#define RAY_MAX_DIST  40
+
+static void scene_raycast(void)
 {
     fb_clear(0x6C59);  /* sky */
     rz_clear_zbuf();
@@ -281,11 +292,12 @@ static void scene_cubes(void)
     fix16_t ex, ey, ez;
     player_eye(&ex, &ey, &ez);
 
-    /* Draw a small 3x3 grid of cubes in front of the player. */
     int px = fix16_to_int(ex);
     int pz = fix16_to_int(ez);
+    
 
     for (int dz = 2; dz <= 4; dz++)
+    {
         for (int dx = -1; dx <= 1; dx++)
         {
             int bx = px + dx;
@@ -301,6 +313,146 @@ static void scene_cubes(void)
             draw_cube(bx, by, bz, top, side, tex_stone,
                       ex, ey, ez, player.yaw, player.pitch);
         }
+    }
+
+    // /* FOV: 70 degrees. In BRAD: 70 * 65536/360 ≈ 12740.
+    //  * Per-column step = FOV / FB_W ≈ 80 BRAD/pixel. */
+    // const int32_t fov_step = (12740) / FB_W;
+
+    // /* Horizon line: shifted by pitch. */
+    // int horizon = FB_H / 2 - (player.pitch / 64);
+
+    // for (int x = 0; x < FB_W; x++)
+    //     {
+    //     /* Ray angle = yaw + (x - FB_W/2) * fov_step (all in BRAD). */
+    //     int32_t angle_offset = (x - FB_W / 2) * fov_step;
+    //     uint16_t ray_angle = player.yaw + (uint16_t)angle_offset;
+
+    //     fix16_t ray_x = fix16_sin_brads(ray_angle);
+    //     fix16_t ray_z = fix16_cos_brads(ray_angle);
+
+    //     /* DDA setup in the XZ plane. */
+    //     int map_x = px;
+    //     int map_z = pz;
+
+    //     int step_x = (ray_x > 0) ? 1 : (ray_x < 0) ? -1 : 0;
+    //     int step_z = (ray_z > 0) ? 1 : (ray_z < 0) ? -1 : 0;
+
+    //     fix16_t frac_x = fix16_frac(ex);
+    //     fix16_t frac_z = fix16_frac(ez);
+
+    //     fix16_t t_max_x, t_max_z;
+    //     fix16_t t_delta_x, t_delta_z;
+
+    //     if (step_x > 0) {
+    //         t_max_x = fix16_div(FIX16_ONE - frac_x, ray_x);
+    //     } else if (step_x < 0) {
+    //         t_max_x = fix16_div(frac_x, -ray_x);
+    //     } else {
+    //         t_max_x = 0x7FFFFFFF;
+    //     }
+    //     if (step_z > 0) {
+    //         t_max_z = fix16_div(FIX16_ONE - frac_z, ray_z);
+    //     } else if (step_z < 0) {
+    //         t_max_z = fix16_div(frac_z, -ray_z);
+    //     } else {
+    //         t_max_z = 0x7FFFFFFF;
+    //     }
+
+    //     t_delta_x = (step_x != 0) ? fix16_div(FIX16_ONE, fix16_abs(ray_x)) : 0x7FFFFFFF;
+    //     t_delta_z = (step_z != 0) ? fix16_div(FIX16_ONE, fix16_abs(ray_z)) : 0x7FFFFFFF;
+
+    //     /* DDA march. */
+    //     int hit_y = -1;
+    //     uint8_t hit_id = BLK_AIR;
+    //     int hit_side = 0;
+    //     fix16_t hit_dist = 0;
+    //     fix16_t hit_wall_x = 0;
+
+    //     for (int step = 0; step < RAY_MAX_DIST * 4; step++)
+    //     {
+    //         if (t_max_x < t_max_z) {
+    //             hit_dist = t_max_x;
+    //             map_x += step_x;
+    //             t_max_x += t_delta_x;
+    //             hit_side = 0;
+    //         } else {
+    //             hit_dist = t_max_z;
+    //             map_z += step_z;
+    //             t_max_z += t_delta_z;
+    //             hit_side = 1;
+    //         }
+
+    //         if ((unsigned)map_x >= WORLD_W || (unsigned)map_z >= WORLD_D)
+    //             break;
+
+    //         /* Find the highest non-air block in this column. */
+    //         for (int by = WORLD_H - 1; by >= 0; by--) {
+    //             uint8_t id = world_get(map_x, by, map_z);
+    //             if (id != BLK_AIR && id != BLK_WATER) {
+    //                 hit_y = by;
+    //                 hit_id = id;
+    //                 break;
+    //             }
+    //         }
+
+    //         if (hit_y >= 0)
+    //         {
+    //             if (hit_side == 0) {
+    //                 hit_wall_x = ez + fix16_mul(hit_dist, ray_z);
+    //             } else {
+    //                 hit_wall_x = ex + fix16_mul(hit_dist, ray_x);
+    //             }
+    //             hit_wall_x = fix16_frac(hit_wall_x);
+    //             if (hit_wall_x < 0) hit_wall_x += FIX16_ONE;
+    //             break;
+    //         }
+    //     }
+
+    //     if (hit_y < 0)
+    //         continue;  /* no hit — column is all sky */
+
+    //     /* Compute wall strip height. */
+    //     fix16_t dist = hit_dist;
+    //     if (dist < FIX16_ONE) dist = FIX16_ONE;
+
+    //     /* wall_height = FB_H / dist (in fix16). */
+    //     fix16_t wall_h_fix = fix16_div(fix16_from_int(FB_H), dist);
+    //     int wall_h = fix16_to_int(wall_h_fix);
+    //     if (wall_h > FB_H) wall_h = FB_H;
+    //     if (wall_h < 1) wall_h = 1;
+
+    //     /* Wall position: top face at hit_y+1, bottom at hit_y. */
+    //     fix16_t scale = wall_h_fix;
+    //     fix16_t block_top_y = fix16_from_int(hit_y + 1);
+    //     fix16_t block_bot_y = fix16_from_int(hit_y);
+
+    //     int wall_top = horizon + fix16_to_int(fix16_mul(ey - block_top_y, scale));
+    //     int wall_bot = horizon + fix16_to_int(fix16_mul(ey - block_bot_y, scale));
+
+    //     int draw_top = wall_top;
+    //     int draw_bot = wall_bot;
+    //     if (draw_top < 0) draw_top = 0;
+    //     if (draw_bot >= FB_H) draw_bot = FB_H - 1;
+
+    //     /* Get texture. */
+    //     const uint16_t (*tex)[TEX_SIZE] = block_textures[hit_id];
+    //     if (!tex) tex = tex_stone;
+
+    //     /* Texture U from hit_wall_x. */
+    //     int tex_u = fix16_to_int(hit_wall_x * (TEX_SIZE - 1));
+    //     if (tex_u < 0) tex_u = 0;
+    //     if (tex_u >= TEX_SIZE) tex_u = TEX_SIZE - 1;
+
+    //     /* Draw textured vertical strip. */
+    //     for (int y = draw_top; y <= draw_bot; y++)
+    //     {
+    //         int tex_v = ((y - wall_top) * (TEX_SIZE - 1)) / (wall_h > 0 ? wall_h : 1);
+    //         if (tex_v < 0) tex_v = 0;
+    //         if (tex_v >= TEX_SIZE) tex_v = TEX_SIZE - 1;
+    //         fb_pixel(x, y, tex[tex_v][tex_u]);
+    //     }
+    //     }
 }
 
 /* ------------------------------------------------------------------ */
@@ -402,7 +554,7 @@ static void scene_world_3d(void)
 /* ------------------------------------------------------------------ */
 
 static const char *scene_names[] = {
-    "DIAG", "PLASMA", "TEXTURED", "CUBE", "CUBES", "WORLD3D"
+    "DIAG", "PLASMA", "TEXTURED", "CUBE", "RAYCAST", "WORLD3D"
 };
 #define SCENE_COUNT 6
 
@@ -472,7 +624,7 @@ void demo_run(void)
             case 1: scene_plasma(); break;
             case 2: scene_textured(frame); break;
             case 3: scene_cube(); break;
-            case 4: scene_cubes(); break;
+            case 4: scene_raycast(); break;
             case 5: scene_world_3d(); break;
         }
 
