@@ -66,6 +66,9 @@
  */
 #pragma once
 
+/* System config */
+#include "config.h"
+
 /* Type definitions */
 #include "types.h"
 
