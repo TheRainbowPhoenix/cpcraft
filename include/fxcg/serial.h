@@ -1,3 +1,4 @@
+/* include/fxcg/serial.h */
 #ifndef _FXCG_SERIAL_H
 #define _FXCG_SERIAL_H
 

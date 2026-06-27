@@ -1,3 +1,4 @@
+/* include/assert.h */
 #ifndef __FXCG_ASSERT_H
 #define __FXCG_ASSERT_H
 

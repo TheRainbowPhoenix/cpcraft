@@ -1,3 +1,4 @@
+/* include/app.h */
 #ifndef _FXCG_MINICOMPAT
 # error Included app.h without minicompat. Use <fxcg/app.h>.
 #else

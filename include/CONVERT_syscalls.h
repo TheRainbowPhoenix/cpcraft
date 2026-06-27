@@ -1,3 +1,4 @@
+/* include/CONVERT_syscalls.h */
 #ifndef _FXCG_MINICOMPAT
 # error Legacy header included without minicompat. Do you really need this?
 #else

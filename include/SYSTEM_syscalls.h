@@ -1,3 +1,4 @@
+/* include/SYSTEM_syscalls.h */
 int EnableColor( int );
 int GetMainBatteryVoltage( int one );
 int SMEM_FindFirst( const unsigned short*pattern, unsigned short*foundfile );

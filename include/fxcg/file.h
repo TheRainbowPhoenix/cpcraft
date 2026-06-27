@@ -1,3 +1,4 @@
+/* include/fxcg/file.h */
 #ifndef _FXCG_FILE_H
 #define _FXCG_FILE_H
 

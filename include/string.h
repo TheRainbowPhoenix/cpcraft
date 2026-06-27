@@ -1,3 +1,4 @@
+/* include/string.h */
 #ifndef _FXCG_STRING_H
 #define _FXCG_STRING_H
 

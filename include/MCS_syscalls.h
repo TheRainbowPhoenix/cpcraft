@@ -1,3 +1,4 @@
+/* include/MCS_syscalls.h */
 int MCS_CreateDirectory( unsigned char*dir );
 int MCS_DeleteDirectory( unsigned char*dir );
 int MCSDelVar2( unsigned char*dir, unsigned char*item );

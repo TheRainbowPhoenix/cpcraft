@@ -1,3 +1,4 @@
+/* include/rtc.h */
 int RTC_Reset( int );
 void RTC_GetTime( unsigned int*hour, unsigned int*minute, unsigned int*second, unsigned int*millisecond );
 int RTC_GetTicks(void);

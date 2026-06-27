@@ -1,3 +1,4 @@
+/* include/stdio.h */
 #ifndef _FXCG_STDIO_H
 #define _FXCG_STDIO_H
 

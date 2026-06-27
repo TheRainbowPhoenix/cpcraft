@@ -1,3 +1,4 @@
+/* src/casiowin.h */
 #ifndef _CASIOWIN_H
 #define _CASIOWIN_H
 

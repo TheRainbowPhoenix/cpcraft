@@ -1,3 +1,4 @@
+/* include/stddef.h */
 #ifndef _FXCG_STDDEF_H
 #define _FXCG_STDDEF_H
 

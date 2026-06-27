@@ -1,3 +1,4 @@
+/* include/errno.h */
 #ifndef _FXCG_ERRNO_H
 #define _FXCG_ERRNO_H
 

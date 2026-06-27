@@ -1,3 +1,4 @@
+/* include/math.h */
 #ifndef _FXCG_MATH_H
 #define _FXCG_MATH_H
 

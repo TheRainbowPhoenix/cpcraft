@@ -1,3 +1,4 @@
+/* include/locale.h */
 #ifndef _FXCG_LOCALE_H
 #define _FXCG_LOCALE_H
 

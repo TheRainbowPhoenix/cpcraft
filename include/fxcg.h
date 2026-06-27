@@ -1,3 +1,4 @@
+/* include/fxcg.h */
 #ifndef _FXCG_MINICOMPAT
 # error Included fxcg.h without minicompat. Use fxcg/ *.h instead.
 #else

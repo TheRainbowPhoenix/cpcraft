@@ -1,3 +1,4 @@
+/* include/fxcg_registers.h */
 #define P00CR 0xA4050100
 #define P00DR (P00CR+0x20)
 #define P01CR (P00CR+2)

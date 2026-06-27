@@ -1,3 +1,4 @@
+/* src/controls.h */
 #include "config.h"
 
 #if MPM

@@ -1,4 +1,7 @@
+/* src/compression.c */
 //https://github.com/andyherbert/lz1/blob/master/lz.c
+#include "engine.h"
+
 
 unsigned int pow_(unsigned int base, unsigned int exp) {
     if (exp == 0) return 1;

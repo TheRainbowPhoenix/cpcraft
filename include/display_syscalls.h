@@ -1,3 +1,4 @@
+/* include/display_syscalls.h */
 #ifndef _FXCG_MINICOMPAT
 # error Included without minicompat. Use <fxcg/display.h>.
 #else

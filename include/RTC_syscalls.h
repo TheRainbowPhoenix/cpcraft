@@ -1,3 +1,4 @@
+/* include/RTC_syscalls.h */
 int RTC_Elapsed_ms( int start_value, int duration_in_ms );
 int RTC_GetTicks(void);
 int RTC_Reset( int );

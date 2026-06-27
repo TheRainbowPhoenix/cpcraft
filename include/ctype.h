@@ -1,3 +1,4 @@
+/* include/ctype.h */
 #ifndef __FXCG_CTYPE_H
 #define __FXCG_CTYPE_H
 

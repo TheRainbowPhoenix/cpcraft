@@ -1,3 +1,4 @@
+/* include/STATUS_ICONS.hpp */
 #ifndef __STATUS_ICONS_HPP__
 #define __STATUS_ICONS_HPP__
 

@@ -1,3 +1,4 @@
+/* src/lz4.h */
 /*
  *  LZ4 - Fast LZ compression algorithm
  *  Header File

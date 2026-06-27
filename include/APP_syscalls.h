@@ -1,3 +1,4 @@
+/* include/APP_syscalls.h */
 #ifndef _FXCG_MINICOMPAT
 # error Included APP_syscalls.h without minicompat. Use <fxcg/app.h>.
 #else

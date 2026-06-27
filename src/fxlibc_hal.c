@@ -1,4 +1,7 @@
+/* src/fxlibc_hal.c */
 #include "casiowin.h"
+#include "engine.h"
+
 #include <unistd.h>
 
 size_t write(int fd, void const *buf, size_t count)

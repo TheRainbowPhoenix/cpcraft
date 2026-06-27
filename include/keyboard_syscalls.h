@@ -1,3 +1,4 @@
+/* include/keyboard_syscalls.h */
 int GetKey(int*key);
 int GetKeyWait_OS(int*column, int*row, int type_of_waiting, int timeout_period, int menu, unsigned short*keycode );
 int Test127E( int, int );

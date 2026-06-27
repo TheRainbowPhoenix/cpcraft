@@ -1,3 +1,4 @@
+/* include/fxcg/app.h */
 #ifndef __FXCG_APP_H
 #define __FXCG_APP_H
 

@@ -1,3 +1,4 @@
+/* include/color.h */
 #ifndef _FXCG_MINICOMPAT
 # error Included color.h without minicompat. Use <fxcg/display.h>.
 #else

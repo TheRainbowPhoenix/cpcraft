@@ -1,3 +1,4 @@
+/* include/disp_tools.hpp */
 #ifndef _FXCG_MINICOMPAT
 # error Included without minicompat. Use <fxcg/display.h>.
 #else

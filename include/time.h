@@ -1,3 +1,4 @@
+/* include/time.h */
 #ifndef _FXCG_TIME_H
 #define _FXCG_TIME_H
 

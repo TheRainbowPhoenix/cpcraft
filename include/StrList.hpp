@@ -1,3 +1,4 @@
+/* include/StrList.hpp */
 #ifndef __STRLIST_HPP__
 #define __STRLIST_HPP__
 

@@ -1,3 +1,4 @@
+/* include/alloca.h */
 #ifndef _ALLOCA_H
 #define _ALLOCA_H
 

@@ -1,3 +1,4 @@
+/* include/LineEditors.hpp */
 #ifndef __fxCG_LINEEDITORS_HPP__
 #define __fxCG_LINEEDITORS_HPP__
 

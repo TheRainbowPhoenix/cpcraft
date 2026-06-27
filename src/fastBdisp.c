@@ -1,4 +1,7 @@
+/* src/fastBdisp.c */
 #include <fxcg/display.h>
+#include "engine.h"
+
 #include "fastBdisp.h"
 
 #define LCD_GRAM    0x202

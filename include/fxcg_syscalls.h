@@ -1,3 +1,4 @@
+/* include/fxcg_syscalls.h */
 int ItoA_10digit( int, void* );
 void ByteToHex( unsigned char value, unsigned char*result );
 void HexToByte( unsigned char*value, unsigned char*result );
