@@ -179,13 +179,6 @@ static void sim_LCD_SendCommandU(uint16_t command)
     }
 }
 
-static void sim_LCD_Refresh()
-{
-    /* The OS uses LCD_Refresh to copy VRAM to the LCD. Our engine
-     * writes directly to the LCD port instead, so LCD_Refresh is a
-     * no-op for us. We provide it for completeness. */
-}
-
 static uint16_t *sim_LCD_GetVRAMAddress()
 {
     return cp_vram_buf;
