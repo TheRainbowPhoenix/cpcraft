@@ -211,12 +211,14 @@ static void draw_cube(int bx, int by, int bz,
     {
         const struct CubeFace *face = &CUBE_FACES[f];
 
-        /* Backface culling: dot(normal, view) > 0 means the face
-         * points AWAY from the camera. Skip it. */
+        /* Backface culling: the view vector points FROM camera TO cube.
+         * A face is visible if its normal points TOWARD the camera,
+         * i.e. dot(normal, view) < 0.
+         * If dot >= 0, the face points AWAY — skip it. */
         fix16_t dot = fix16_mul(face->normal[0], vx) +
                       fix16_mul(face->normal[1], vy) +
                       fix16_mul(face->normal[2], vz);
-        if (dot <= 0) continue;
+        if (dot >= 0) continue;
 
         /* Project the 4 corners. */
         ScreenPoint sp[4];
@@ -252,18 +254,12 @@ static void scene_cube(void)
     fix16_t ex, ey, ez;
     player_eye(&ex, &ey, &ez);
 
-    /* Place a single cube 3 blocks in front of the player, at eye level.
-     * The player can turn the camera to see different faces. */
-    int bx = fix16_to_int(ex);
-    int bz = fix16_to_int(ez) + 3;  /* 3 blocks in front */
-    int by = fix16_to_int(ey) - 1;  /* at eye level so it's visible */
-
-    if (bx < 0) bx = 0;
-    if (bx >= WORLD_W) bx = WORLD_W - 1;
-    if (bz < 0) bz = 0;
-    if (bz >= WORLD_D) bz = WORLD_D - 1;
-    if (by < 0) by = 0;
-    if (by >= WORLD_H) by = WORLD_H - 1;
+    /* Place the cube at a FIXED world position so the player can walk
+     * around it and view it from all angles. Center of the world, at
+     * a height visible from the player's spawn. */
+    int bx = WORLD_W / 2;
+    int bz = WORLD_D / 2 + 5;  /* a few blocks south of center */
+    int by = 14;               /* at terrain height */
 
     draw_cube(bx, by, bz, tex_box, tex_box, tex_box,
               ex, ey, ez, player.yaw, player.pitch);
@@ -371,7 +367,7 @@ static void scene_world_3d(void)
                     fix16_t dot = fix16_mul(face->normal[0], vx) +
                                   fix16_mul(face->normal[1], vy) +
                                   fix16_mul(face->normal[2], vz);
-                    if (dot <= 0) continue;
+                    if (dot >= 0) continue;
 
                     /* Project the 4 corners. */
                     ScreenPoint sp[4];

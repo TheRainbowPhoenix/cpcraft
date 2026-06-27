@@ -2,47 +2,45 @@
 /*
  * cpcraft-port — engine/camera.h
  *
- * 3D-to-2D projection (16.16 fixed-point, no floats).
+ * 3D-to-2D projection (int32_t 16.16 fixed-point, no floats, no struct return).
  *
  * Coordinate system (right-handed):
  *   +X = east, +Y = up, +Z = south.
  *   Yaw 0 = looking down +Z, yaw 90° (BRAD 16384) = looking down +X.
  *   Pitch 0 = horizontal, pitch +89° = straight up.
  *
- * The camera is at the player's eye position. We project a world-space
- * point to screen-space (sx, sy) and a depth value (sz), where sz > 0
- * means "in front of the camera". If sz <= 0 the point is behind the
- * camera and the caller should skip it.
- *
- * sz is stored as fix16_t (raw camera-space z). Larger = farther.
- * The rasterizer converts this to 1/z for the z-buffer test.
+ * camera_project() writes to an output ScreenPoint pointer instead of
+ * returning a struct. This avoids SH-4A struct-return alignment issues.
  */
 #pragma once
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "fix16.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/* Screen-space point with depth. */
 typedef struct {
     int sx, sy;         /* screen coords in framebuffer pixels */
-    fix16_t sz;         /* camera-space depth (fix16, >0 = in front) */
+    int32_t sz;         /* camera-space depth (16.16, >0 = in front) */
     bool visible;       /* false if behind the camera */
 } ScreenPoint;
 
-/* Initialize the camera (precompute focal length from FOV). Call once
- * at startup, after engine_init(). */
+/* Initialize the camera (precompute focal length). Call once at startup. */
 void camera_init(void);
 
-/* Project a world-space point (wx, wy, wz) to screen space.
+/* Project a world-space point to screen space.
  *
- * eye + yaw + pitch come from the player. All positions are fix16_t. */
-ScreenPoint camera_project(fix16_t wx, fix16_t wy, fix16_t wz,
-                           fix16_t ex, fix16_t ey, fix16_t ez,
-                           uint16_t yaw, int16_t pitch);
+ * Writes the result to *out (does NOT return a struct — avoids SH-4A
+ * alignment issues with struct returns).
+ *
+ * All positions are int32_t (16.16 fixed-point). */
+void camera_project(int32_t wx, int32_t wy, int32_t wz,
+                    int32_t ex, int32_t ey, int32_t ez,
+                    uint16_t yaw, int16_t pitch,
+                    ScreenPoint *out);
 
 #ifdef __cplusplus
 }
