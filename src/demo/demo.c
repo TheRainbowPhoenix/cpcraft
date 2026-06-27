@@ -102,8 +102,8 @@ void demo_run(void)
 
             /* Color for this row. */
             uint16_t r5 = ((row >> 2) & 0x1F);
-            uint16_t g6_base = 0;  /* will vary per column */
-            uint16_t b5_base = ((row) >> 3) & 0x1F;
+            // uint16_t g6_base = 0;  /* will vary per column */
+            // uint16_t b5_base = ((row) >> 3) & 0x1F;
 
             /* Write the span directly to fb_vram for speed. */
             uint16_t *dst = fb_vram + (row * FB_W) + left;
