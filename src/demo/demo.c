@@ -227,7 +227,7 @@ static void draw_cube(int bx, int by, int bz,
             fix16_t wx = fix16_from_int(bx) + fix16_from_int(face->corners[i][0]);
             fix16_t wy = fix16_from_int(by) + fix16_from_int(face->corners[i][1]);
             fix16_t wz = fix16_from_int(bz) + fix16_from_int(face->corners[i][2]);
-            sp[i] = camera_project(wx, wy, wz, ex, ey, ez, yaw, pitch);
+            camera_project(wx, wy, wz, ex, ey, ez, yaw, pitch, &sp[i]);
         }
 
         /* Skip if any vertex is behind the camera. */
@@ -254,18 +254,11 @@ static void scene_cube(void)
     fix16_t ex, ey, ez;
     player_eye(&ex, &ey, &ez);
 
-    /* Place a single cube 3 blocks in front of the player, at eye level.
-     * The player can turn the camera to see different faces. */
-    int bx = fix16_to_int(ex);
-    int bz = fix16_to_int(ez) + 3;  /* 3 blocks in front */
-    int by = fix16_to_int(ey) - 1;  /* at eye level so it's visible */
-
-    if (bx < 0) bx = 0;
-    if (bx >= WORLD_W) bx = WORLD_W - 1;
-    if (bz < 0) bz = 0;
-    if (bz >= WORLD_D) bz = WORLD_D - 1;
-    if (by < 0) by = 0;
-    if (by >= WORLD_H) by = WORLD_H - 1;
+    /* Place the cube at a FIXED world position so the player can walk
+     * around it and view it from all angles. */
+    int bx = WORLD_W / 2;
+    int bz = WORLD_D / 2 + 5;  /* a few blocks south of center */
+    int by = 14;               /* at terrain height */
 
     draw_cube(bx, by, bz, tex_box, tex_box, tex_box,
               ex, ey, ez, player.yaw, player.pitch);
@@ -287,7 +280,6 @@ static void scene_cube(void)
 static void scene_raycast(void)
 {
     fb_clear(0x6C59);  /* sky */
-    rz_clear_zbuf();
 
     fix16_t ex, ey, ez;
     player_eye(&ex, &ey, &ez);
@@ -533,7 +525,7 @@ static void scene_world_3d(void)
                         fix16_t wx = fix16_from_int(bx) + fix16_from_int(face->corners[i][0]);
                         fix16_t wy = fix16_from_int(by) + fix16_from_int(face->corners[i][1]);
                         fix16_t wz = fix16_from_int(bz) + fix16_from_int(face->corners[i][2]);
-                        sp[i] = camera_project(wx, wy, wz, ex, ey, ez, player.yaw, player.pitch);
+                        camera_project(wx, wy, wz, ex, ey, ez, player.yaw, player.pitch, &sp[i]);
                         if (!sp[i].visible) all_vis = false;
                     }
                     if (!all_vis) continue;
