@@ -5,9 +5,6 @@
 #include "engine.h"
 
 // perlin noise
-int SEED = 0;
-
-bool blocksRenderd[TOTALCHUNKWIDTH * TOTALCHUNKWIDTH];
 unsigned char blocks[TOTALCHUNKWIDTH * TOTALCHUNKWIDTH][WIDTH * HEIGHT * WIDTH];
 unsigned char maxChunkHight[TOTALCHUNKWIDTH * TOTALCHUNKWIDTH];
 

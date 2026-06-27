@@ -8,8 +8,6 @@ char performanceName[10][35] = {
     "update screen",
 };
 
-int health = 20;
-
 // UI
 void drawHp(int x, int y, int barHeight, int barWidth, int hp, int maxHp) {
   int hpBarWidth = (hp * (barWidth - 1)) / maxHp;

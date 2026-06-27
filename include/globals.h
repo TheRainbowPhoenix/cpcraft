@@ -24,7 +24,7 @@ void swap(Vector2I **a, Vector2I **b);
 extern int resXZBuffer;
 extern int resYZBuffer;
 
-int renderingMode; // 0=normal, 1=no transparent, 2=wireframe
+extern int renderingMode; // 0=normal, 1=no transparent, 2=wireframe
 extern int maxSpeed;
 // unsigned short ZBuffer[192*108];
 extern unsigned short *ZBuffer;
@@ -57,7 +57,7 @@ extern chestData allchest[32];
 extern int triangleLength;
 extern int verticesLength;
 
-short *VRAMAddress;
+extern short *VRAMAddress;
 extern char *lightmap;  // behind z-buffer
 extern char *blockData; // behind lightmap
 
@@ -143,11 +143,11 @@ extern int UIState;
 extern bool ExitLoop;
 
 /* Texture pointers */
-color_t *textures2;
-color_t *itemIcons2;
-color_t *assetsInputBuffer;
-color_t *randomShit;
-color_t *screenColor;
+extern color_t *textures2;
+extern color_t *itemIcons2;
+extern color_t *assetsInputBuffer;
+extern color_t *randomShit;
+// color_t *screenColor;
 
 /* World data */
 
@@ -171,7 +171,6 @@ extern int activeChunks;
 extern char dayTimeChange;
 extern unsigned char performace[10];
 extern unsigned char Cperformace[10];
-color_t performanceColors[10] = {0xf800, 0xfc00, 0xffe0, 0xfc10, 0xfc1f,
-                                 0xf81f, 0x841f, 0x041f, 0x001f, 0x07ff};
+extern color_t performanceColors[10];
 extern int renderdV;
 extern bool blocksRenderd[64];

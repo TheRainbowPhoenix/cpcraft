@@ -4,6 +4,7 @@
 
 int resXZBuffer = 192;
 int resYZBuffer = 108;
+int renderingMode = 0;
 int maxSpeed = 25;
 unsigned short *ZBuffer;
 float gravity = 9.81f;
@@ -93,8 +94,11 @@ int activeChunks = 0;
 char dayTimeChange = 0;
 unsigned char performace[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 unsigned char Cperformace[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+color_t performanceColors[10] = {0xf800, 0xfc00, 0xffe0, 0xfc10, 0xfc1f,
+                                 0xf81f, 0x841f, 0x041f, 0x001f, 0x07ff};
 int renderdV = 0;
-bool blocksRenderd[64];
+#include "chunk_constants.h"
+bool blocksRenderd[TOTALCHUNKWIDTH * TOTALCHUNKWIDTH];
 
 /* Global texture pointers (initialized to memory-mapped addresses) */
 color_t *textures2 = (color_t *)(0x8C540000 + ALLOC_OFFSET);
