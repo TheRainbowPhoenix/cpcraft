@@ -1,31 +1,35 @@
-name: C/C++ CI
+name: Build (fx-cg)
 
 on:
   push:
-    branches: [ "main", "dev" ]
-    # Publish semver tags as releases.
-    tags: [ 'v*.*.*' ]
   pull_request:
-    branches: [ "*" ]
   workflow_dispatch:
 
-permissions:
-  contents: read
-
-jobs:   
-  build-artifact:
+jobs:
+  build:
     runs-on: ubuntu-latest
+
+    # Run all steps inside your GHCR image
     container:
-      image: ghcr.io/classpaddev/hollyhock-3:v2.2.1
-      credentials:
-       username: ${{ github.actor }}
-       password: ${{ secrets.github_token }}
+      image: ghcr.io/therainbowphoenix/gint-docker:main
 
     steps:
-    - uses: actions/checkout@v6
-      with:
-        submodules: true
-    - run: make -j
-    - uses: actions/upload-artifact@v7
-      with:
-        path: dist/**
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Build (fxsdk build-cg)
+        run: |
+          fxsdk build-cg -s
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: fxcg-apps
+          path: |
+            *.hh3
+            *.g1a
+            *.g3a
+          if-no-files-found: error
+          retention-days: 14
