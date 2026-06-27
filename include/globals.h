@@ -174,3 +174,11 @@ extern unsigned char Cperformace[10];
 extern color_t performanceColors[10];
 extern int renderdV;
 extern bool blocksRenderd[64];
+
+extern bool useCurrentVersion;
+extern char texturePackCreator[5][24];
+extern char texturePackName[5][24];
+extern char texturePackTotalPath[5][50];
+extern color_t texturePackIcon[5][1024];
+extern int texturePackVersion[5];
+extern int maxTextureIndex;

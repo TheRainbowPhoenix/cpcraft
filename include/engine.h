@@ -69,7 +69,6 @@
 /* System config */
 #include "config.h"
 #include "data_decls.h"
-// #include "data_all.h"
 
 /* Type definitions */
 #include "types.h"
@@ -270,3 +269,12 @@ void makePigLoad(int posX, int posY, int posZ, int slot);
 /* utils */
 color_t combineColors(color_t color1, color_t color2, int strength);
 color_t combineColorsWithBrightness(color_t color, int brightness);
+
+/* textures */
+void loadTextureAssets();
+void loadIconAssets();
+void loadTexturePackData(char *texturePackPath, char *creator, char *name,
+                         int *version);
+void loadTexturePackIcon(char *texturePackPath, color_t *icon);
+void loadAvailableTexturePacks();
+void convertToBitmap16bit();

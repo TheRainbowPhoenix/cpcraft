@@ -160,9 +160,10 @@ void loadPerlin(int chunkX, int chunkY) {
       blocksRenderd[chunkIndex] = true;
       for (int x = 0; x < WIDTH; x++) {
         for (int z = 0; z < WIDTH; z++) {
-          int maxY =
-              perlin2d(x + chunkX * WIDTH, z + chunkY * WIDTH, 0.05f, 1) * 8 +
-              24;
+          int maxY = perlin2d((float)(x + chunkX * WIDTH),
+                              (float)(z + chunkY * WIDTH), 0.05f, 1) *
+                         8 +
+                     24;
 
           for (int y = 0; y < HEIGHT; y++) {
             if (y <= maxY) {

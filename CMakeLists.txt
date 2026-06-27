@@ -18,6 +18,7 @@ set(SOURCES
 
   # Refactored core
   src/main.c
+  src/swap.c
   src/math_utils.c
   src/delta_time.c
   src/collision.c
@@ -27,6 +28,7 @@ set(SOURCES
   src/misc.c
   src/game.c
   src/render_object.c
+  src/textures.c
 
   # Rendering
   src/render/drawing.c
