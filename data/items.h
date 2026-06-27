@@ -39,7 +39,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 2,
     },
     {
@@ -52,7 +52,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 3,
     },
     {
@@ -65,7 +65,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 4,
     },
     {
@@ -78,7 +78,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 5,
     },
     {
@@ -91,7 +91,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 6,
     },
     {
@@ -104,7 +104,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 7,
     },
     {
@@ -117,7 +117,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 8,
     },
     {
@@ -130,7 +130,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 9,
     },
     {
@@ -143,7 +143,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 10,
     },
     {
@@ -156,7 +156,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 11,
     },
     {
@@ -169,7 +169,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 12,
     },
     {
@@ -182,7 +182,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 13,
     },
     {
@@ -195,7 +195,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 14,
     },
     {
@@ -208,7 +208,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 15,
     },
     {
@@ -221,7 +221,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 16,
     },
     {
@@ -234,7 +234,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 17,
     },
     {
@@ -247,7 +247,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 18,
     },
     {
@@ -260,7 +260,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 19,
     },
     {
@@ -273,7 +273,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 20,
     },
     {
@@ -286,7 +286,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 21,
     },
     {
@@ -299,7 +299,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 1,
         .toolType = 1,
-		.damage = 3,
+        .damage = 3,
         .iconIndex = 22,
     },
     {
@@ -312,7 +312,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 2,
         .toolType = 1,
-		.damage = 4,
+        .damage = 4,
         .iconIndex = 23,
     },
     {
@@ -325,7 +325,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 3,
         .toolType = 1,
-		.damage = 5,
+        .damage = 5,
         .iconIndex = 24,
     },
     {
@@ -338,7 +338,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 4,
         .toolType = 1,
-		.damage = 3,
+        .damage = 3,
         .iconIndex = 25,
     },
     {
@@ -351,7 +351,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 5,
         .toolType = 1,
-		.damage = 6,
+        .damage = 6,
         .iconIndex = 26,
     },
     {
@@ -364,7 +364,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 1,
         .toolType = 2,
-		.damage = 4,
+        .damage = 4,
         .iconIndex = 27,
     },
     {
@@ -377,7 +377,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 2,
         .toolType = 2,
-		.damage = 5,
+        .damage = 5,
         .iconIndex = 28,
     },
     {
@@ -390,7 +390,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 3,
         .toolType = 2,
-		.damage = 6,
+        .damage = 6,
         .iconIndex = 29,
     },
     {
@@ -403,7 +403,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 4,
         .toolType = 2,
-		.damage = 4,
+        .damage = 4,
         .iconIndex = 30,
     },
     {
@@ -416,7 +416,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 5,
         .toolType = 2,
-		.damage = 7,
+        .damage = 7,
         .iconIndex = 31,
     },
     {
@@ -429,7 +429,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 1,
         .toolType = 3,
-		.damage = 2,
+        .damage = 2,
         .iconIndex = 32,
     },
     {
@@ -442,7 +442,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 2,
         .toolType = 3,
-		.damage = 3,
+        .damage = 3,
         .iconIndex = 33,
     },
     {
@@ -455,7 +455,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 3,
         .toolType = 3,
-		.damage = 4,
+        .damage = 4,
         .iconIndex = 34,
     },
     {
@@ -468,7 +468,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 4,
         .toolType = 3,
-		.damage = 2,
+        .damage = 2,
         .iconIndex = 35,
     },
     {
@@ -481,10 +481,10 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 5,
         .toolType = 3,
-		.damage = 5,
+        .damage = 5,
         .iconIndex = 36,
     },
-    
+
     {
         .isBlock = false,
         .blockId = 0,
@@ -495,7 +495,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 1,
         .toolType = 4,
-		.damage = 5,
+        .damage = 5,
         .iconIndex = 37,
     },
     {
@@ -508,7 +508,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 2,
         .toolType = 4,
-		.damage = 6,
+        .damage = 6,
         .iconIndex = 38,
     },
     {
@@ -521,7 +521,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 3,
         .toolType = 4,
-		.damage = 7,
+        .damage = 7,
         .iconIndex = 39,
     },
     {
@@ -534,7 +534,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 4,
         .toolType = 4,
-		.damage = 5,
+        .damage = 5,
         .iconIndex = 40,
     },
     {
@@ -547,7 +547,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 5,
         .toolType = 4,
-		.damage = 8,
+        .damage = 8,
         .iconIndex = 41,
     },
     {
@@ -560,7 +560,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 1,
         .toolType = 5,
-		.damage = 3,
+        .damage = 3,
         .iconIndex = 42,
     },
     {
@@ -573,7 +573,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 2,
         .toolType = 5,
-		.damage = 4,
+        .damage = 4,
         .iconIndex = 43,
     },
     {
@@ -586,7 +586,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 3,
         .toolType = 5,
-		.damage = 5,
+        .damage = 5,
         .iconIndex = 44,
     },
     {
@@ -599,7 +599,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 4,
         .toolType = 5,
-		.damage = 3,
+        .damage = 3,
         .iconIndex = 45,
     },
     {
@@ -612,7 +612,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 5,
         .toolType = 5,
-		.damage = 6,
+        .damage = 6,
         .iconIndex = 46,
     },
 
@@ -626,7 +626,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 47,
     },
     {
@@ -639,7 +639,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 48,
     },
     {
@@ -652,7 +652,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 49,
     },
     {
@@ -665,7 +665,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 50,
     },
     {
@@ -678,7 +678,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 51,
     },
     {
@@ -691,7 +691,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 52,
     },
     {
@@ -704,7 +704,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 53,
     },
     {
@@ -717,7 +717,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 54,
     },
     {
@@ -730,7 +730,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 55,
     },
     {
@@ -743,7 +743,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 56,
     },
     {
@@ -756,7 +756,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 57,
     },
     {
@@ -769,7 +769,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 58,
     },
     {
@@ -782,7 +782,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 59,
     },
     {
@@ -795,7 +795,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 60,
     },
     {
@@ -808,7 +808,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 61,
     },
     {
@@ -821,7 +821,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 62,
     },
     {
@@ -834,7 +834,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 63,
     },
     {
@@ -847,7 +847,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 64,
     },
     {
@@ -860,7 +860,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 65,
     },
     {
@@ -873,7 +873,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 6,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 66,
     },
     {
@@ -886,7 +886,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 67,
     },
     {
@@ -899,7 +899,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 5,
         .toolType = 7,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 68,
     },
     {
@@ -912,7 +912,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 69,
     },
     {
@@ -925,7 +925,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 70,
     },
     {
@@ -938,7 +938,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 71,
     },
     {
@@ -951,7 +951,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 72,
     },
 
@@ -965,7 +965,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 73,
     },
     {
@@ -978,7 +978,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 74,
     },
     {
@@ -991,7 +991,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 75,
     },
     {
@@ -1004,7 +1004,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 76,
     },
     {
@@ -1017,7 +1017,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 77,
     },
     {
@@ -1030,7 +1030,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 78,
     },
     {
@@ -1043,7 +1043,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 79,
     },
     {
@@ -1056,7 +1056,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 80,
     },
     {
@@ -1069,7 +1069,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 81,
     },
     {
@@ -1082,7 +1082,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 82,
     },
     {
@@ -1095,7 +1095,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 83,
     },
     {
@@ -1108,10 +1108,10 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 84,
     },
-	{
+    {
         .isBlock = true,
         .blockId = 63,
         .breaksIn = 0,
@@ -1121,10 +1121,10 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 85,
     },
-	{
+    {
         .isBlock = true,
         .blockId = 64,
         .breaksIn = 0,
@@ -1134,10 +1134,10 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 86,
     },
-	{
+    {
         .isBlock = true,
         .blockId = 65,
         .breaksIn = 0,
@@ -1147,10 +1147,10 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 87,
     },
-	{
+    {
         .isBlock = true,
         .blockId = 66,
         .breaksIn = 0,
@@ -1160,10 +1160,10 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 88,
     },
-	{
+    {
         .isBlock = true,
         .blockId = 67,
         .breaksIn = 0,
@@ -1173,10 +1173,10 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 89,
     },
-	{
+    {
         .isBlock = true,
         .blockId = 68,
         .breaksIn = 0,
@@ -1186,10 +1186,10 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 90,
     },
-	{
+    {
         .isBlock = true,
         .blockId = 69,
         .breaksIn = 0,
@@ -1199,10 +1199,10 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 91,
     },
-	{
+    {
         .isBlock = true,
         .blockId = 70,
         .breaksIn = 0,
@@ -1212,10 +1212,10 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 92,
     },
-	{
+    {
         .isBlock = true,
         .blockId = 71,
         .breaksIn = 0,
@@ -1225,10 +1225,10 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 93,
     },
-	{
+    {
         .isBlock = false,
         .blockId = 0,
         .breaksIn = 32,
@@ -1238,10 +1238,10 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 1,
         .toolType = 8,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 94,
     },
-	{
+    {
         .isBlock = true,
         .blockId = 72,
         .breaksIn = 0,
@@ -1251,7 +1251,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 0,
         .toolType = 0,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 95,
     },
     {
@@ -1264,7 +1264,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 1,
         .toolType = 9,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 96,
     },
     {
@@ -1277,7 +1277,7 @@ const item allItem[100] = {
         .stackSize = 64,
         .toolLevel = 2,
         .toolType = 9,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 97,
     },
     {
@@ -1290,7 +1290,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 3,
         .toolType = 7,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 98,
     },
     {
@@ -1303,7 +1303,7 @@ const item allItem[100] = {
         .stackSize = 1,
         .toolLevel = 8,
         .toolType = 7,
-		.damage = 1,
+        .damage = 1,
         .iconIndex = 99,
     },
 };

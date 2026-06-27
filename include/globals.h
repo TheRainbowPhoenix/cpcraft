@@ -58,8 +58,8 @@ extern int triangleLength;
 extern int verticesLength;
 
 short *VRAMAddress;
-char *lightmap = 0x8C228800 + ALLOC_OFFSET;  // behind z-buffer
-char *blockData = 0x8C282800 + ALLOC_OFFSET; // behind lightmap
+extern char *lightmap;  // behind z-buffer
+extern char *blockData; // behind lightmap
 
 extern float deltaTime;
 extern float deltaTimeNoSlow;
