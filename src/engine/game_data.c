@@ -4,7 +4,7 @@
  *
  * Ported data tables + entity/particle/chest management from CPCraft.
  *
- * All floats replaced with int32_t. All arrays sized for the ClassPad's
+ * All floats replaced with fix16_t. All arrays sized for the ClassPad's
  * limited RAM.
  */
 #include "game_data.h"
@@ -199,7 +199,7 @@ int entity_alloc(void)
     return -1;
 }
 
-void entity_spawn_item(int32_t x, int32_t y, int32_t z, int itemIndex)
+void entity_spawn_item(fix16_t x, fix16_t y, fix16_t z, int itemIndex)
 {
     int slot = entity_alloc();
     if (slot < 0) return;
@@ -215,7 +215,7 @@ void entity_spawn_item(int32_t x, int32_t y, int32_t z, int itemIndex)
     entity_list[slot].renderTextured = true;
 }
 
-void entity_spawn_sheep(int32_t x, int32_t y, int32_t z)
+void entity_spawn_sheep(fix16_t x, fix16_t y, fix16_t z)
 {
     int slot = entity_alloc();
     if (slot < 0) return;
@@ -233,7 +233,7 @@ void entity_spawn_sheep(int32_t x, int32_t y, int32_t z)
     entity_list[slot].moveTimer = 0;
 }
 
-void entity_spawn_pig(int32_t x, int32_t y, int32_t z)
+void entity_spawn_pig(fix16_t x, fix16_t y, fix16_t z)
 {
     int slot = entity_alloc();
     if (slot < 0) return;
@@ -251,7 +251,7 @@ void entity_spawn_pig(int32_t x, int32_t y, int32_t z)
 }
 
 /* Simple entity AI + physics. */
-void entity_update_all(int32_t dt)
+void entity_update_all(fix16_t dt)
 {
     for (int i = 0; i < ENTITY_COUNT; i++)
     {
@@ -268,15 +268,15 @@ void entity_update_all(int32_t dt)
         e->y += e->vy;
 
         /* Simple ground collision: if below the terrain, stop. */
-        int bx = ((e->x) / 100);
-        int bz = ((e->z) / 100);
-        int by = ((e->y) / 100);
+        int bx = fix16_to_int(e->x);
+        int bz = fix16_to_int(e->z);
+        int by = fix16_to_int(e->y);
         if (by < 0) { e->y = 0; e->vy = 0; }
 
         /* Check block below. */
         uint8_t below = world_get(bx, by - 1, bz);
         if (block_is_solid(below) && e->vy < 0) {
-            e->y = ((by) * 100);
+            e->y = fix16_from_int(by);
             e->vy = 0;
         }
 
@@ -296,17 +296,17 @@ void entity_update_all(int32_t dt)
                 if (action < 4) {
                     /* Walk in a random direction. */
                     e->state = ENT_WALKING;
-                    int32_t angle = (h >> 4) & 0xFFFF;  /* random BRAD */
-                    int32_t speed = 1966;  /* ~0.03 blocks/frame */
-                    e->vx = (sin_brads(angle) * speed)/TRIG_SCALE;
-                    e->vz = (cos_brads(angle) * speed)/TRIG_SCALE;
-                    e->moveTimer = (((2 + ((h >> 8) * 100)) & 3));
+                    fix16_t angle = (h >> 4) & 0xFFFF;  /* random BRAD */
+                    fix16_t speed = 1966;  /* ~0.03 blocks/frame */
+                    e->vx = fix16_mul(fix16_sin_brads(angle), speed);
+                    e->vz = fix16_mul(fix16_cos_brads(angle), speed);
+                    e->moveTimer = fix16_from_int(2 + ((h >> 8) & 3));
                 } else {
                     /* Stand still. */
                     e->state = ENT_STANDING;
                     e->vx = 0;
                     e->vz = 0;
-                    e->moveTimer = (((2 + ((h >> 8) * 100)) & 3));
+                    e->moveTimer = fix16_from_int(2 + ((h >> 8) & 3));
                 }
             }
 
@@ -315,14 +315,14 @@ void entity_update_all(int32_t dt)
                 e->vx = -e->vx;
                 e->vz = -e->vz;
                 e->state = ENT_RUNNING;
-                e->moveTimer = ((3) * 100);
+                e->moveTimer = fix16_from_int(3);
             }
         }
         else if (e->type == ENTITY_ITEM)
         {
             /* Item drops slow down. */
-            e->vx = (e->vx * 0x60000)/TRIG_SCALE;  /* 0.75 friction */
-            e->vz = (e->vz * 0x60000)/TRIG_SCALE;
+            e->vx = fix16_mul(e->vx, 0x60000);  /* 0.75 friction */
+            e->vz = fix16_mul(e->vz, 0x60000);
         }
     }
 }
@@ -338,9 +338,9 @@ void entity_clear_all(void)
 
 Particle particle_list[PARTICLE_COUNT];
 
-void particle_spawn(int32_t x, int32_t y, int32_t z,
-                    int32_t vx, int32_t vy, int32_t vz,
-                    int32_t size, uint16_t color,
+void particle_spawn(fix16_t x, fix16_t y, fix16_t z,
+                    fix16_t vx, fix16_t vy, fix16_t vz,
+                    fix16_t size, uint16_t color,
                     int maxTime, bool gravity)
 {
     for (int i = 0; i < PARTICLE_COUNT; i++)
@@ -360,7 +360,7 @@ void particle_spawn(int32_t x, int32_t y, int32_t z,
     }
 }
 
-void particle_update_all(int32_t dt)
+void particle_update_all(fix16_t dt)
 {
     for (int i = 0; i < PARTICLE_COUNT; i++)
     {
@@ -375,7 +375,7 @@ void particle_update_all(int32_t dt)
             p->vy -= 1456;
 
         p->time += dt;
-        if (p->time >= ((p->maxTime) * 100))
+        if (p->time >= fix16_from_int(p->maxTime))
             p->active = false;
     }
 }

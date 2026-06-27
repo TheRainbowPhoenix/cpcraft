@@ -21,7 +21,7 @@
  *   Backspace(held): walk backward (scenes 4-5)
  *   Shift+Clear    : quit
  *
- * NO FLOATS. All math is 16.16 fixed-point (int32_t).
+ * NO FLOATS. All math is 16.16 fixed-point (fix16_t).
  */
 #include "demo.h"
 #include "../engine/engine.h"
@@ -39,11 +39,11 @@ static void scene_diag()
     /* Print player position using overlay_printf (writes to fb_vram,
      * which gets streamed to the LCD by fb_present). Debug_Printf
      * would be overwritten by fb_present. */
-    int32_t ex, ey, ez;
+    fix16_t ex, ey, ez;
     player_eye(&ex, &ey, &ez);
-    int px = ((ex) / 100);
-    int py = ((ey) / 100);
-    int pz = ((ez) / 100);
+    int px = fix16_to_int(ex);
+    int py = fix16_to_int(ey);
+    int pz = fix16_to_int(ez);
 
     const uint16_t white = 0xFFFF;
     overlay_printf(1, 1, white, "P:%d,%d,%d", px, py, pz);
@@ -177,17 +177,17 @@ struct CubeFace {
 
 static const struct CubeFace CUBE_FACES[6] = {
     /* +X face (east) */
-    { {{1,0,1}, {1,0,0}, {1,1,0}, {1,1,1}}, {100, 0, 0} },
+    { {{1,0,1}, {1,0,0}, {1,1,0}, {1,1,1}}, {FIX16_ONE, 0, 0} },
     /* -X face (west) */
-    { {{0,0,0}, {0,0,1}, {0,1,1}, {0,1,0}}, {-100, 0, 0} },
+    { {{0,0,0}, {0,0,1}, {0,1,1}, {0,1,0}}, {-FIX16_ONE, 0, 0} },
     /* +Y face (top) */
-    { {{0,1,1}, {1,1,1}, {1,1,0}, {0,1,0}}, {0, 100, 0} },
+    { {{0,1,1}, {1,1,1}, {1,1,0}, {0,1,0}}, {0, FIX16_ONE, 0} },
     /* -Y face (bottom) */
-    { {{0,0,0}, {1,0,0}, {1,0,1}, {0,0,1}}, {0, -100, 0} },
+    { {{0,0,0}, {1,0,0}, {1,0,1}, {0,0,1}}, {0, -FIX16_ONE, 0} },
     /* +Z face (south) */
-    { {{0,0,1}, {1,0,1}, {1,1,1}, {0,1,1}}, {0, 0, 100} },
+    { {{0,0,1}, {1,0,1}, {1,1,1}, {0,1,1}}, {0, 0, FIX16_ONE} },
     /* -Z face (north) */
-    { {{1,0,0}, {0,0,0}, {0,1,0}, {1,1,0}}, {0, 0, -100} },
+    { {{1,0,0}, {0,0,0}, {0,1,0}, {1,1,0}}, {0, 0, -FIX16_ONE} },
 };
 
 /* Draw a single cube at world position (bx, by, bz) with the given
@@ -196,38 +196,36 @@ static void draw_cube(int bx, int by, int bz,
                       const uint16_t (*top_tex)[TEX_SIZE],
                       const uint16_t (*side_tex)[TEX_SIZE],
                       const uint16_t (*bot_tex)[TEX_SIZE],
-                      int32_t ex, int32_t ey, int32_t ez,
+                      fix16_t ex, fix16_t ey, fix16_t ez,
                       uint16_t yaw, int16_t pitch)
 {
     /* Cube center in fix16. */
-    int32_t cx = ((bx) * 100) + 50;
-    int32_t cy = ((by) * 100) + 50;
-    int32_t cz = ((bz) * 100) + 50;
+    fix16_t cx = fix16_from_int(bx) + FIX16_HALF;
+    fix16_t cy = fix16_from_int(by) + FIX16_HALF;
+    fix16_t cz = fix16_from_int(bz) + FIX16_HALF;
 
     /* View vector (camera -> cube center). */
-    int32_t vx = cx - ex, vy = cy - ey, vz = cz - ez;
+    fix16_t vx = cx - ex, vy = cy - ey, vz = cz - ez;
 
     for (int f = 0; f < 6; f++)
     {
         const struct CubeFace *face = &CUBE_FACES[f];
 
-        /* Backface culling: the view vector points FROM camera TO cube.
-         * A face is visible if its normal points TOWARD the camera,
-         * i.e. dot(normal, view) < 0.
-         * If dot >= 0, the face points AWAY — skip it. */
-        int32_t dot = (face->normal[0] * vx)/TRIG_SCALE +
-                      (face->normal[1] * vy)/TRIG_SCALE +
-                      (face->normal[2] * vz)/TRIG_SCALE;
+        /* Backface culling: dot(normal, view) > 0 means the face
+         * points AWAY from the camera. Skip it. */
+        fix16_t dot = fix16_mul(face->normal[0], vx) +
+                      fix16_mul(face->normal[1], vy) +
+                      fix16_mul(face->normal[2], vz);
         if (dot >= 0) continue;
 
         /* Project the 4 corners. */
         ScreenPoint sp[4];
         for (int i = 0; i < 4; i++)
         {
-            int32_t wx = ((bx) * 100) + ((face->corners[i][0]) * 100);
-            int32_t wy = ((by) * 100) + ((face->corners[i][1]) * 100);
-            int32_t wz = ((bz) * 100) + ((face->corners[i][2]) * 100);
-            camera_project(wx, wy, wz, ex, ey, ez, yaw, pitch, &sp[i]);
+            fix16_t wx = fix16_from_int(bx) + fix16_from_int(face->corners[i][0]);
+            fix16_t wy = fix16_from_int(by) + fix16_from_int(face->corners[i][1]);
+            fix16_t wz = fix16_from_int(bz) + fix16_from_int(face->corners[i][2]);
+            sp[i] = camera_project(wx, wy, wz, ex, ey, ez, yaw, pitch);
         }
 
         /* Skip if any vertex is behind the camera. */
@@ -251,15 +249,21 @@ static void scene_cube(void)
     fb_clear(0x6C59);  /* sky blue */
     rz_clear_zbuf();
 
-    int32_t ex, ey, ez;
+    fix16_t ex, ey, ez;
     player_eye(&ex, &ey, &ez);
 
-    /* Place the cube at a FIXED world position so the player can walk
-     * around it and view it from all angles. Center of the world, at
-     * a height visible from the player's spawn. */
-    int bx = WORLD_W / 2;
-    int bz = WORLD_D / 2 + 5;  /* a few blocks south of center */
-    int by = 14;               /* at terrain height */
+    /* Place a single cube 3 blocks in front of the player, at eye level.
+     * The player can turn the camera to see different faces. */
+    int bx = fix16_to_int(ex);
+    int bz = fix16_to_int(ez) + 3;  /* 3 blocks in front */
+    int by = fix16_to_int(ey) - 1;  /* at eye level so it's visible */
+
+    if (bx < 0) bx = 0;
+    if (bx >= WORLD_W) bx = WORLD_W - 1;
+    if (bz < 0) bz = 0;
+    if (bz >= WORLD_D) bz = WORLD_D - 1;
+    if (by < 0) by = 0;
+    if (by >= WORLD_H) by = WORLD_H - 1;
 
     draw_cube(bx, by, bz, tex_box, tex_box, tex_box,
               ex, ey, ez, player.yaw, player.pitch);
@@ -274,12 +278,12 @@ static void scene_cubes(void)
     fb_clear(0x6C59);  /* sky */
     rz_clear_zbuf();
 
-    int32_t ex, ey, ez;
+    fix16_t ex, ey, ez;
     player_eye(&ex, &ey, &ez);
 
     /* Draw a small 3x3 grid of cubes in front of the player. */
-    int px = ((ex) / 100);
-    int pz = ((ez) / 100);
+    int px = fix16_to_int(ex);
+    int pz = fix16_to_int(ez);
 
     for (int dz = 2; dz <= 4; dz++)
         for (int dx = -1; dx <= 1; dx++)
@@ -308,15 +312,15 @@ static void scene_world_3d(void)
     fb_clear(0x6C59);  /* sky */
     rz_clear_zbuf();
 
-    int32_t ex, ey, ez;
+    fix16_t ex, ey, ez;
     player_eye(&ex, &ey, &ez);
 
     /* Walk every block in the world and draw exposed faces.
      * This is the brute-force approach — for a 64x32x64 world that's
      * 131072 iterations. On hardware this will be slow, but it tests
      * the full 3D pipeline. */
-    int px = ((ex) / 100);
-    int pz = ((ez) / 100);
+    int px = fix16_to_int(ex);
+    int pz = fix16_to_int(ez);
 
     /* Only render blocks within a small radius of the player to keep
      * the frame time reasonable. */
@@ -351,22 +355,22 @@ static void scene_world_3d(void)
                 for (int f = 0; f < 6; f++)
                 {
                     const struct CubeFace *face = &CUBE_FACES[f];
-                    int nx = bx + face->normal[0] / 100;
-                    int ny = by + face->normal[1] / 100;
-                    int nz = bz + face->normal[2] / 100;
+                    int nx = bx + face->normal[0] / FIX16_ONE;
+                    int ny = by + face->normal[1] / FIX16_ONE;
+                    int nz = bz + face->normal[2] / FIX16_ONE;
 
                     /* Skip this face if the neighbor is solid. */
                     if (block_is_solid(world_get(nx, ny, nz))) continue;
 
                     /* Backface culling. */
-                    int32_t cx = ((bx) * 100) + 50;
-                    int32_t cy = ((by) * 100) + 50;
-                    int32_t cz = ((bz) * 100) + 50;
-                    int32_t vx = cx - ex, vy = cy - ey, vz = cz - ez;
+                    fix16_t cx = fix16_from_int(bx) + FIX16_HALF;
+                    fix16_t cy = fix16_from_int(by) + FIX16_HALF;
+                    fix16_t cz = fix16_from_int(bz) + FIX16_HALF;
+                    fix16_t vx = cx - ex, vy = cy - ey, vz = cz - ez;
 
-                    int32_t dot = (face->normal[0] * vx)/TRIG_SCALE +
-                                  (face->normal[1] * vy)/TRIG_SCALE +
-                                  (face->normal[2] * vz)/TRIG_SCALE;
+                    fix16_t dot = fix16_mul(face->normal[0], vx) +
+                                  fix16_mul(face->normal[1], vy) +
+                                  fix16_mul(face->normal[2], vz);
                     if (dot >= 0) continue;
 
                     /* Project the 4 corners. */
@@ -374,10 +378,10 @@ static void scene_world_3d(void)
                     bool all_vis = true;
                     for (int i = 0; i < 4; i++)
                     {
-                        int32_t wx = ((bx) * 100) + ((face->corners[i][0]) * 100);
-                        int32_t wy = ((by) * 100) + ((face->corners[i][1]) * 100);
-                        int32_t wz = ((bz) * 100) + ((face->corners[i][2]) * 100);
-                        camera_project(wx, wy, wz, ex, ey, ez, player.yaw, player.pitch, &sp[i]);
+                        fix16_t wx = fix16_from_int(bx) + fix16_from_int(face->corners[i][0]);
+                        fix16_t wy = fix16_from_int(by) + fix16_from_int(face->corners[i][1]);
+                        fix16_t wz = fix16_from_int(bz) + fix16_from_int(face->corners[i][2]);
+                        sp[i] = camera_project(wx, wy, wz, ex, ey, ez, player.yaw, player.pitch);
                         if (!sp[i].visible) all_vis = false;
                     }
                     if (!all_vis) continue;
@@ -412,9 +416,9 @@ void demo_run(void)
     POWER_MSTPCR0->s.TMU = 0;
 
     /* Show startup message. */
-    // Debug_Printf(0, 0, false, 0, "CPCraft-port starting...");
+    Debug_Printf(0, 0, false, 0, "CPCraft-port starting...");
     fb_present();
-    // Debug_Printf(0, 1, false, 0, "engine_init done");
+    Debug_Printf(0, 1, false, 0, "engine_init done");
 
     while (1)
     {
@@ -489,7 +493,7 @@ void demo_run(void)
             overlay_printf(1, FB_H - 11, fg, "F%4d", frame);
             overlay_printf(40, FB_H - 11, fg, "FPS%2d", fps);
             if (scene == 4) {
-                overlay_printf(80, FB_H - 11, fg, "Y%3d", ((player.y) / 100));
+                overlay_printf(80, FB_H - 11, fg, "Y%3d", fix16_to_int(player.y));
             }
         }
 

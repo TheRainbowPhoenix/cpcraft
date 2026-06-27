@@ -12,7 +12,7 @@
  *   - ChestData: a chest's inventory contents
  *   - CraftingRecipe / FurnaceRecipe: crafting/smelting recipes
  *
- * All floats replaced with int32_t. All arrays sized down for the
+ * All floats replaced with fix16_t. All arrays sized down for the
  * ClassPad's limited RAM.
  *
  * This is a "ready for use" header — the data tables are defined in
@@ -68,7 +68,7 @@ extern const Item item_table[ITEM_COUNT];
 typedef struct {
     short itemIndex;          /* which item this block drops when broken */
     short fullBlockIndex;     /* item index for the full block form */
-    int32_t destroyTime[6];   /* time to destroy with each tool level (0=hand) */
+    fix16_t destroyTime[6];   /* time to destroy with each tool level (0=hand) */
     uint8_t textureIndex[10]; /* texture indices for each face */
     short drops;              /* item index of the drop (-1 if none) */
     char toolToBreak;         /* minimum tool type needed */
@@ -87,7 +87,7 @@ extern const BlockDef block_def_table[BLOCK_DEF_COUNT];
  * or item drops. Each entity has a position, velocity, health, and AI
  * state.
  *
- * CPCraft uses floats for position/velocity; we use int32_t.
+ * CPCraft uses floats for position/velocity; we use fix16_t.
  *
  * Entity types:
  *   1 = sheep
@@ -118,16 +118,16 @@ typedef struct {
     uint16_t state;         /* EntityState */
     uint16_t state2;        /* extra state data */
     int16_t fallingSince;   /* how long the entity has been falling */
-    int32_t moveTimer;      /* AI timer */
+    fix16_t moveTimer;      /* AI timer */
     uint16_t health;
     uint16_t extraEntity;   /* for sheep: the "sheared" version entity index */
     bool isFed;
 
-    int32_t vx, vy, vz;     /* velocity (fix16 per frame) */
+    fix16_t vx, vy, vz;     /* velocity (fix16 per frame) */
     bool renderTextured;
 
     /* Position (in block coordinates, fix16). */
-    int32_t x, y, z;
+    fix16_t x, y, z;
 
     bool hasFur;            /* sheep: has wool? */
 } Entity;
@@ -138,16 +138,16 @@ extern Entity entity_list[ENTITY_COUNT];
 int entity_alloc(void);
 
 /* Spawn an item drop at (x, y, z) with the given item index. */
-void entity_spawn_item(int32_t x, int32_t y, int32_t z, int itemIndex);
+void entity_spawn_item(fix16_t x, fix16_t y, fix16_t z, int itemIndex);
 
 /* Spawn a sheep at (x, y, z). */
-void entity_spawn_sheep(int32_t x, int32_t y, int32_t z);
+void entity_spawn_sheep(fix16_t x, fix16_t y, fix16_t z);
 
 /* Spawn a pig at (x, y, z). */
-void entity_spawn_pig(int32_t x, int32_t y, int32_t z);
+void entity_spawn_pig(fix16_t x, fix16_t y, fix16_t z);
 
 /* Update all entities (AI, physics, collisions). Call once per frame. */
-void entity_update_all(int32_t dt);
+void entity_update_all(fix16_t dt);
 
 /* Clear all entities. */
 void entity_clear_all(void);
@@ -161,27 +161,27 @@ void entity_clear_all(void);
 
 typedef struct {
     bool active;
-    int32_t x, y, z;       /* position */
-    int32_t vx, vy, vz;    /* velocity */
-    int32_t size;
+    fix16_t x, y, z;       /* position */
+    fix16_t vx, vy, vz;    /* velocity */
+    fix16_t size;
     uint16_t color;
     uint8_t transparency;
     uint8_t mode;
     int maxTime;
-    int32_t time;
+    fix16_t time;
     bool gravity;
 } Particle;
 
 extern Particle particle_list[PARTICLE_COUNT];
 
 /* Spawn a particle. */
-void particle_spawn(int32_t x, int32_t y, int32_t z,
-                    int32_t vx, int32_t vy, int32_t vz,
-                    int32_t size, uint16_t color,
+void particle_spawn(fix16_t x, fix16_t y, fix16_t z,
+                    fix16_t vx, fix16_t vy, fix16_t vz,
+                    fix16_t size, uint16_t color,
                     int maxTime, bool gravity);
 
 /* Update all particles. Call once per frame. */
-void particle_update_all(int32_t dt);
+void particle_update_all(fix16_t dt);
 
 /* ========================================================================
  *  Chest data
