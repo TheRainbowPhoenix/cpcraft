@@ -130,7 +130,7 @@ void world_render(void)
                         fix16_t wx = fix16_from_int(bx) + fix16_from_int(fd->corners[i][0]);
                         fix16_t wy = fix16_from_int(by) + fix16_from_int(fd->corners[i][1]);
                         fix16_t wz = fix16_from_int(bz) + fix16_from_int(fd->corners[i][2]);
-                        sp[i] = camera_project(wx, wy, wz, ex, ey, ez, yaw, pitch);
+                        camera_project(wx, wy, wz, ex, ey, ez, yaw, pitch, &sp[i]);
                     }
 
                     const uint16_t (*tex)[TEX_SIZE];
