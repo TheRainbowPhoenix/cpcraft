@@ -1,3 +1,4 @@
+/* data/sky_colors.h */
 /* data/sky_colors.h - Sky color tables */
 #pragma once
 #include "types.h"
@@ -114,7 +115,3 @@ color_t missingTexture[256] = {
     0xf01a, 0x0020, 0x0020, 0xf01a, 0xf01a, 0x0020, 0x0020, 0xf01a, 0xf01a,
     0x0020, 0x0020, 0xf01a, 0xf01a};
 
-color_t *textures2 = 0x8C540000 + ALLOC_OFFSET;
-color_t *itemIcons2 = 0x8C580000 + ALLOC_OFFSET;
-color_t *assetsInputBuffer = 0x8C500000 + ALLOC_OFFSET;
-color_t *randomShit = 0x8C5B0000 + ALLOC_OFFSET;

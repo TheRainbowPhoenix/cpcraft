@@ -21,129 +21,126 @@ void swap(Vector2I **a, Vector2I **b);
 #define entityLength 128
 #define objLength 228
 
-int resXZBuffer = 192;
-int resYZBuffer = 108;
+extern int resXZBuffer;
+extern int resYZBuffer;
 
 int renderingMode; // 0=normal, 1=no transparent, 2=wireframe
-int maxSpeed = 25;
+extern int maxSpeed;
 // unsigned short ZBuffer[192*108];
-unsigned short *ZBuffer;
-float gravity = 9.81f;
+extern unsigned short *ZBuffer;
+extern float gravity;
 
-float PPosX = 54;
-float PPosY = 40;
-float PPosZ = 54;
+extern float PPosX;
+extern float PPosY;
+extern float PPosZ;
 
-int startFallY = 0;
+extern int startFallY;
 
-float velocityX;
-float velocityY;
-float velocityZ;
+extern float velocityX;
+extern float velocityY;
+extern float velocityZ;
 
-float rotationX = 90;
-float rotationY = 0;
+extern float rotationX;
+extern float rotationY;
 
-float playerMovementSpeed = 4;
-float playerRotationSpeed = 90;
+extern float playerMovementSpeed;
+extern float playerRotationSpeed;
 
-int partiLength = 1;
-int usedEntitys = 0;
-obj allObj[objLength];
-particle allparticles[1];
-entity entityList[entityLength];
+extern int partiLength;
+extern int usedEntitys;
+extern obj allObj[objLength];
+extern particle allparticles[1];
+extern entity entityList[entityLength];
 
-chestData allchest[32];
+extern chestData allchest[32];
 
-int triangleLength;
-int verticesLength;
+extern int triangleLength;
+extern int verticesLength;
 
 short *VRAMAddress;
 char *lightmap = 0x8C228800 + ALLOC_OFFSET;  // behind z-buffer
 char *blockData = 0x8C282800 + ALLOC_OFFSET; // behind lightmap
 
-float deltaTime;
-float deltaTimeNoSlow;
-int time1;
+extern float deltaTime;
+extern float deltaTimeNoSlow;
+extern int time1;
 
-bool slow;
+extern bool slow;
 
-float cosTable[TABLE_SIZE];
-float sinTable[TABLE_SIZE];
+extern float cosTable[TABLE_SIZE];
+extern float sinTable[TABLE_SIZE];
 
-bool compressVertices = true;
-bool stopChunkLoading = false;
-bool caves = false;
-bool OrePatches = false;
-int advancedTerrain = 2;
-bool renderUnderwater = true;
-bool survival = false;
-bool renderTextured = true;
-bool lighting = true;
-bool isOncCG50 = false;
-bool mobs = false;
-bool dayNightCycle = false;
-bool isinfinite = false;
-bool showPerformaceGraph = false;
-bool beautifulSky = true;
-char currentTexturePackIndex = 0;
+extern bool compressVertices;
+extern bool stopChunkLoading;
+extern bool caves;
+extern bool OrePatches;
+extern int advancedTerrain;
+extern bool renderUnderwater;
+extern bool survival;
+extern bool renderTextured;
+extern bool lighting;
+extern bool isOncCG50;
+extern bool mobs;
+extern bool dayNightCycle;
+extern bool isinfinite;
+extern bool showPerformaceGraph;
+extern bool beautifulSky;
+extern char currentTexturePackIndex;
 
-int currentSelectedWorld = 0;
-char worldExists[5] = {0, 0, 0, 0, 0};
-int worldVersion[5] = {0, 0, 0, 0, 0};
+extern int currentSelectedWorld;
+extern char worldExists[5];
+extern int worldVersion[5];
 
-int pixelSize = 2;
-char skyBrightness = 8;
+extern int pixelSize;
+extern char skyBrightness;
 
-int blockSelected = 1;
-int totalBlockAmount = 8;
+extern int blockSelected;
+extern int totalBlockAmount;
 
-unsigned short *screenColor = 0xE5200000;
+extern unsigned short *screenColor;
 
-float destructionTimer = 0;
-float totalDestructionTimer = 0;
-int destructionBlockIndex = 0;
+extern float destructionTimer;
+extern float totalDestructionTimer;
+extern int destructionBlockIndex;
 
-int dayTime = 1200;
+extern int dayTime;
 
 #define MULTIPLIER 1664525
 #define INCREMENT 1013904223
 
 /* Additional globals from the delta_time section */
-int renderDistance = 0;
-int redstoneRenderDistance = 1;
+extern int renderDistance;
+extern int redstoneRenderDistance;
 
-Vector3I removeBlock;
-Vector3I addBlock;
-bool isTopOfBlock = false;
-int entityInFrontIndex;
+extern Vector3I removeBlock;
+extern Vector3I addBlock;
+extern bool isTopOfBlock;
+extern int entityInFrontIndex;
 
 /* Forward vector (computed by CalculateForwardVector) */
-Vector3 forward;
+extern Vector3 forward;
 /* World block data array */
 
 /* Chunk management */
-Vector2S chunk2DPos[64];
-bool chunk2DActive[64];
-bool chunk2DReset[64];
+extern Vector2S chunk2DPos[64];
+extern bool chunk2DActive[64];
+extern bool chunk2DReset[64];
 
 /* Hotbar / inventory */
-int currentSlot = 0;
-short hotbarBlockTypes[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
-short hotbarBlockAmount[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-short hotbarBlockHp[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-short inventoryBlockTypes[27] = {
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-};
-short inventoryBlockAmount[27];
-short inventoryBlockHp[27];
+extern int currentSlot;
+extern short hotbarBlockTypes[9];
+extern short hotbarBlockAmount[9];
+extern short hotbarBlockHp[9];
+extern short inventoryBlockTypes[27];
+extern short inventoryBlockAmount[27];
+extern short inventoryBlockHp[27];
 
 /* Memory allocator */
-tlsf_t tlsf;
+extern tlsf_t tlsf;
 
 /* UI state */
-int UIState = 9;
-bool ExitLoop = false;
+extern int UIState;
+extern bool ExitLoop;
 
 /* Texture pointers */
 color_t *textures2;
@@ -155,26 +152,26 @@ color_t *screenColor;
 /* World data */
 
 /* Performance tracking */
-int performanceTime1 = 0;
-int performanceTime2 = 0;
-float performanceTime = 0;
-int fps = 0;
+extern int performanceTime1;
+extern int performanceTime2;
+extern float performanceTime;
+extern int fps;
 
 /* More missing globals */
-int currentChunkUpdateTimer = 0;
-int currentChunkUpdated = 0;
-bool isInCraftingTable = false;
-bool isInFurnace = false;
-int currentChestIndex = 0;
-int startColor = 0;
+extern int currentChunkUpdateTimer;
+extern int currentChunkUpdated;
+extern bool isInCraftingTable;
+extern bool isInFurnace;
+extern int currentChestIndex;
+extern int startColor;
 extern int SEED;
 
 /* More globals */
-int activeChunks = 0;
-char dayTimeChange = 0;
-unsigned char performace[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-unsigned char Cperformace[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+extern int activeChunks;
+extern char dayTimeChange;
+extern unsigned char performace[10];
+extern unsigned char Cperformace[10];
 color_t performanceColors[10] = {0xf800, 0xfc00, 0xffe0, 0xfc10, 0xfc1f,
                                  0xf81f, 0x841f, 0x041f, 0x001f, 0x07ff};
-int renderdV = 0;
-bool blocksRenderd[64];
+extern int renderdV;
+extern bool blocksRenderd[64];

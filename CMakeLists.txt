@@ -13,6 +13,8 @@ set(SOURCES
   src/fastBdisp.c
   src/lz4.c
   src/tlsf.c
+  src/globals.c
+  src/data_tables.c
 
   # Refactored core
   src/main.c
