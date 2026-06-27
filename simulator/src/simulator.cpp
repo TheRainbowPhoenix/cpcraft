@@ -365,7 +365,7 @@ static void sim_Debug_Printf(unsigned int x, unsigned int y, bool invert,
                 {
                     int tx = px + col, ty = py + row;
                     if (tx >= 0 && tx < CP_LCD_W && ty >= 0 && ty < CP_LCD_H)
-                        lcd_gram[ty * CP_LCD_W + tx] = 0xFFFF;
+                        cp_vram_buf[ty * CP_LCD_W + tx] = 0xFFFF;
                 }
             }
         }
@@ -419,6 +419,17 @@ static int sim_pending_waitkey = 0;
  * later in the file but Debug_WaitKey needs them now. */
 extern "C" void sim_pump_events();
 extern "C" void sim_present();
+
+static void sim_LCD_Refresh()
+{
+    /* The OS uses LCD_Refresh to copy VRAM to the LCD and display it.
+     * In the simulator, we use this as the "present" hook — it pushes
+     * the VRAM to the SDL window and advances the TMU. */
+    /* Copy VRAM to LCD GRAM so the SDL texture shows it. */
+    for (int i = 0; i < CP_LCD_W * CP_LCD_H; i++)
+        lcd_gram[i] = cp_vram_buf[i];
+    sim_present();
+}
 
 static int sim_Debug_WaitKey()
 {

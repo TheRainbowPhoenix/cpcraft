@@ -117,7 +117,6 @@ void fb_rect(int x, int y, int w, int h, uint16_t color)
 void fb_present(void)
 {
     /* Start the TMU so we can measure refresh ticks. */
-    #ifdef __sh__
     
     POWER_MSTPCR0->s.TMU = 0;                 /* un-gate TMU clock */
     TMU_TCR_1->raw = 0;
@@ -127,7 +126,6 @@ void fb_present(void)
     TMU_TSTR->s.STR1 = 1;
 
     const uint32_t t_start = *TMU_TCNT_1;
-    #endif
 
    
     const uint16_t *src = fb_vram;
@@ -157,21 +155,16 @@ void fb_present(void)
         src += FB_W;
     }
 
-#ifdef __sh__
+
 
     /* Stop the TMU and record the refresh ticks. */
     const uint32_t t_end = *TMU_TCNT_1;
     TMU_TSTR->s.STR1 = 0;
     /* TMU counts DOWN, so delta = start - end. */
     fb_last_refresh_ticks = t_start - t_end;
-#else
+#ifndef __sh__
     fb_last_refresh_ticks = 0;
-
-    /* In the simulator, push the LCD framebuffer to the SDL window.
-     * On hardware this is implicit — the LCD controller reads GRAM
-     * continuously and displays it. In the simulator, sim_present()
-     * updates the SDL texture from lcd_gram (which our SIM_LCD_WRITE
-     * calls just filled) and pumps SDL events. */
+    /* In the simulator, push the LCD framebuffer to the SDL window. */
     extern void sim_present(void);
     sim_present();
 #endif
