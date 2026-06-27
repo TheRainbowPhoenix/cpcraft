@@ -2,7 +2,7 @@
 #pragma once
 #include "types.h"
 
-static const item allItem[100] = {
+const item allItem[100] = {
     {
         .isBlock = true,
         .blockId = 0,

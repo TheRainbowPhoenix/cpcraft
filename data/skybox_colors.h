@@ -2,7 +2,7 @@
 #pragma once
 #include "types.h"
 
-static const int skyboxColors[16][128] = {
+const int skyboxColors[16][128] = {
 	{
 		0x949d949d,
 		0x949d949d,

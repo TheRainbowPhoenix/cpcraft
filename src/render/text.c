@@ -1,5 +1,6 @@
 /* src/render/text.c - Text rendering functions */
 #include "engine.h"
+#include "config.h"
 
 
 void renderText(int x, int y, const char *text)

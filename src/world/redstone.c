@@ -3,7 +3,12 @@
 #include "config.h"
 #include "chunk_constants.h"
 
+void makeExplosion(int size, int posX, int posY, int posZ)
+{
+    int half = size/2;
 
+    bool doUpdateInChunk[totalChunkWidth*totalChunkWidth];
+    for (int i = 0; i < totalChunkWidth*totalChunkWidth; i++)
     doUpdateInChunk[i] = false;
 
     for (int x = 0; x < size; x++)
@@ -1550,9 +1555,3 @@ void updateMap()
     //    }
     //}
 }
-void changeBrightnessAllTriangles(int lighChange)
-{
-    for (int i = 0; i < totalChunkWidth*totalChunkWidth; i++)
-    {
-        for (int j = 0; j < allObj[i].sizeT; j++)
-        allObj[i].brightnes[j] += lighChange;

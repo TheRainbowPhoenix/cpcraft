@@ -2,7 +2,7 @@
 #pragma once
 #include "types.h"
 
-static const block allBlock[73] = {
+const block allBlock[73] = {
     {//air 0
         .blockType = 0,
         .destroyTime = {1, 1, 1, 1, 1, 1},

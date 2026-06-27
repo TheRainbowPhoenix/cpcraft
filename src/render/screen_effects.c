@@ -1,5 +1,6 @@
 /* src/render/screen_effects.c - Underwater and menu visual effects */
 #include "engine.h"
+#include "config.h"
 
 
 void intToHex(unsigned int num, char *hexStr) {

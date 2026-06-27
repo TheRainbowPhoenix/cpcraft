@@ -116,7 +116,6 @@ void itemDetails(int posX, int posY, char text[])
     drawMinecraftFont(posX+4, posX+4, posY+4, false, textLength, text, 0xdefb, 0x39c7);
 }
 
-int fps = 0;
 int renderdT = 0;
 int renderdV = 0;
 
@@ -132,8 +131,6 @@ int cursorYSelected = 0;
 
 float buttonPressTimer1 = 0;
 float buttonPressTimer2 = 0;
-
-int currentChestIndex = 0;
 
 int WorldOpenMode = 0; //0=create/load, 1=overwrite, 2=always load-
 

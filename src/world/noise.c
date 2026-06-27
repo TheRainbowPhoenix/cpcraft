@@ -12,6 +12,8 @@ int SEED = 0;
 #define width 12
 #define totalChunkWidth 8
 
+
+
 bool blocksRenderd[totalChunkWidth*totalChunkWidth];
 unsigned char blocks[totalChunkWidth*totalChunkWidth][width * height * width];
 unsigned char maxChunkHight[totalChunkWidth*totalChunkWidth];

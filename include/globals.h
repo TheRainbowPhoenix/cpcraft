@@ -6,6 +6,7 @@
 #pragma once
 
 #include "types.h"
+#include "../src/tlsf.h"
 
 void swap(Vector2I** a, Vector2I** b) {
     Vector2I* temp = *a;
@@ -169,7 +170,7 @@ int currentChunkUpdateTimer = 0;
 int currentChunkUpdated = 0;
 bool isInCraftingTable = false;
 bool isInFurnace = false;
-int currentChestIndex = -1;
+int currentChestIndex = 0;
 int startColor = 0;
 extern int SEED;
 
